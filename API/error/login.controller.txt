@@ -1,0 +1,30 @@
+[18/02/2026 21:58:19]Error: Column 'username' cannot be null
+[18/02/2026 22:01:24]Error: Column 'username' cannot be null
+[18/02/2026 22:02:29]Column 'username' cannot be null
+[18/02/2026 22:03:46]Error: Column 'username' cannot be null
+[18/02/2026 22:04:32]Error: Column 'username' cannot be null
+[18/02/2026 22:04:43]Error: Column 'username' cannot be null
+[18/02/2026 22:05:08]Error: Column 'username' cannot be null
+[18/02/2026 22:05:45]Error: Column 'username' cannot be null
+[18/02/2026 22:07:16]Error: Column 'username' cannot be null
+[18/02/2026 22:07:39]Error: Column 'username' cannot be null
+[18/02/2026 22:07:59]Error: Column 'username' cannot be null
+[18/02/2026 22:08:02]Error: Column 'username' cannot be null
+[18/02/2026 22:08:31]Error: Column 'username' cannot be null
+[18/02/2026 22:08:40]Error: Column 'username' cannot be null
+[18/02/2026 22:08:48]Error: Column 'username' cannot be null
+[18/02/2026 22:09:19]Error: Column 'username' cannot be null
+[07/03/2026 15:39:23]ReferenceError: user is not defined
+[07/03/2026 15:39:36]ReferenceError: user is not defined
+[07/03/2026 15:39:57]ReferenceError: user is not defined
+[07/03/2026 15:40:13]ReferenceError: user is not defined
+[07/03/2026 15:40:19]ReferenceError: user is not defined
+[07/03/2026 15:42:01]TypeError: crypto.createHash is not a function
+[07/03/2026 15:45:59]Error: data and hash arguments required
+[07/03/2026 15:46:41]Error: data and hash arguments required
+[07/03/2026 15:47:02]ReferenceError: isCurrent is not defined
+[09/03/2026 22:55:04]ReferenceError: jwt is not defined
+[09/03/2026 22:55:52]ReferenceError: jwt is not defined
+[09/03/2026 22:55:54]ReferenceError: jwt is not defined
+[15/03/2026 17:29:32]Error: secretOrPrivateKey is not valid key material
+[15/03/2026 22:37:07]TypeError: Cannot destructure property 'username' of 'req.body' as it is undefined.

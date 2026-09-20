@@ -1,0 +1,5 @@
+TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'Socket'
+    |     property 'parser' -> object with constructor 'HTTPParser'
+    --- property 'socket' closes the circle
+TypeError: Cannot read properties of undefined (reading 'group_id')
