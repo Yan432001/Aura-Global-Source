@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 // import plugin cors ដើម្បីឲ្យ react អាច access ប្រើប្រាស់បាន
 const cors = require("cors");
 const express = require("express");
@@ -67,3 +68,5 @@ app.listen(PORT, () => {
     console.log("http://localhost:" + PORT);
 
 })
+=======
+>>>>>>> Stashed changes
