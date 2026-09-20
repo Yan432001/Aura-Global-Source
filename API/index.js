@@ -1,5 +1,4 @@
-<<<<<<< Updated upstream
-// import plugin cors ដើម្បីឲ្យ react អាច access ប្រើប្រាស់បាន
+require("dotenv").config();
 const cors = require("cors");
 const express = require("express");
 const app = express();
@@ -8,7 +7,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors({ origin: "*" }));
 
-// import data by app folder real data 
+// Import data by app folder real data
 require("./app/config/route/admin/borrower.route")(app);
 require("./app/config/route/admin/categories.route")(app);
 require("./app/config/route/admin/products.route")(app);
@@ -24,6 +23,14 @@ require("./app/config/route/admin/auth.route")(app);
 require("./app/config/route/admin/setting.route")(app);
 require("./app/config/route/admin/permissions.route")(app);
 
+// Telegram Mini App (TMA) Routes & Bot Integration
+const tmaRoutes = require("./app/config/route/tma.route");
+const bot = require("./app/services/telegramBot.service"); // Updated to match service module export convention
+const emenuRoutes = require('./app/config/route/emenu.route');
+
+app.use('/api/v1/emenu', emenuRoutes);
+app.use("/api/tma", tmaRoutes);
+app.use("/api", tmaRoutes); // Mounts /shop/:slug and /biller/:id/store directly under /api to match goal specifications (/api/shop/:slug)
 
 app.get("/api/home", (req, res) => {
     const data = [
@@ -61,12 +68,19 @@ app.get("/api/home", (req, res) => {
 
     res.json({
         list: data,
-    })
-})
-const PORT = 8080;
-app.listen(PORT, () => {
-    console.log("http://localhost:" + PORT);
+    });
+});
 
-})
-=======
->>>>>>> Stashed changes
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+
+    // Start Telegram Bot Long-Polling in the background (handled seamlessly inside telegramBot.service.js if exported or checked)
+    if (process.env.TELEGRAM_BOT_TOKEN && bot && typeof bot.start === 'function') {
+        bot.start({
+            onStart: (botInfo) => console.log(`Telegram Bot @${botInfo.username} running...`),
+        }).catch((err) => console.error("Telegram bot error:", err.message));
+    } else {
+        console.warn("TELEGRAM_BOT_TOKEN is missing or bot instance is uninitialized. Bot polling skipped.");
+    }
+});

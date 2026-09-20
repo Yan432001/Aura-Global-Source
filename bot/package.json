@@ -1,0 +1,20 @@
+{
+  "name": "auraglobalstore-bot",
+  "version": "1.0.0",
+  "description": "Telegram Mini App Bot for Aura Global Multi-Store E-Menu",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "grammy": "^1.21.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

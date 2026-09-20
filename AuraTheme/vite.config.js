@@ -12,21 +12,10 @@ export default defineConfig({
       '@AdCat': path.resolve(__dirname, './src/assets/styles'),
     },
   },
-  // server: {
-  //   host: true,
-  //   allowedHosts: true, 
-  // },
   server: {
-    host: true,
+    host: true,         // Exposes the dev server to your local network (LAN IP) and external tunnels
     port: 5173,
-    strictPort: true, // Prevents Vite from switching ports
-    allowedHosts: true,
+    strictPort: true,   // Prevents Vite from automatically switching ports if 5173 is busy
+    allowedHosts: true, // Accepts all incoming tunnel and proxy domains (e.g., Cloudflare, ngrok)
   },
-  // server: {
-  //   host: true,
-  //   allowedHosts: [
-  //     '.trycloudflare.com',
-  //     'corrected-indicators-payment-peterson.trycloudflare.com'
-  //   ],
-  // },
 });

@@ -5,23 +5,22 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+
+// Base Web Layout & Pages
 import MainLayout from './layouts/MainLayout';
-import AdminLayout from './layouts/AdminLayout';
 import Home from './pages/web/Home';
 import Shops from './pages/web/Shops';
 import ShopDetail from './pages/web/ShopDetail';
 import Products from './pages/web/Products';
 import Service from './pages/web/Community';
-import CategoriesPage from './pages/admins/CategoriesPage';
 import Learn from './pages/web/Learn';
 import Profile from './pages/web/Profile';
 import Cart from './pages/web/Cart';
 import Wishlist from './pages/web/Wishlist';
-import Login from './pages/admins/auth/Login';
-import ModernCardLogin from './pages/admins/auth/adminLogin';
-import HorizontalGlassLogin from './pages/admins/auth/HorizontalGlassLogin';
-import MinimalistFloatingLogin from './pages/admins/auth/MinimalistFloatingLogin';
-import GradientGlassLogin from './pages/admins/auth/ModernGradientGlassLogin';
+
+// Admin Layout & Pages
+import AdminLayout from './layouts/AdminLayout';
+import CategoriesPage from './pages/admins/CategoriesPage';
 import AdminDashboardRouter from './pages/admins/AdminDashboardRouter';
 import AdminProducts from './pages/admins/AdminProducts';
 import AdminUsers from './pages/admins/AdminUsers';
@@ -32,8 +31,13 @@ import RevenueAnalytics from './pages/admins/RevenueAnalytics';
 import CustomerAnalytics from './pages/admins/CustomerAnalytics';
 import SalesReport from './pages/admins/SalesReport';
 import InventoryReport from './pages/admins/InventoryReport';
-import SystemSettings from './pages/admins/SystemSettings';
 import UserManagement from './pages/admins/UserManagement';
+
+// E-Menu Telegram Mini App Layout & Views
+import EMenuLayout from './pages/emenu/EMenuLayout';
+import EMenuPage from './views/EMenuPage';
+import TelegramEntry from './views/TelegramEntry';
+import StoreNotFound from './views/StoreNotFound';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -41,10 +45,7 @@ const ProtectedRoute = ({ children }) => {
   return user ? children : <Navigate to="/login" />;
 };
 
-// Applies the admin Theme Customizer (dark mode, color presets, fonts) via
-// antd's ConfigProvider. Scoped to the admin route tree only, so the
-// customer-facing website always renders with antd's plain default theme
-// and never inherits an admin's dark mode or custom styling choices.
+// Admin Theme Wrapper
 const AdminThemeWrapper = ({ children }) => {
   const { currentTheme } = useTheme();
   return (
@@ -65,12 +66,23 @@ const ThemedAdminLayout = () => (
 const AppContent = () => {
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* 1. Telegram Deep-Link Entry */}
+      <Route path="/tg" element={<TelegramEntry />} />
+
+      {/* 2. Isolated Multi-Store E-Menu Routes (No Base Header/Footer) */}
+      <Route path="/shop" element={<EMenuLayout />}>
+        <Route index element={<TelegramEntry />} />
+        <Route path="not-found" element={<StoreNotFound />} />
+        <Route path="by-biller/:billerId" element={<EMenuPage />} />
+        <Route path=":storeSlug" element={<EMenuPage />} />
+      </Route>
+
+      {/* 3. Base Customer-Facing Website Routes */}
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Home />} />
         <Route path="sourcing" element={<Navigate to="/products" replace />} />
-        <Route path="shop" element={<Shops />} />
-        <Route path="shop/:shopId" element={<ShopDetail />} />
+        <Route path="shops" element={<Shops />} />
+        <Route path="shops/:shopId" element={<ShopDetail />} />
         <Route path="products" element={<Products />} />
         <Route path="service" element={<Service />} />
         <Route path="community" element={<Navigate to="/service" replace />} />
@@ -79,14 +91,8 @@ const AppContent = () => {
         <Route path="cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
         <Route path="wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
       </Route>
-      
-      <Route path="/login" element={<Login />} />
-      <Route path="/admins/login" element={<ModernCardLogin />} />
-      <Route path="/admins/HorizontalGlassLogin" element={<HorizontalGlassLogin />} />
-      <Route path="/admins/MinimalistFloatingLogin" element={<MinimalistFloatingLogin />} />
-      <Route path="/admins/GradientGlassLogin" element={<GradientGlassLogin />} />
-      
-      {/* Admin Routes */}
+
+      {/* 4. Admin Management Routes */}
       <Route path="/admins/" element={<ThemedAdminLayout />}>
         <Route index element={<AdminDashboardRouter />} />
         <Route path="dashboard" element={<AdminDashboardRouter />} />
@@ -102,9 +108,9 @@ const AppContent = () => {
         <Route path="settings/categories" element={<CategoriesPage />} />
         <Route path="settings/users" element={<UserManagement />} />
       </Route>
-      
-      {/* Catch all route */}
-      <Route path="*" element={<Navigate to="/" />} />
+
+      {/* 5. Catch-All Route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };
