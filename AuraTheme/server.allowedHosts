@@ -12,21 +12,8 @@ export default defineConfig({
       '@AdCat': path.resolve(__dirname, './src/assets/styles'),
     },
   },
-  // server: {
-  //   host: true,
-  //   allowedHosts: true, 
-  // },
   server: {
     host: true,
-    port: 5173,
-    strictPort: true, // Prevents Vite from switching ports
-    allowedHosts: true,
+    allowedHosts: true, // This enables all tunnel domains like .trycloudflare.com
   },
-  // server: {
-  //   host: true,
-  //   allowedHosts: [
-  //     '.trycloudflare.com',
-  //     'corrected-indicators-payment-peterson.trycloudflare.com'
-  //   ],
-  // },
 });
