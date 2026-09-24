@@ -6,7 +6,17 @@ const StoreController = {
       const { slug } = req.params;
       const store = await EMenuModel.getStoreBySlug(slug);
       if (!store) return res.status(404).json({ status: false, message: 'Store not found' });
-      res.json({ status: true, data: store });
+      const menu = await EMenuModel.getStoreMenu(store.id);
+      res.json({
+        status: true,
+        data: store,
+        store: {
+          ...store,
+          logoUrl: store.logo
+        },
+        products: menu.products || [],
+        categories: menu.categories || []
+      });
     } catch (err) {
       res.status(500).json({ status: false, error: err.message });
     }

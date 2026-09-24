@@ -1,70 +1,37 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Avatar, Badge, Button, Card, Col, Flex, Grid, Rate, Row, Space, Tag, Typography } from 'antd';
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  Typography,
+  Row,
+  Col,
+  Card,
+  Button,
+  Avatar,
+  Grid,
+  Space,
+  message
+} from 'antd';
 import {
   ArrowRightOutlined,
-  CustomerServiceOutlined,
-  HeartOutlined,
-  LockOutlined,
-  RocketOutlined,
+  SendOutlined,
+  ShopOutlined,
   SafetyCertificateOutlined,
-  ShoppingCartOutlined,
-  StarFilled,
-  SyncOutlined,
+  RocketOutlined,
+  CustomerServiceOutlined,
+  FireOutlined,
   ThunderboltOutlined,
-  TruckOutlined,
+  LockOutlined,
+  SyncOutlined,
+  StarFilled,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { products, shopCategories } from '../../data/shopData';
-import { formatCurrency, publicTheme } from '../../utils/webTheme';
+import simpleData from '../../../../data/simpleData';
+import { useCart } from '../../contexts/CartContext';
+import { publicTheme, formatCurrency } from '../../utils/webTheme';
 
-const { Paragraph, Text, Title } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { useBreakpoint } = Grid;
 
-const nova = {
-  ink: '#1c2333',
-  sub: '#6b7590',
-  border: 'rgba(47, 111, 237, 0.14)',
-  soft: '#eef3ff',
-  accent: publicTheme.primary,
-  sunset: publicTheme.accent,
-};
-
-const Blob = ({ size, top, left, right, bottom, color, blur = 40, opacity = 0.5 }) => (
-  <div
-    aria-hidden
-    style={{
-      position: 'absolute',
-      width: size,
-      height: size,
-      top,
-      left,
-      right,
-      bottom,
-      background: color,
-      borderRadius: '50%',
-      filter: `blur(${blur}px)`,
-      opacity,
-      pointerEvents: 'none',
-      zIndex: 0,
-    }}
-  />
-);
-
-const featureRow = [
-  { icon: <TruckOutlined />, title: 'Free Shipping', text: 'On orders over $50' },
-  { icon: <LockOutlined />, title: 'Secure Payments', text: '100% secure checkout' },
-  { icon: <SyncOutlined />, title: 'Easy Returns', text: '30-day return policy' },
-  { icon: <CustomerServiceOutlined />, title: '24/7 Support', text: 'Always here to help' },
-];
-
-const trustRow = [
-  { icon: <SafetyCertificateOutlined />, title: 'Premium Quality', text: 'Made of the finest materials' },
-  { icon: <RocketOutlined />, title: 'Fast Delivery', text: 'Quick and reliable shipping' },
-  { icon: <LockOutlined />, title: 'Secure Checkout', text: 'Your data is protected' },
-  { icon: <StarFilled />, title: 'Customer Satisfaction', text: '100% guarantee' },
-];
-
-const useCountdown = (hours = 30) => {
+const useCountdown = (hours = 24) => {
   const [target] = useState(() => Date.now() + hours * 60 * 60 * 1000);
   const [now, setNow] = useState(() => Date.now());
 
@@ -76,417 +43,853 @@ const useCountdown = (hours = 30) => {
   const remaining = Math.max(target - now, 0);
   const totalSeconds = Math.floor(remaining / 1000);
   return {
-    days: Math.floor(totalSeconds / 86400),
     hours: Math.floor((totalSeconds % 86400) / 3600),
     minutes: Math.floor((totalSeconds % 3600) / 60),
     seconds: totalSeconds % 60,
   };
 };
 
-const CountdownBox = ({ value, label }) => (
-  <div
-    style={{
-      minWidth: 56,
-      textAlign: 'center',
-      padding: '8px 6px',
-      borderRadius: 12,
-      background: 'rgba(255,255,255,0.16)',
-    }}
-  >
-    <div style={{ fontSize: 20, fontWeight: 800, color: 'white', lineHeight: 1 }}>
-      {String(value).padStart(2, '0')}
-    </div>
-    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.78)', marginTop: 4, textTransform: 'uppercase' }}>
-      {label}
-    </div>
-  </div>
-);
-
-const ProductCard = ({ product, badge }) => {
-  const navigate = useNavigate();
-  const discount = product.originalPrice
-    ? Math.round(100 - (product.price / product.originalPrice) * 100)
-    : 0;
-
-  return (
-    <Card
-      hoverable
-      onClick={() => navigate('/products')}
-      style={{
-        borderRadius: 18,
-        border: `1px solid ${nova.border}`,
-        overflow: 'hidden',
-        height: '100%',
-      }}
-      styles={{ body: { padding: 14 } }}
-      cover={
-        <div style={{ position: 'relative', aspectRatio: '1 / 1', background: nova.soft }}>
-          <img
-            src={product.image}
-            alt={product.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-          {(badge || discount > 0) && (
-            <Tag
-              style={{
-                position: 'absolute',
-                top: 10,
-                left: 10,
-                margin: 0,
-                borderRadius: 999,
-                border: 'none',
-                background: badge === 'New' ? nova.accent : '#e0393f',
-                color: 'white',
-                fontWeight: 700,
-                fontSize: 11,
-              }}
-            >
-              {badge || `-${discount}%`}
-            </Tag>
-          )}
-          <Button
-            shape="circle"
-            icon={<HeartOutlined />}
-            onClick={(event) => event.stopPropagation()}
-            style={{ position: 'absolute', top: 10, right: 10, border: 'none', boxShadow: '0 6px 16px rgba(0,0,0,0.12)' }}
-          />
-        </div>
-      }
-    >
-      <Space direction="vertical" size={4} style={{ width: '100%' }}>
-        <Text strong ellipsis style={{ color: nova.ink, fontSize: 14 }}>
-          {product.name}
-        </Text>
-        <Rate disabled defaultValue={Math.round(product.rating)} style={{ fontSize: 11 }} />
-        <Flex align="center" gap={8}>
-          <Text strong style={{ color: nova.ink, fontSize: 16 }}>{formatCurrency(product.price)}</Text>
-          {product.originalPrice && (
-            <Text delete style={{ color: nova.sub, fontSize: 12 }}>{formatCurrency(product.originalPrice)}</Text>
-          )}
-        </Flex>
-      </Space>
-    </Card>
-  );
-};
-
-const Home = () => {
+export default function Home() {
   const navigate = useNavigate();
   const screens = useBreakpoint();
-  const countdown = useCountdown(30);
+  const countdown = useCountdown(18);
+  const { addItem } = useCart();
+  const [activeCategory, setActiveCategory] = useState('all');
 
-  const heroProduct = products[0];
-  const floatingPicks = useMemo(() => products.slice(1, 5), []);
-  const newArrivals = useMemo(() => products.slice(0, 6), []);
-  const bestSellers = useMemo(() => products.slice(6, 9), []);
-  const categoryTiles = useMemo(() => shopCategories.slice(0, 6), []);
+  const stores = simpleData.stores || [];
+  const categories = simpleData.categories || [];
+  const products = simpleData.products || [];
 
-  const isDesktop = screens.lg;
+  const filteredProducts = useMemo(() => {
+    if (activeCategory === 'all') return products;
+    return products.filter((p) => Number(p.category_id) === Number(activeCategory));
+  }, [products, activeCategory]);
+
+  const handleAddToCart = (product, e) => {
+    if (e) e.stopPropagation();
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      quantity: 1,
+    });
+    message.success(`${product.name} added to cart!`);
+  };
 
   return (
-    <div style={{ padding: 0 }}>
-      {/* Hero */}
-      <Card
+    <div style={{ width: '100%', paddingBottom: 48 }}>
+      {/* 1. Full-Screen Hero Banner using Default Theme Colors */}
+      <div
         className="stagger-rise"
         style={{
+          width: '100%',
           borderRadius: 28,
-          border: `1px solid ${nova.border}`,
           background: publicTheme.heroBackground,
-          marginBottom: 20,
-          overflow: 'hidden',
+          border: `1px solid ${publicTheme.border}`,
+          boxShadow: publicTheme.shadow,
           position: 'relative',
+          overflow: 'hidden',
+          padding: screens.xs ? '32px 20px' : screens.md ? '48px 44px' : '56px 52px',
+          marginBottom: 36,
         }}
-        styles={{ body: { padding: screens.xs ? 20 : 36, position: 'relative', zIndex: 1 } }}
       >
-        <Blob size={220} top={-80} right={-60} color={publicTheme.primary} opacity={0.14} />
-        <Blob size={160} bottom={-60} left="38%" color={publicTheme.accent} opacity={0.14} />
-        <StarFilled style={{ position: 'absolute', top: 26, right: '32%', color: '#ffb03d', fontSize: 22, opacity: 0.8, zIndex: 1 }} />
-        <Row gutter={[24, 24]} align="middle" style={{ position: 'relative', zIndex: 1 }}>
-          <Col xs={24} lg={12}>
-            <Space direction="vertical" size={16}>
-              <Tag style={{ width: 'fit-content', margin: 0, borderRadius: 999, border: 'none', background: nova.soft, color: nova.accent, fontWeight: 700, padding: '6px 12px' }}>
-                Trending Now
-              </Tag>
-              <Title level={1} style={{ margin: 0, color: nova.ink, fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05 }}>
-                Discover Products You&apos;ll Love
-              </Title>
-              <Paragraph style={{ margin: 0, color: nova.sub, fontSize: 16, maxWidth: 460 }}>
-                Shop the latest trending products curated for modern lifestyles.
-              </Paragraph>
-              <Space wrap size={12}>
-                <Button
-                  type="primary"
-                  size="large"
-                  onClick={() => navigate('/products')}
-                  style={{ height: 48, borderRadius: 999, background: nova.accent, border: 'none', fontWeight: 700, paddingInline: 26, boxShadow: '0 14px 30px rgba(47,111,237,0.28)' }}
-                >
-                  Shop Now
-                </Button>
-                <Button
-                  size="large"
-                  onClick={() => navigate('/shop')}
-                  style={{ height: 48, borderRadius: 999, borderColor: nova.sunset, color: nova.sunset, fontWeight: 700, paddingInline: 26 }}
-                >
-                  Explore Collection
-                </Button>
-              </Space>
-              <Flex align="center" gap={10}>
-                <Avatar.Group max={{ count: 4 }} size={30}>
-                  {products.slice(0, 4).map((product) => (
-                    <Avatar key={product.id} src={product.image} />
-                  ))}
-                </Avatar.Group>
-                <Text style={{ color: nova.sub, fontSize: 13 }}>Loved by 50,000+ customers</Text>
-              </Flex>
+        {/* Decorative ambient color accents using default palette */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            width: 320,
+            height: 320,
+            top: -60,
+            right: -60,
+            background: publicTheme.primary,
+            borderRadius: '50%',
+            filter: 'blur(70px)',
+            opacity: 0.12,
+            pointerEvents: 'none',
+          }}
+        />
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            width: 280,
+            height: 280,
+            bottom: -60,
+            left: '30%',
+            background: publicTheme.accent,
+            borderRadius: '50%',
+            filter: 'blur(70px)',
+            opacity: 0.1,
+            pointerEvents: 'none',
+          }}
+        />
+
+        <Row gutter={[40, 36]} align="middle" style={{ position: 'relative', zIndex: 1 }}>
+          <Col xs={24} lg={13}>
+            {/* Header Kicker */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: publicTheme.primary,
+                  boxShadow: `0 0 10px ${publicTheme.primary}`,
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  color: publicTheme.primary,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Multi-Store E-Menu & Telegram Mini App
+              </span>
+            </div>
+
+            <Title
+              level={1}
+              style={{
+                color: publicTheme.text,
+                fontSize: screens.xs ? 32 : screens.md ? 44 : 52,
+                fontWeight: 800,
+                lineHeight: 1.12,
+                letterSpacing: '-0.02em',
+                marginBottom: 16,
+              }}
+            >
+              Order Seamlessly with{' '}
+              <span style={{ color: publicTheme.primary }}>Telegram Mini App</span> & Multi-Store E-Menu
+            </Title>
+
+            <Paragraph
+              style={{
+                color: publicTheme.subtext,
+                fontSize: screens.xs ? 14 : 16,
+                lineHeight: 1.6,
+                maxWidth: 580,
+                marginBottom: 28,
+              }}
+            >
+              Browse artisan food, specialty coffee, and curated lifestyle collections. Place orders
+              directly inside Telegram or web, with instant automated dispatch to shop staff groups
+              for fast contactless dining and takeaway.
+            </Paragraph>
+
+            <Space wrap size={14}>
+              <Button
+                type="primary"
+                size="large"
+                icon={<SendOutlined />}
+                onClick={() => navigate('/shop/sbc-store')}
+                style={{
+                  height: 48,
+                  borderRadius: 14,
+                  background: publicTheme.primary,
+                  borderColor: publicTheme.primary,
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  paddingInline: 26,
+                  boxShadow: '0 10px 24px rgba(47, 111, 237, 0.28)',
+                }}
+              >
+                Launch Telegram Mini App E-Menu
+              </Button>
+              <Button
+                size="large"
+                icon={<ShopOutlined />}
+                onClick={() => navigate('/products')}
+                style={{
+                  height: 48,
+                  borderRadius: 14,
+                  background: '#ffffff',
+                  borderColor: publicTheme.accent,
+                  color: publicTheme.accent,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  paddingInline: 24,
+                }}
+              >
+                Browse Web Catalog
+              </Button>
             </Space>
+
+            {/* Quick Metrics */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: screens.xs ? 14 : 24,
+                marginTop: 32,
+                paddingTop: 24,
+                borderTop: `1px solid ${publicTheme.softBorder}`,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: publicTheme.text }}>4 Shops</div>
+                <div style={{ fontSize: 12, color: publicTheme.subtext }}>Active Concepts</div>
+              </div>
+              <div style={{ width: 1, height: 28, background: publicTheme.softBorder }} />
+              <div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: publicTheme.primary }}>&lt; 1s</div>
+                <div style={{ fontSize: 12, color: publicTheme.subtext }}>Group Dispatch</div>
+              </div>
+              <div style={{ width: 1, height: 28, background: publicTheme.softBorder }} />
+              <div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: publicTheme.accent }}>4.9 ★</div>
+                <div style={{ fontSize: 12, color: publicTheme.subtext }}>User Satisfaction</div>
+              </div>
+            </div>
           </Col>
 
-          <Col xs={24} lg={12}>
-            <div style={{ position: 'relative', maxWidth: 460, margin: '0 auto' }}>
-              <div style={{ borderRadius: 24, overflow: 'hidden', aspectRatio: '4 / 5', background: nova.soft }}>
-                <img
-                  src={heroProduct?.image}
-                  alt={heroProduct?.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+          {/* Interactive Telegram Order Simulator Card using Default Theme */}
+          <Col xs={24} lg={11}>
+            <div
+              style={{
+                borderRadius: 24,
+                background: 'rgba(255, 255, 255, 0.95)',
+                border: `1px solid ${publicTheme.border}`,
+                padding: 24,
+                backdropFilter: 'blur(20px)',
+                boxShadow: publicTheme.lightShadow,
+              }}
+            >
+              {/* Telegram Card Header */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingBottom: 14,
+                  borderBottom: `1px solid ${publicTheme.softBorder}`,
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Avatar
+                    src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=100&h=100&fit=crop"
+                    size={40}
+                    style={{ border: `2px solid ${publicTheme.primary}` }}
+                  />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: publicTheme.text }}>
+                      ☕ Aura Coffee Kitchen Group
+                    </div>
+                    <div style={{ fontSize: 11, color: publicTheme.success, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: publicTheme.success }} />
+                      Telegram Bot Live
+                    </div>
+                  </div>
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: '4px 10px',
+                    borderRadius: 999,
+                    background: 'rgba(47, 111, 237, 0.1)',
+                    color: publicTheme.primary,
+                  }}
+                >
+                  Auto-Sync
+                </span>
               </div>
 
-              {isDesktop ? (
-                floatingPicks.map((product, index) => {
-                  const positions = [
-                    { top: -14, left: -30 },
-                    { top: -10, right: -34 },
-                    { bottom: 90, right: -40 },
-                    { bottom: -16, left: -20 },
-                  ];
-                  return (
-                    <div
-                      key={product.id}
-                      style={{
-                        position: 'absolute',
-                        ...positions[index],
-                        background: 'white',
-                        borderRadius: 16,
-                        padding: '10px 14px',
-                        boxShadow: '0 16px 36px rgba(20,20,22,0.14)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        maxWidth: 170,
-                      }}
-                    >
-                      <Avatar shape="square" size={38} src={product.image} style={{ borderRadius: 10 }} />
-                      <div>
-                        <Text style={{ fontSize: 11, color: nova.sub, display: 'block' }}>{product.name}</Text>
-                        <Text strong style={{ fontSize: 13, color: nova.ink }}>{formatCurrency(product.price)}</Text>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div style={{ display: 'flex', gap: 10, overflowX: 'auto', marginTop: 14, paddingBottom: 4 }}>
-                  {floatingPicks.map((product) => (
-                    <div
-                      key={product.id}
-                      style={{
-                        flex: '0 0 auto',
-                        background: 'white',
-                        border: `1px solid ${nova.border}`,
-                        borderRadius: 16,
-                        padding: '10px 14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                      }}
-                    >
-                      <Avatar shape="square" size={34} src={product.image} style={{ borderRadius: 8 }} />
-                      <div>
-                        <Text style={{ fontSize: 11, color: nova.sub, display: 'block' }}>{product.name}</Text>
-                        <Text strong style={{ fontSize: 12, color: nova.ink }}>{formatCurrency(product.price)}</Text>
-                      </div>
-                    </div>
-                  ))}
+              {/* Sample Dispatched Order Receipt */}
+              <div
+                style={{
+                  background: 'rgba(240, 244, 255, 0.85)',
+                  borderRadius: 16,
+                  padding: 16,
+                  border: `1px solid ${publicTheme.softBorder}`,
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  lineHeight: 1.55,
+                  color: publicTheme.text,
+                }}
+              >
+                <div style={{ color: publicTheme.primary, fontWeight: 'bold', marginBottom: 6 }}>
+                  🔔 NEW SHOP ORDER #TMA-892410
                 </div>
-              )}
+                <div>👤 Customer: Elena Rostova</div>
+                <div>📍 Table #04 · Dine-In</div>
+                <div>📝 Note: Extra oat milk & double shot</div>
+                <div style={{ margin: '8px 0', borderTop: `1px dashed ${publicTheme.softBorder}` }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>2x Spanish Iced Latte</span>
+                  <span style={{ fontWeight: 'bold' }}>$8.50</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>1x Golden Almond Croissant</span>
+                  <span style={{ fontWeight: 'bold' }}>$3.75</span>
+                </div>
+                <div style={{ margin: '8px 0', borderTop: `1px solid ${publicTheme.softBorder}` }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: publicTheme.success, fontWeight: 'bold' }}>
+                  <span>TOTAL TO COLLECT:</span>
+                  <span>$12.25</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                <Button
+                  block
+                  type="primary"
+                  onClick={() => navigate('/shop/sbc-store')}
+                  style={{
+                    height: 40,
+                    borderRadius: 12,
+                    background: publicTheme.primary,
+                    fontWeight: 700,
+                    border: 'none',
+                  }}
+                >
+                  Open SBC Coffee E-Menu
+                </Button>
+                <Button
+                  onClick={() => navigate('/shop/aura-bakery')}
+                  style={{
+                    height: 40,
+                    borderRadius: 12,
+                    background: 'white',
+                    borderColor: publicTheme.border,
+                    color: publicTheme.text,
+                    fontWeight: 600,
+                  }}
+                >
+                  Bakery Menu
+                </Button>
+              </div>
             </div>
           </Col>
         </Row>
-      </Card>
+      </div>
 
-      {/* Feature row */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        {featureRow.map((item) => (
-          <Col xs={12} sm={12} md={6} key={item.title}>
-            <Card style={{ borderRadius: 20, border: `1px solid ${nova.border}`, textAlign: 'center', height: '100%' }} styles={{ body: { padding: 18 } }}>
-              <div style={{ fontSize: 24, color: nova.accent, marginBottom: 8 }}>{item.icon}</div>
-              <Text strong style={{ display: 'block', color: nova.ink, fontSize: 13 }}>{item.title}</Text>
-              <Text style={{ color: nova.sub, fontSize: 12 }}>{item.text}</Text>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      {/* Shop by categories */}
-      <Space direction="vertical" size={4} style={{ width: '100%', marginBottom: 14 }}>
-        <Flex justify="space-between" align="center">
-          <Title level={3} style={{ margin: 0, color: nova.ink }}>Shop by Categories</Title>
-          <Button type="link" onClick={() => navigate('/shop')} style={{ color: nova.accent, fontWeight: 700, padding: 0 }}>
-            View All Categories <ArrowRightOutlined />
+      {/* 2. Connected Multi-Store Concept Showcase (Full Screen 4-Card Layout) */}
+      <div style={{ width: '100%', marginBottom: 40 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: publicTheme.primary, textTransform: 'uppercase', marginBottom: 4 }}>
+              Multi-Concept Brands
+            </div>
+            <Title level={2} style={{ margin: 0, fontWeight: 800, color: publicTheme.text }}>
+              Explore Our Shops & E-Menus
+            </Title>
+          </div>
+          <Button
+            type="link"
+            onClick={() => navigate('/shops')}
+            style={{ fontWeight: 700, color: publicTheme.primary, padding: 0 }}
+          >
+            All Locations <ArrowRightOutlined />
           </Button>
-        </Flex>
-      </Space>
-      <Row gutter={[14, 14]} style={{ marginBottom: 28 }}>
-        {categoryTiles.map((category) => {
-          const sampleProduct = products.find((product) => product.category === category.id) || products[0];
-          return (
-            <Col xs={12} sm={8} md={4} key={category.id}>
-              <div
-                onClick={() => navigate('/shop')}
-                style={{ cursor: 'pointer', textAlign: 'center' }}
-              >
-                <div style={{ borderRadius: 20, overflow: 'hidden', aspectRatio: '1 / 1', background: nova.soft, marginBottom: 8 }}>
-                  <img
-                    src={sampleProduct.image}
-                    alt={category.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                </div>
-                <Text strong style={{ color: nova.ink, fontSize: 13 }}>{category.name.split(' ')[0]}</Text>
-              </div>
-            </Col>
-          );
-        })}
-      </Row>
+        </div>
 
-      {/* New arrivals */}
-      <Space direction="vertical" size={4} style={{ width: '100%', marginBottom: 14 }}>
-        <Flex justify="space-between" align="center">
-          <Title level={3} style={{ margin: 0, color: nova.ink }}>New Arrivals</Title>
-          <Button type="link" onClick={() => navigate('/products')} style={{ color: nova.accent, fontWeight: 700, padding: 0 }}>
-            View All New Arrivals <ArrowRightOutlined />
-          </Button>
-        </Flex>
-      </Space>
-      <Row gutter={[16, 16]} style={{ marginBottom: 28 }}>
-        {newArrivals.map((product, index) => (
-          <Col xs={12} sm={8} lg={4} key={product.id}>
-            <ProductCard product={product} badge={index < 2 ? 'New' : undefined} />
-          </Col>
-        ))}
-      </Row>
-
-      {/* Best sellers */}
-      <Space direction="vertical" size={4} style={{ width: '100%', marginBottom: 14 }}>
-        <Flex justify="space-between" align="center">
-          <Title level={3} style={{ margin: 0, color: nova.ink }}>Best Sellers</Title>
-          <Button type="link" onClick={() => navigate('/products')} style={{ color: nova.accent, fontWeight: 700, padding: 0 }}>
-            View All Best Sellers <ArrowRightOutlined />
-          </Button>
-        </Flex>
-      </Space>
-      <Row gutter={[18, 18]} style={{ marginBottom: 28 }}>
-        {bestSellers.map((product) => (
-          <Col xs={24} sm={12} md={8} key={product.id}>
-            <Badge.Ribbon text="Bestseller" color={nova.accent}>
+        <Row gutter={[20, 20]} style={{ width: '100%', margin: 0 }}>
+          {stores.map((store) => (
+            <Col xs={24} sm={12} lg={6} key={store.id} style={{ padding: '0 10px' }}>
               <Card
                 hoverable
-                onClick={() => navigate('/products')}
-                style={{ borderRadius: 22, border: `1px solid ${nova.border}`, overflow: 'hidden' }}
-                styles={{ body: { padding: 18 } }}
+                onClick={() => navigate(`/shop/${store.slug}`)}
+                style={{
+                  borderRadius: 22,
+                  border: `1px solid ${publicTheme.border}`,
+                  overflow: 'hidden',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: '#ffffff',
+                  boxShadow: publicTheme.lightShadow,
+                }}
+                styles={{
+                  body: {
+                    padding: 16,
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  },
+                }}
                 cover={
-                  <div style={{ aspectRatio: '4 / 3', background: nova.soft }}>
-                    <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ position: 'relative', height: 140, overflow: 'hidden' }}>
+                    <img
+                      src={store.banner}
+                      alt={store.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(to top, rgba(28, 35, 51, 0.75) 0%, transparent 60%)',
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: 10,
+                        left: 12,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <Avatar
+                        src={store.logo}
+                        size={38}
+                        style={{ border: '2px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
+                      />
+                      <span style={{ color: 'white', fontWeight: 700, fontSize: 13, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                        {store.name}
+                      </span>
+                    </div>
                   </div>
                 }
               >
-                <Text strong style={{ display: 'block', color: nova.ink, fontSize: 16, marginBottom: 4 }}>{product.name}</Text>
-                <Text style={{ color: nova.sub, fontSize: 13, display: 'block', marginBottom: 10 }}>
-                  {product.description}
-                </Text>
-                <Flex justify="space-between" align="center">
-                  <Text strong style={{ color: nova.ink, fontSize: 18 }}>{formatCurrency(product.price)}</Text>
-                  <Button
-                    icon={<ShoppingCartOutlined />}
-                    onClick={(event) => event.stopPropagation()}
-                    style={{ borderRadius: 999, background: nova.accent, color: 'white', border: 'none', fontWeight: 700 }}
-                  >
-                    Quick Add
-                  </Button>
-                </Flex>
-              </Card>
-            </Badge.Ribbon>
-          </Col>
-        ))}
-      </Row>
+                <div>
+                  <p style={{ fontSize: 12, color: publicTheme.subtext, margin: '0 0 10px', lineHeight: 1.45, minHeight: 36 }}>
+                    {store.tagline}
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: publicTheme.subtext, marginBottom: 6 }}>
+                    <span style={{ color: publicTheme.accent, fontWeight: 'bold' }}>★ {store.rating || '4.9'}</span>
+                    <span>·</span>
+                    <span>{store.hours}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: publicTheme.primary, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <SendOutlined style={{ fontSize: 10 }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      Group: {store.telegram_group_name?.split(' ')[1] || 'Staff Group'}
+                    </span>
+                  </div>
+                </div>
 
-      {/* Flash sale + collection */}
-      <Row gutter={[18, 18]} style={{ marginBottom: 28 }}>
-        <Col xs={24} md={14}>
-          <Card
-            style={{ borderRadius: 26, border: 'none', height: '100%', background: 'linear-gradient(120deg, #ff5f2e 0%, #ff8a3d 100%)' }}
-            styles={{ body: { padding: screens.xs ? 22 : 30 } }}
-          >
-            <Flex vertical={!screens.sm} justify="space-between" align={screens.sm ? 'center' : 'flex-start'} gap={20}>
-              <Space direction="vertical" size={10}>
-                <Tag style={{ width: 'fit-content', margin: 0, borderRadius: 999, border: 'none', background: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 700 }}>
-                  <ThunderboltOutlined /> Limited Time
-                </Tag>
-                <Title level={2} style={{ margin: 0, color: 'white' }}>Flash Sale</Title>
-                <Text style={{ color: 'rgba(255,255,255,0.86)' }}>Up To 70% Off</Text>
                 <Button
-                  onClick={() => navigate('/products')}
-                  style={{ marginTop: 6, height: 44, borderRadius: 999, background: 'white', color: '#ff5f2e', border: 'none', fontWeight: 800 }}
+                  block
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/shop/${store.slug}`);
+                  }}
+                  style={{
+                    marginTop: 14,
+                    height: 38,
+                    borderRadius: 12,
+                    background: 'rgba(240, 244, 255, 0.7)',
+                    borderColor: publicTheme.border,
+                    color: publicTheme.primary,
+                    fontWeight: 700,
+                    fontSize: 12,
+                  }}
                 >
-                  Shop Sale Now
+                  Open E-Menu →
                 </Button>
-              </Space>
-              <Space size={8}>
-                <CountdownBox value={countdown.days} label="Days" />
-                <CountdownBox value={countdown.hours} label="Hours" />
-                <CountdownBox value={countdown.minutes} label="Min" />
-                <CountdownBox value={countdown.seconds} label="Sec" />
-              </Space>
-            </Flex>
-          </Card>
-        </Col>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </div>
 
-        <Col xs={24} md={10}>
-          <Card
-            style={{ borderRadius: 26, border: 'none', height: '100%', background: nova.ink }}
-            styles={{ body: { padding: screens.xs ? 22 : 30 } }}
-          >
-            <Space direction="vertical" size={10}>
-              <Text style={{ color: 'rgba(255,255,255,0.72)' }}>New Collection</Text>
-              <Title level={3} style={{ margin: 0, color: 'white' }}>Summer 2025</Title>
-              <Paragraph style={{ margin: 0, color: 'rgba(255,255,255,0.78)' }}>
-                Discover the latest trends and fresh styles.
-              </Paragraph>
-              <Button
-                onClick={() => navigate('/shop')}
-                style={{ marginTop: 4, height: 44, borderRadius: 999, background: 'white', color: nova.ink, border: 'none', fontWeight: 800 }}
+      {/* 3. Telegram Mini App Ordering Flow (Full Screen 3-Card Row) */}
+      <div
+        style={{
+          width: '100%',
+          borderRadius: 26,
+          background: 'rgba(255, 255, 255, 0.85)',
+          border: `1px solid ${publicTheme.border}`,
+          padding: screens.xs ? '24px 18px' : '36px 36px',
+          marginBottom: 40,
+          boxShadow: publicTheme.lightShadow,
+        }}
+      >
+        <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto 30px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: publicTheme.primary, textTransform: 'uppercase', marginBottom: 4 }}>
+            Contactless Ordering
+          </div>
+          <Title level={3} style={{ margin: 0, fontWeight: 800, color: publicTheme.text }}>
+            How Telegram Mini App Ordering Works
+          </Title>
+          <Paragraph style={{ color: publicTheme.subtext, fontSize: 14, marginTop: 6 }}>
+            No app store download or manual signup. Guests scan table QR or open via Telegram directly.
+          </Paragraph>
+        </div>
+
+        <Row gutter={[24, 24]}>
+          <Col xs={24} md={8}>
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: 20,
+                padding: 24,
+                border: `1px solid ${publicTheme.softBorder}`,
+                height: '100%',
+                boxShadow: '0 4px 12px rgba(47, 111, 237, 0.05)',
+              }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 14,
+                  background: 'rgba(47, 111, 237, 0.1)',
+                  color: publicTheme.primary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  marginBottom: 16,
+                }}
               >
-                Shop Collection
-              </Button>
-            </Space>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Trust row */}
-      <Row gutter={[16, 16]}>
-        {trustRow.map((item) => (
-          <Col xs={12} sm={12} md={6} key={item.title}>
-            <Flex align="center" gap={12} style={{ padding: '14px 4px' }}>
-              <div style={{ fontSize: 20, color: nova.accent }}>{item.icon}</div>
-              <div>
-                <Text strong style={{ display: 'block', color: nova.ink, fontSize: 13 }}>{item.title}</Text>
-                <Text style={{ color: nova.sub, fontSize: 12 }}>{item.text}</Text>
+                1
               </div>
-            </Flex>
+              <div style={{ fontSize: 15, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
+                Open Mini App
+              </div>
+              <p style={{ fontSize: 13, color: publicTheme.subtext, margin: 0, lineHeight: 1.55 }}>
+                Tap the bot or scan the table QR code. The Telegram WebApp launches immediately with full catalog and pricing.
+              </p>
+            </div>
+          </Col>
+
+          <Col xs={24} md={8}>
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: 20,
+                padding: 24,
+                border: `1px solid ${publicTheme.softBorder}`,
+                height: '100%',
+                boxShadow: '0 4px 12px rgba(47, 111, 237, 0.05)',
+              }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 14,
+                  background: 'rgba(255, 122, 61, 0.1)',
+                  color: publicTheme.accent,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  marginBottom: 16,
+                }}
+              >
+                2
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
+                Select & Customize
+              </div>
+              <p style={{ fontSize: 13, color: publicTheme.subtext, margin: 0, lineHeight: 1.55 }}>
+                Pick drinks, fresh bakery, or healthy bowls. Add your table number, dietary notes, and customer phone.
+              </p>
+            </div>
+          </Col>
+
+          <Col xs={24} md={8}>
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: 20,
+                padding: 24,
+                border: `1px solid ${publicTheme.softBorder}`,
+                height: '100%',
+                boxShadow: '0 4px 12px rgba(47, 111, 237, 0.05)',
+              }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 14,
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  color: publicTheme.success,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  marginBottom: 16,
+                }}
+              >
+                3
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
+                Shop Group Dispatch
+              </div>
+              <p style={{ fontSize: 13, color: publicTheme.subtext, margin: 0, lineHeight: 1.55 }}>
+                Orders transmit directly to the shop’s Telegram kitchen group with formatted itemized tickets for immediate prep.
+              </p>
+            </div>
+          </Col>
+        </Row>
+      </div>
+
+      {/* 4. Full-Screen Products Showcase with Category Filters */}
+      <div style={{ width: '100%', marginBottom: 40 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 18 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: publicTheme.primary, textTransform: 'uppercase', marginBottom: 4 }}>
+              Fresh Selections
+            </div>
+            <Title level={2} style={{ margin: 0, fontWeight: 800, color: publicTheme.text }}>
+              Featured Products & Items
+            </Title>
+          </div>
+          <Button
+            type="link"
+            onClick={() => navigate('/products')}
+            style={{ fontWeight: 700, color: publicTheme.primary, padding: 0 }}
+          >
+            View Full Menu <ArrowRightOutlined />
+          </Button>
+        </div>
+
+        {/* Category Tabs */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            overflowX: 'auto',
+            paddingBottom: 12,
+            marginBottom: 20,
+          }}
+        >
+          <Button
+            onClick={() => setActiveCategory('all')}
+            style={{
+              borderRadius: 20,
+              fontWeight: 700,
+              fontSize: 12,
+              background: activeCategory === 'all' ? publicTheme.primary : '#ffffff',
+              color: activeCategory === 'all' ? '#ffffff' : publicTheme.text,
+              borderColor: activeCategory === 'all' ? publicTheme.primary : publicTheme.border,
+            }}
+          >
+            All Products ({products.length})
+          </Button>
+          {categories.map((cat) => (
+            <Button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              style={{
+                borderRadius: 20,
+                fontWeight: 700,
+                fontSize: 12,
+                background: activeCategory === cat.id ? publicTheme.primary : '#ffffff',
+                color: activeCategory === cat.id ? '#ffffff' : publicTheme.text,
+                borderColor: activeCategory === cat.id ? publicTheme.primary : publicTheme.border,
+              }}
+            >
+              {cat.icon ? `${cat.icon} ` : ''}{cat.name}
+            </Button>
+          ))}
+        </div>
+
+        {/* Full-Width Products Grid */}
+        <Row gutter={[18, 18]} style={{ width: '100%', margin: 0 }}>
+          {filteredProducts.map((product) => (
+            <Col xs={12} sm={8} md={6} lg={4} key={product.id} style={{ padding: '0 9px' }}>
+              <Card
+                hoverable
+                style={{
+                  borderRadius: 20,
+                  border: `1px solid ${publicTheme.border}`,
+                  overflow: 'hidden',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: '#ffffff',
+                  boxShadow: publicTheme.lightShadow,
+                }}
+                styles={{
+                  body: {
+                    padding: 14,
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  },
+                }}
+                cover={
+                  <div style={{ position: 'relative', aspectRatio: '1 / 1', overflow: 'hidden', background: '#f8fafc' }}>
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    {product.badge && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          top: 8,
+                          left: 8,
+                          background: 'rgba(28, 35, 51, 0.82)',
+                          backdropFilter: 'blur(4px)',
+                          color: '#ffffff',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                        }}
+                      >
+                        {product.badge}
+                      </span>
+                    )}
+                  </div>
+                }
+              >
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: publicTheme.text, marginBottom: 4, lineHeight: 1.3 }}>
+                    {product.name}
+                  </div>
+                  <p
+                    style={{
+                      fontSize: 11,
+                      color: publicTheme.subtext,
+                      lineHeight: 1.4,
+                      margin: '0 0 10px',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {product.details || 'Fresh artisan preparation.'}
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6 }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: publicTheme.text }}>
+                    ${Number(product.price).toFixed(2)}
+                  </div>
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={(e) => handleAddToCart(product, e)}
+                    style={{
+                      borderRadius: 10,
+                      background: publicTheme.primary,
+                      borderColor: publicTheme.primary,
+                      fontWeight: 700,
+                      fontSize: 11,
+                      height: 30,
+                    }}
+                  >
+                    + Add
+                  </Button>
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </div>
+
+      {/* 5. Limited Flash Deal in Default Sunset Coral Gradient */}
+      <div
+        style={{
+          width: '100%',
+          borderRadius: 26,
+          background: publicTheme.sunset,
+          color: '#ffffff',
+          padding: screens.xs ? '24px 20px' : '36px 40px',
+          marginBottom: 36,
+          boxShadow: '0 16px 36px rgba(255, 122, 61, 0.28)',
+        }}
+      >
+        <Row gutter={[24, 24]} align="middle" justify="space-between">
+          <Col xs={24} md={14}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <FireOutlined style={{ fontSize: 16 }} />
+              <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Daily Special Offers
+              </span>
+            </div>
+            <Title level={2} style={{ color: '#ffffff', margin: '0 0 8px', fontWeight: 800 }}>
+              Enjoy 20% Off Your First Telegram Order
+            </Title>
+            <Paragraph style={{ color: 'rgba(255, 255, 255, 0.92)', fontSize: 14, margin: 0, maxWidth: 520 }}>
+              Use coupon code <b>AURATG</b> on checkout or mention it in your order notes.
+            </Paragraph>
+          </Col>
+          <Col xs={24} md={10} style={{ textAlign: screens.xs ? 'left' : 'right' }}>
+            <div style={{ display: 'inline-flex', gap: 10, marginBottom: 14 }}>
+              <div style={{ background: 'rgba(255,255,255,0.22)', padding: '8px 14px', borderRadius: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>{String(countdown.hours).padStart(2, '0')}</div>
+                <div style={{ fontSize: 9, textTransform: 'uppercase', opacity: 0.85 }}>Hours</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.22)', padding: '8px 14px', borderRadius: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>{String(countdown.minutes).padStart(2, '0')}</div>
+                <div style={{ fontSize: 9, textTransform: 'uppercase', opacity: 0.85 }}>Mins</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.22)', padding: '8px 14px', borderRadius: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>{String(countdown.seconds).padStart(2, '0')}</div>
+                <div style={{ fontSize: 9, textTransform: 'uppercase', opacity: 0.85 }}>Secs</div>
+              </div>
+            </div>
+            <div>
+              <Button
+                size="large"
+                onClick={() => navigate('/shop/sbc-store')}
+                style={{
+                  height: 44,
+                  borderRadius: 14,
+                  background: '#ffffff',
+                  color: publicTheme.accent,
+                  border: 'none',
+                  fontWeight: 800,
+                  fontSize: 13,
+                  boxShadow: '0 8px 20px rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                Claim Deal in Mini App
+              </Button>
+            </div>
+          </Col>
+        </Row>
+      </div>
+
+      {/* 6. Full-Width Trust & Quality Pillars */}
+      <Row gutter={[16, 16]} style={{ width: '100%', margin: 0 }}>
+        {[
+          { icon: <SendOutlined />, title: 'Real-Time Telegram Dispatch', text: 'Kitchen tickets sent instantly to shop groups' },
+          { icon: <SafetyCertificateOutlined />, title: 'Artisan Quality', text: 'Farm-to-cup beans & European sourdough' },
+          { icon: <RocketOutlined />, title: 'Fast Contactless Service', text: 'Dine-in at your table or quick store pickup' },
+          { icon: <CustomerServiceOutlined />, title: 'Direct Customer Support', text: 'Dedicated assistance anytime via Telegram' },
+        ].map((item, idx) => (
+          <Col xs={12} sm={12} md={6} key={idx} style={{ padding: '0 8px' }}>
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: 18,
+                padding: 18,
+                border: `1px solid ${publicTheme.softBorder}`,
+                boxShadow: publicTheme.lightShadow,
+                height: '100%',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 12,
+              }}
+            >
+              <div style={{ fontSize: 22, color: publicTheme.primary, marginTop: 2 }}>{item.icon}</div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: publicTheme.text, marginBottom: 2 }}>
+                  {item.title}
+                </div>
+                <div style={{ fontSize: 11, color: publicTheme.subtext, lineHeight: 1.45 }}>
+                  {item.text}
+                </div>
+              </div>
+            </div>
           </Col>
         ))}
       </Row>
     </div>
   );
-};
-
-export default Home;
+}

@@ -1,4 +1,15 @@
 const EMenuModel = require('../models/emenu.model');
+const { sendOrderToShopGroup, getRecentDispatches } = require('../services/telegramNotification.service');
+const rawSimpleData = require('../../../data/simpleData');
+const simpleData = rawSimpleData.default || rawSimpleData;
+
+exports.getStoreList = async (req, res) => {
+  try {
+    return res.status(200).json({ status: true, data: simpleData.stores });
+  } catch (err) {
+    return res.status(500).json({ status: false, message: err.message });
+  }
+};
 
 exports.resolveStore = async (req, res) => {
   try {
@@ -30,7 +41,7 @@ exports.getStoreMenu = async (req, res) => {
 exports.submitOrder = async (req, res) => {
   try {
     const { identifier } = req.params;
-    const { cartItems, customerData } = req.body;
+    const { cartItems, customerData = {} } = req.body;
 
     if (!cartItems || !cartItems.length) {
       return res.status(400).json({ status: false, message: 'Cart cannot be empty' });
@@ -49,7 +60,32 @@ exports.submitOrder = async (req, res) => {
     };
 
     const orderResult = await EMenuModel.createOrder(store.biller_id, customerPayload, cartItems);
-    return res.status(201).json({ status: true, message: 'Order created', data: orderResult });
+
+    // Send formatted order notification to the shop's Telegram group!
+    const dispatchInfo = await sendOrderToShopGroup({
+      store,
+      order: orderResult,
+      customer: customerPayload,
+      items: cartItems
+    });
+
+    return res.status(201).json({
+      status: true,
+      message: 'Order created and dispatched to shop group',
+      data: {
+        ...orderResult,
+        dispatchInfo
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ status: false, message: err.message });
+  }
+};
+
+exports.getDispatches = async (req, res) => {
+  try {
+    const dispatches = getRecentDispatches();
+    return res.json({ status: true, data: dispatches });
   } catch (err) {
     return res.status(500).json({ status: false, message: err.message });
   }

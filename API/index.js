@@ -71,16 +71,20 @@ app.get("/api/home", (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+module.exports = app;
 
-    // Start Telegram Bot Long-Polling in the background (handled seamlessly inside telegramBot.service.js if exported or checked)
-    if (process.env.TELEGRAM_BOT_TOKEN && bot && typeof bot.start === 'function') {
-        bot.start({
-            onStart: (botInfo) => console.log(`Telegram Bot @${botInfo.username} running...`),
-        }).catch((err) => console.error("Telegram bot error:", err.message));
-    } else {
-        console.warn("TELEGRAM_BOT_TOKEN is missing or bot instance is uninitialized. Bot polling skipped.");
-    }
-});
+if (require.main === module) {
+    const PORT = process.env.PORT || 8080;
+    app.listen(PORT, () => {
+        console.log(`Server running at http://localhost:${PORT}`);
+
+        // Start Telegram Bot Long-Polling in the background (handled seamlessly inside telegramBot.service.js if exported or checked)
+        if (process.env.TELEGRAM_BOT_TOKEN && bot && typeof bot.start === 'function') {
+            bot.start({
+                onStart: (botInfo) => console.log(`Telegram Bot @${botInfo.username} running...`),
+            }).catch((err) => console.error("Telegram bot error:", err.message));
+        } else {
+            console.warn("TELEGRAM_BOT_TOKEN is missing or bot instance is uninitialized. Bot polling skipped.");
+        }
+    });
+}

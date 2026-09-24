@@ -1,0 +1,9 @@
+{
+  "name": "Aura Global E-Menu & Management System",
+  "description": "Multi-store E-Menu, Telegram Mini App ordering system, and ERP admin management platform.",
+  "prompt": "Aura Global E-Menu, Telegram Mini App, and ERP admin management platform.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

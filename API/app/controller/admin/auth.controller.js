@@ -2,7 +2,7 @@
 
 const { db, access_token_key } = require("../../config/utill/helper");
 const { logError } = require("../../config/utill/logErr");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const jwt = require('jsonwebtoken');
 // const Auth_Model = require("../../models/admins/auth.model");
 

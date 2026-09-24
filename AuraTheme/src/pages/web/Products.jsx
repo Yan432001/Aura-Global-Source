@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Col, Drawer, Input, Row, Select, Slider, Space, Switch, Tag, Typography, message } from 'antd';
 import {
   AppstoreOutlined,
@@ -8,8 +8,10 @@ import {
   MenuUnfoldOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
+import { useSearchParams } from 'react-router-dom';
 import ProductQuickViewModal from '../../components/web/shared/ProductQuickViewModal';
 import RetailProductCard from '../../components/web/shared/RetailProductCard';
+import TelegramMiniAppModal from '../../components/web/shared/TelegramMiniAppModal';
 import { brands, products, shopCategories, shops } from '../../data/shopData';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
@@ -22,7 +24,17 @@ const Products = () => {
   const { addToCart } = useCart();
   const { wishlist, toggleWishlist } = useWishlist();
   const [messageApi, contextHolder] = message.useMessage();
-  const [search, setSearch] = useState('');
+  const [searchParams] = useSearchParams();
+  const urlQuery = searchParams.get('q') || '';
+  const [search, setSearch] = useState(urlQuery);
+  const [telegramProduct, setTelegramProduct] = useState(null);
+
+  useEffect(() => {
+    if (urlQuery !== undefined) {
+      setSearch(urlQuery);
+    }
+  }, [urlQuery]);
+
   const [category, setCategory] = useState('all');
   const [brand, setBrand] = useState('all');
   const [shopId, setShopId] = useState('all');
@@ -290,6 +302,7 @@ const Products = () => {
                   isWishlisted={wishlist.some((item) => item.id === product.id)}
                   onLike={() => messageApi.success(`You liked ${product.name}`)}
                   onShare={handleShare}
+                  onOpenTelegram={(item) => setTelegramProduct(item)}
                 />
               </Col>
             ))}
@@ -313,6 +326,13 @@ const Products = () => {
         open={Boolean(previewProduct)}
         onClose={() => setPreviewProduct(null)}
         onOrder={handleOrder}
+      />
+
+      <TelegramMiniAppModal
+        open={Boolean(telegramProduct)}
+        onClose={() => setTelegramProduct(null)}
+        product={telegramProduct}
+        allProducts={products}
       />
     </div>
   );

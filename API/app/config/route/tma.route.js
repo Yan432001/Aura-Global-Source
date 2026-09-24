@@ -10,6 +10,16 @@ router.get('/shop/:slug/categories', StoreController.getCategories);
 router.get('/shop/:slug/products', StoreController.getProducts);
 router.get('/biller/:id/store', StoreController.resolveBiller);
 
+router.get('/store/:slug', StoreController.getStore);
+router.get('/store/:slug/categories', StoreController.getCategories);
+router.get('/store/:slug/products', StoreController.getProducts);
+router.get('/store/:slug/catalog', StoreController.getProducts);
+
+// Orders query endpoint
+router.get('/orders', OrderController.getOrders);
+router.get('/shop/:slug/orders', OrderController.getOrders);
+router.get('/store/:slug/orders', OrderController.getOrders);
+
 // Secure checkout (Permits conditional local testing or strict initData enforcement)
 const authMiddleware = process.env.NODE_ENV === 'development'
   ? (req, res, next) => {
@@ -20,5 +30,7 @@ const authMiddleware = process.env.NODE_ENV === 'development'
   : verifyTelegramWebAppData;
 
 router.post('/shop/:slug/orders', authMiddleware, OrderController.createOrder);
+router.post('/store/:slug/order', authMiddleware, OrderController.createOrder);
+router.post('/checkout', authMiddleware, OrderController.createOrder);
 
 module.exports = router;

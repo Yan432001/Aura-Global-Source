@@ -5,6 +5,7 @@ import {
   HeartFilled,
   HeartOutlined,
   LikeOutlined,
+  SendOutlined,
   ShareAltOutlined,
   ShoppingCartOutlined,
 } from '@ant-design/icons';
@@ -20,6 +21,7 @@ const RetailProductCard = ({
   isWishlisted = false,
   onLike,
   onShare,
+  onOpenTelegram,
 }) => (
   <Card
     hoverable
@@ -137,6 +139,22 @@ const RetailProductCard = ({
           style={{ borderRadius: 14, background: publicTheme.ribbon, border: 'none', fontWeight: 700 }}
         >
           Order product
+        </Button>
+        <Button
+          icon={<SendOutlined style={{ color: '#2481cc' }} />}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenTelegram?.(product);
+          }}
+          style={{
+            borderRadius: 14,
+            border: '1px solid rgba(36, 129, 204, 0.3)',
+            background: 'rgba(36, 129, 204, 0.08)',
+            color: '#2481cc',
+            fontWeight: 700,
+          }}
+        >
+          Telegram E-Menu
         </Button>
         <Button
           icon={isWishlisted ? <HeartFilled /> : <HeartOutlined />}

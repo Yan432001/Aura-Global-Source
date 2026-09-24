@@ -9,7 +9,7 @@ const footerColumns = [
   {
     title: 'Solutions',
     links: [
-      { label: 'Shop directory', to: '/shop' },
+      { label: 'Shop directory', to: '/shops' },
       { label: 'Retail products', to: '/products' },
       { label: 'Service support', to: '/service' },
       { label: 'Learning academy', to: '/learn' },

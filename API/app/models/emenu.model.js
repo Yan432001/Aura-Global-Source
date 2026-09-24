@@ -23,6 +23,28 @@ const EMenuModel = {
     return rows[0] || null;
   },
 
+  async getStoreByIdentifier(identifier) {
+    if (!identifier) return null;
+    if (/^\d+$/.test(String(identifier))) {
+      const byId = await this.getStoreByBillerId(identifier);
+      if (byId) return { ...byId, biller_id: byId.id };
+    }
+    const bySlug = await this.getStoreBySlug(identifier);
+    if (bySlug) return { ...bySlug, biller_id: bySlug.id };
+    return null;
+  },
+
+  async getStoreMenu(billerId) {
+    const categories = await this.getCategoriesByStore(billerId);
+    const { rows: products } = await this.getProductsByStore(billerId, { limit: 100, offset: 0 });
+    return { categories, products };
+  },
+
+  async createOrder(billerId, customerData, items) {
+    const store = (await this.getStoreByBillerId(billerId)) || { id: billerId, name: 'Store' };
+    return this.createStoreOrder(store, customerData.customerId || 1, items, customerData.note || '');
+  },
+
   async getCategoriesByStore(billerId) {
     const sql = `
       SELECT DISTINCT c.id, c.code, c.name, c.image

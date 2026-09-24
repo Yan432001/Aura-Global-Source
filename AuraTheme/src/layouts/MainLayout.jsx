@@ -1,9 +1,8 @@
 import React from 'react';
-import { Layout, Row, Col, Grid } from 'antd';
+import { Layout, Grid } from 'antd';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from '../components/web/common/Header';
 import Footer from '../components/web/common/Footer';
-import Sidebar from '../components/web/common/Sidebar';
 import { publicTheme } from '../utils/webTheme';
 
 const { Content } = Layout;
@@ -13,9 +12,6 @@ const MainLayout = () => {
   const location = useLocation();
   const screens = useBreakpoint();
   const currentPage = location.pathname;
-  const fullWidthRoutes = ['/shop', '/products', '/service'];
-
-  const isFullWidthPage = fullWidthRoutes.some((route) => currentPage.startsWith(route));
 
   return (
     <Layout
@@ -50,25 +46,17 @@ const MainLayout = () => {
         <Header currentPage={currentPage} />
       </Layout.Header>
 
-      <Content style={{ flex: 1, position: 'relative', zIndex: 1 }}>
-        <Row
-          gutter={[20, 20]}
+      <Content style={{ flex: 1, position: 'relative', zIndex: 1, width: '100%' }}>
+        <div
           style={{
-            minHeight: 'calc(100vh - 84px - 180px)',
-            padding: screens.xs ? '20px 12px 44px' : '24px 24px 56px',
             width: '100%',
+            minHeight: 'calc(100vh - 84px - 180px)',
+            padding: screens.xs ? '16px 12px 40px' : '20px 28px 56px',
+            boxSizing: 'border-box',
           }}
         >
-          <Col xs={24} lg={isFullWidthPage ? 24 : 17}>
-            <Outlet />
-          </Col>
-
-          {!isFullWidthPage && (
-            <Col xs={24} lg={7}>
-              <Sidebar />
-            </Col>
-          )}
-        </Row>
+          <Outlet />
+        </div>
       </Content>
 
       <Footer />
