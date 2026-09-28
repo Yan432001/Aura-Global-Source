@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTelegram } from '../hooks/useTelegram';
 import { products } from '../data/shopData';
 import simpleData from '../../../data/simpleData';
@@ -7,28 +7,29 @@ import simpleData from '../../../data/simpleData';
 export default function TelegramEntry() {
   const { startParam } = useTelegram();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!startParam) {
-      navigate('/shop/seller-1', { replace: true });
+      if (location.pathname === '/menu') {
+        navigate('/shop/aura-bakery', { replace: true });
+        return;
+      }
+      navigate('/shop/sbc-store', { replace: true });
       return;
     }
 
     // 1. Deep link format: item_<id>
     if (startParam.startsWith('item_')) {
       const productId = startParam.replace('item_', '');
-      // Find shop from shopData or simpleData
-      const foundProduct = (products || []).find((p) => String(p.id) === String(productId));
-      if (foundProduct && foundProduct.shopId) {
-        navigate(`/shop/${foundProduct.shopId}?item=${productId}`, { replace: true });
-        return;
-      }
       const simpleProd = (simpleData.products || []).find((p) => String(p.id) === String(productId));
-      if (simpleProd && simpleProd.biller_id) {
-        navigate(`/shop/by-biller/${simpleProd.biller_id}?item=${productId}`, { replace: true });
+      if (simpleProd) {
+        const store = (simpleData.stores || []).find((s) => s.id === simpleProd.biller_id);
+        const slug = store ? store.slug : 'sbc-store';
+        navigate(`/shop/${slug}?item=${productId}`, { replace: true });
         return;
       }
-      navigate(`/shop/seller-1?item=${productId}`, { replace: true });
+      navigate(`/shop/sbc-store?item=${productId}`, { replace: true });
       return;
     }
 
@@ -50,7 +51,8 @@ export default function TelegramEntry() {
     // 4. Biller & Store legacy deep links
     if (startParam.startsWith('biller_')) {
       const billerId = startParam.replace('biller_', '');
-      navigate(`/shop/by-biller/${billerId}`, { replace: true });
+      const store = (simpleData.stores || []).find((s) => String(s.id) === String(billerId));
+      navigate(`/shop/${store?.slug || 'sbc-store'}`, { replace: true });
       return;
     }
 
@@ -62,7 +64,7 @@ export default function TelegramEntry() {
 
     // 5. Direct raw param fallback
     navigate(`/shop/${startParam}`, { replace: true });
-  }, [startParam, navigate]);
+  }, [startParam, navigate, location.pathname, location.search]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] flex-1">
@@ -71,7 +73,7 @@ export default function TelegramEntry() {
       </div>
       <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-500 mb-3" />
       <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-        Connecting to Telegram Mini App via @BotFather...
+        Connecting to Telegram Mini App (@aura_emenu_order_bot)...
       </p>
       <p className="text-xs text-slate-400 mt-1">Routing to shop &amp; item catalog</p>
     </div>

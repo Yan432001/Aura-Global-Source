@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Col, Drawer, Input, Row, Select, Slider, Space, Switch, Tag, Typography, message } from 'antd';
+import { Badge, Button, Card, Col, Drawer, Grid, Input, Row, Select, Slider, Space, Switch, Tag, Typography, message, notification } from 'antd';
 import {
   AppstoreOutlined,
   CloseOutlined,
@@ -8,7 +8,7 @@ import {
   MenuUnfoldOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import ProductQuickViewModal from '../../components/web/shared/ProductQuickViewModal';
 import RetailProductCard from '../../components/web/shared/RetailProductCard';
 import TelegramMiniAppModal from '../../components/web/shared/TelegramMiniAppModal';
@@ -18,12 +18,16 @@ import { useWishlist } from '../../contexts/WishlistContext';
 import { animateAddToCart } from '../../utils/helpers';
 import { formatCurrency, publicTheme } from '../../utils/webTheme';
 
+const { useBreakpoint } = Grid;
 const { Paragraph, Text, Title } = Typography;
 
 const Products = () => {
+  const screens = useBreakpoint();
+  const navigate = useNavigate();
   const { addToCart } = useCart();
   const { wishlist, toggleWishlist } = useWishlist();
   const [messageApi, contextHolder] = message.useMessage();
+  const [notificationApi, notificationContextHolder] = notification.useNotification();
   const [searchParams] = useSearchParams();
   const urlQuery = searchParams.get('q') || '';
   const [search, setSearch] = useState(urlQuery);
@@ -44,6 +48,17 @@ const Products = () => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [gridMode, setGridMode] = useState(4);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (category !== 'all') count++;
+    if (brand !== 'all') count++;
+    if (shopId !== 'all') count++;
+    if (stockOnly) count++;
+    if (priceRange[0] > 0 || priceRange[1] < 1600) count++;
+    if (search.trim()) count++;
+    return count;
+  }, [category, brand, shopId, stockOnly, priceRange, search]);
 
   const filteredProducts = useMemo(() => {
     const query = search.toLowerCase();
@@ -88,6 +103,55 @@ const Products = () => {
       productImage: product.image,
     });
     addToCart(product);
+
+    notificationApi.success({
+      message: (
+        <span style={{ fontWeight: 800, fontSize: 14 }}>
+          {product.name} Added to Cart!
+        </span>
+      ),
+      description: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, marginBottom: 8 }}>
+          <img
+            src={product.image}
+            alt=""
+            style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }}
+          />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: '#2563eb' }}>
+              ${Number(product.price).toFixed(2)}
+            </div>
+            <div style={{ fontSize: 11, color: '#64748b' }}>Item is saved in your cart</div>
+          </div>
+        </div>
+      ),
+      actions: (
+        <Space size={8}>
+          <Button size="small" onClick={() => notificationApi.destroy()} style={{ borderRadius: 8, fontSize: 12 }}>
+            Continue Shopping
+          </Button>
+          <Button
+            type="primary"
+            size="small"
+            onClick={() => {
+              notificationApi.destroy();
+              navigate('/cart');
+            }}
+            style={{
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 800,
+              background: '#2563eb',
+              borderColor: '#2563eb',
+            }}
+          >
+            View Cart &amp; Checkout →
+          </Button>
+        </Space>
+      ),
+      duration: 5,
+      placement: 'topRight',
+    });
   };
 
   const handleWishlist = (product) => {
@@ -99,8 +163,8 @@ const Products = () => {
 
   const productColumnProps =
     gridMode === 6
-      ? { xs: 24, sm: 12, md: 8, lg: 8, xl: 4, xxl: 4 }
-      : { xs: 24, sm: 12, md: 8, lg: 8, xl: 6, xxl: 6 };
+      ? { xs: 12, sm: 8, md: 6, lg: 6, xl: 4, xxl: 4 }
+      : { xs: 12, sm: 8, md: 8, lg: 6, xl: 6, xxl: 6 };
 
   const filterPanel = (
     <Card
@@ -206,92 +270,110 @@ const Products = () => {
   return (
     <div style={{ padding: 0 }}>
       {contextHolder}
+      {notificationContextHolder}
       <Card
         className="frosted-panel stagger-rise"
         style={{
-          borderRadius: 34,
+          borderRadius: screens.xs ? 22 : 34,
           border: `1px solid ${publicTheme.border}`,
           boxShadow: publicTheme.shadow,
           background: publicTheme.heroBackground,
-          marginBottom: 24,
+          marginBottom: screens.xs ? 16 : 24,
         }}
-        styles={{ body: { padding: 28 } }}
+        styles={{ body: { padding: screens.xs ? 18 : 28 } }}
       >
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          <Tag style={{ width: 'fit-content', borderRadius: 999, border: 'none', background: publicTheme.pill, color: publicTheme.primary, fontWeight: 700, padding: '8px 14px' }}>
+        <Space direction="vertical" size={screens.xs ? 10 : 16} style={{ width: '100%' }}>
+          <Tag style={{ width: 'fit-content', borderRadius: 999, border: 'none', background: publicTheme.pill, color: publicTheme.primary, fontWeight: 700, padding: screens.xs ? '4px 10px' : '8px 14px', fontSize: screens.xs ? 11 : 12 }}>
             Retail products
           </Tag>
-          <Title level={1} style={{ margin: 0, color: publicTheme.text, fontSize: 'clamp(30px, 4vw, 52px)', lineHeight: 1.05 }}>
+          <Title level={1} style={{ margin: 0, color: publicTheme.text, fontSize: 'clamp(24px, 4vw, 48px)', lineHeight: 1.1 }}>
             Full-width products with open and close filter sidebar.
           </Title>
-          <Paragraph style={{ margin: 0, color: publicTheme.subtext, fontSize: 16, maxWidth: 860 }}>
-            The product page now uses a left filter sidebar that can be opened and closed. Users can switch the product wall between 4 items per row or 6 items per row on wide screens.
+          <Paragraph style={{ margin: 0, color: publicTheme.subtext, fontSize: screens.xs ? 13 : 16, maxWidth: 860 }}>
+            Browse verified catalog lines. On mobile and tablet, products adapt to a compact, app-like 2-column view with quick order and Telegram E-Menu integration.
           </Paragraph>
         </Space>
       </Card>
 
       <div
         style={{
-          borderRadius: 24,
+          borderRadius: screens.xs ? 18 : 24,
           border: `1px solid ${publicTheme.border}`,
           background: publicTheme.cardBackground,
           boxShadow: publicTheme.lightShadow,
-          padding: 16,
-          marginBottom: 24,
+          padding: screens.xs ? 12 : 16,
+          marginBottom: screens.xs ? 16 : 24,
         }}
       >
-        <Row gutter={[12, 12]} align="middle">
-          <Col xs={24} lg={10}>
-            <Text style={{ color: publicTheme.subtext }}>
+        <Row gutter={[12, 12]} align="middle" justify="space-between">
+          <Col xs={12} sm={12} lg={10}>
+            <Text style={{ color: publicTheme.subtext, fontSize: screens.xs ? 12 : 14 }}>
               Showing <Text strong style={{ color: publicTheme.text }}>{filteredProducts.length}</Text> products
             </Text>
           </Col>
-          <Col xs={24} lg={14}>
-            <Space wrap style={{ width: '100%', justifyContent: 'flex-end' }}>
-              <Button
-                icon={filtersOpen ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
-                onClick={() => setFiltersOpen((current) => !current)}
-                style={{ borderRadius: 14, fontWeight: 700 }}
-              >
-                {filtersOpen ? 'Close filter bar' : 'Open filter bar'}
-              </Button>
-              <Button
-                icon={<FilterOutlined />}
-                onClick={() => setMobileFilterOpen(true)}
-                style={{ borderRadius: 14, fontWeight: 700 }}
-              >
-                Mobile filters
-              </Button>
-              <Space.Compact>
-                <Button
-                  type={gridMode === 4 ? 'primary' : 'default'}
-                  onClick={() => setGridMode(4)}
-                  style={{ fontWeight: 700 }}
-                >
-                  4 per row
-                </Button>
-                <Button
-                  type={gridMode === 6 ? 'primary' : 'default'}
-                  onClick={() => setGridMode(6)}
-                  style={{ fontWeight: 700 }}
-                >
-                  6 per row
-                </Button>
-              </Space.Compact>
-            </Space>
+          <Col xs={12} sm={12} lg={14}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {/* Mobile / Tablet Filter Button */}
+              {!screens.lg && (
+                <Badge count={activeFiltersCount} size="small">
+                  <Button
+                    type={activeFiltersCount > 0 ? 'primary' : 'default'}
+                    icon={<FilterOutlined />}
+                    onClick={() => setMobileFilterOpen(true)}
+                    style={{
+                      borderRadius: 12,
+                      fontWeight: 700,
+                      height: 36,
+                      fontSize: screens.xs ? 12 : 13,
+                    }}
+                  >
+                    Filters
+                  </Button>
+                </Badge>
+              )}
+
+              {/* Desktop Filters and Grid Buttons */}
+              {screens.lg && (
+                <>
+                  <Button
+                    icon={filtersOpen ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+                    onClick={() => setFiltersOpen((current) => !current)}
+                    style={{ borderRadius: 14, fontWeight: 700 }}
+                  >
+                    {filtersOpen ? 'Close filter bar' : 'Open filter bar'}
+                  </Button>
+                  <Space.Compact>
+                    <Button
+                      type={gridMode === 4 ? 'primary' : 'default'}
+                      onClick={() => setGridMode(4)}
+                      style={{ fontWeight: 700 }}
+                    >
+                      4 per row
+                    </Button>
+                    <Button
+                      type={gridMode === 6 ? 'primary' : 'default'}
+                      onClick={() => setGridMode(6)}
+                      style={{ fontWeight: 700 }}
+                    >
+                      6 per row
+                    </Button>
+                  </Space.Compact>
+                </>
+              )}
+            </div>
           </Col>
         </Row>
       </div>
 
-      <Row gutter={[20, 20]} align="top">
-        {filtersOpen && (
+      <Row gutter={screens.xs ? [12, 12] : [20, 20]} align="top">
+        {filtersOpen && screens.lg && (
           <Col xs={0} lg={6}>
             {filterPanel}
           </Col>
         )}
 
         <Col xs={24} lg={filtersOpen ? 18 : 24}>
-          <Row gutter={[18, 18]}>
+          <Row gutter={screens.xs ? [10, 10] : screens.sm ? [12, 12] : [16, 16]}>
             {filteredProducts.map((product) => (
               <Col {...productColumnProps} key={product.id}>
                 <RetailProductCard

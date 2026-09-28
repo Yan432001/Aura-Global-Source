@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Avatar, Button, Col, Input, Row, Space, Tag, Typography, message } from 'antd';
+import { Avatar, Button, Col, Grid, Input, Row, Space, Tag, Typography, message, notification } from 'antd';
 import { ArrowLeftOutlined, SearchOutlined, SendOutlined, StarFilled } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import ProductQuickViewModal from '../../components/web/shared/ProductQuickViewModal';
@@ -12,14 +12,17 @@ import { useWishlist } from '../../contexts/WishlistContext';
 import { animateAddToCart } from '../../utils/helpers';
 import { publicTheme } from '../../utils/webTheme';
 
+const { useBreakpoint } = Grid;
 const { Paragraph, Text, Title } = Typography;
 
 const ShopDetail = () => {
+  const screens = useBreakpoint();
   const navigate = useNavigate();
   const { shopId } = useParams();
   const { addToCart } = useCart();
   const { wishlist, toggleWishlist } = useWishlist();
   const [messageApi, contextHolder] = message.useMessage();
+  const [notificationApi, notificationContextHolder] = notification.useNotification();
   const [search, setSearch] = useState('');
   const [previewProduct, setPreviewProduct] = useState(null);
   const [telegramModal, setTelegramModal] = useState({ open: false, shop: null, product: null });
@@ -125,19 +128,68 @@ const ShopDetail = () => {
       animateAddToCart(imageElement);
     }
     addToCart(product);
-    messageApi.success(`Added ${product.name} to cart`);
+
+    notificationApi.success({
+      message: (
+        <span style={{ fontWeight: 800, fontSize: 14 }}>
+          {product.name} Added to Cart!
+        </span>
+      ),
+      description: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, marginBottom: 8 }}>
+          <img
+            src={product.image}
+            alt=""
+            style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }}
+          />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: '#2563eb' }}>
+              ${Number(product.price).toFixed(2)}
+            </div>
+            <div style={{ fontSize: 11, color: '#64748b' }}>Item is saved in your cart</div>
+          </div>
+        </div>
+      ),
+      actions: (
+        <Space size={8}>
+          <Button size="small" onClick={() => notificationApi.destroy()} style={{ borderRadius: 8, fontSize: 12 }}>
+            Continue
+          </Button>
+          <Button
+            type="primary"
+            size="small"
+            onClick={() => {
+              notificationApi.destroy();
+              navigate('/cart');
+            }}
+            style={{
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 800,
+              background: '#2563eb',
+              borderColor: '#2563eb',
+            }}
+          >
+            View Cart &amp; Checkout →
+          </Button>
+        </Space>
+      ),
+      duration: 5,
+      placement: 'topRight',
+    });
   };
 
   return (
     <div style={{ padding: 0 }}>
       {contextHolder}
+      {notificationContextHolder}
       <div
         style={{
           position: 'relative',
           overflow: 'hidden',
-          borderRadius: 34,
-          marginBottom: 24,
-          minHeight: 320,
+          borderRadius: screens.xs ? 22 : 34,
+          marginBottom: screens.xs ? 16 : 24,
+          minHeight: screens.xs ? 220 : 320,
           background: '#183441',
         }}
       >
@@ -147,10 +199,10 @@ const ShopDetail = () => {
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(18,37,48,0.88), rgba(20,92,114,0.72))' }} />
-        <div style={{ position: 'relative', zIndex: 1, padding: 28 }}>
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/shops')} style={{ borderRadius: 999 }}>
+        <div style={{ position: 'relative', zIndex: 1, padding: screens.xs ? 16 : 28 }}>
+          <Space direction="vertical" size={screens.xs ? 12 : 16} style={{ width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/shops')} style={{ borderRadius: 999, height: screens.xs ? 34 : 40 }}>
                 Back to shops
               </Button>
 
@@ -160,65 +212,65 @@ const ShopDetail = () => {
                 onClick={() => setTelegramModal({ open: true, shop, product: null })}
                 style={{
                   borderRadius: 999,
-                  height: 42,
-                  paddingInline: 22,
+                  height: screens.xs ? 34 : 42,
+                  paddingInline: screens.xs ? 14 : 22,
                   background: '#2481cc',
                   borderColor: '#2481cc',
                   fontWeight: 700,
-                  fontSize: 13,
+                  fontSize: screens.xs ? 12 : 13,
                   boxShadow: '0 8px 18px rgba(36, 129, 204, 0.4)',
                 }}
               >
-                Open in Telegram Mini App (@{BOTFATHER_CONFIG.botUsername})
+                Telegram Mini App
               </Button>
             </div>
 
-            <Space align="center" size={14} wrap>
-              <Avatar size={64} src={shop.logo} style={{ background: publicTheme.ribbon, fontWeight: 800 }}>
+            <Space align="center" size={screens.xs ? 10 : 14} wrap>
+              <Avatar size={screens.xs ? 46 : 64} src={shop.logo} style={{ background: publicTheme.ribbon, fontWeight: 800 }}>
                 {shop.logoText || shop.name.slice(0, 2)}
               </Avatar>
               <div>
-                <Title level={1} style={{ margin: 0, color: 'white', fontSize: 'clamp(28px, 4vw, 48px)' }}>
+                <Title level={1} style={{ margin: 0, color: 'white', fontSize: screens.xs ? 22 : 'clamp(28px, 4vw, 48px)' }}>
                   {shop.name}
                 </Title>
-                <Space size={10} wrap style={{ marginTop: 4 }}>
-                  <Tag style={{ margin: 0, borderRadius: 999, background: 'rgba(255,255,255,0.14)', color: 'white', border: 'none' }}>
-                    Established {shop.established}
+                <Space size={6} wrap style={{ marginTop: 2 }}>
+                  <Tag style={{ margin: 0, borderRadius: 999, background: 'rgba(255,255,255,0.14)', color: 'white', border: 'none', fontSize: screens.xs ? 10 : 12 }}>
+                    Est. {shop.established}
                   </Tag>
-                  <Tag style={{ margin: 0, borderRadius: 999, background: 'rgba(255,255,255,0.14)', color: 'white', border: 'none' }}>
+                  <Tag style={{ margin: 0, borderRadius: 999, background: 'rgba(255,255,255,0.14)', color: 'white', border: 'none', fontSize: screens.xs ? 10 : 12 }}>
                     {shop.responseTime}
                   </Tag>
                   {shop.telegram_group_name && (
-                    <Tag style={{ margin: 0, borderRadius: 999, background: 'rgba(47, 111, 237, 0.4)', color: 'white', border: 'none' }}>
+                    <Tag style={{ margin: 0, borderRadius: 999, background: 'rgba(47, 111, 237, 0.4)', color: 'white', border: 'none', fontSize: screens.xs ? 10 : 12 }}>
                       <SendOutlined style={{ marginRight: 4 }} />
-                      Dispatch: {shop.telegram_group_name}
+                      {shop.telegram_group_name}
                     </Tag>
                   )}
                 </Space>
               </div>
             </Space>
-            <Paragraph style={{ maxWidth: 760, margin: 0, color: 'rgba(255,255,255,0.82)', fontSize: 16 }}>
+            <Paragraph style={{ maxWidth: 760, margin: 0, color: 'rgba(255,255,255,0.82)', fontSize: screens.xs ? 13 : 16 }}>
               {shop.summary}
             </Paragraph>
-            <Space wrap size={[8, 8]}>
+            <Space wrap size={[6, 6]}>
               {(shop.specialties || []).map((item) => (
-                <Tag key={item} style={{ margin: 0, borderRadius: 999, background: 'rgba(255,255,255,0.14)', color: 'white', border: 'none' }}>
+                <Tag key={item} style={{ margin: 0, borderRadius: 999, background: 'rgba(255,255,255,0.14)', color: 'white', border: 'none', fontSize: screens.xs ? 10 : 12 }}>
                   {item}
                 </Tag>
               ))}
             </Space>
-            <Space size={18} wrap>
+            <Space size={14} wrap style={{ fontSize: screens.xs ? 12 : 14 }}>
               <Text style={{ color: 'white' }}><StarFilled style={{ color: '#ffd666' }} /> {shop.rating} rating</Text>
               <Text style={{ color: 'white' }}>{shop.followers.toLocaleString()} followers</Text>
-              <Text style={{ color: 'white' }}>{shopProducts.length} products</Text>
+              <Text style={{ color: 'white' }}>{shopProducts.length} items</Text>
             </Space>
           </Space>
         </div>
       </div>
 
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: screens.xs ? 12 : 20 }}>
         <Input
-          size="large"
+          size={screens.xs ? 'middle' : 'large'}
           prefix={<SearchOutlined style={{ color: publicTheme.subtext }} />}
           placeholder={`Search ${shop.name} items...`}
           value={search}
@@ -228,9 +280,9 @@ const ShopDetail = () => {
         />
       </div>
 
-      <Row gutter={[16, 16]}>
+      <Row gutter={screens.xs ? [10, 10] : screens.sm ? [12, 12] : [16, 16]}>
         {shopProducts.map((product) => (
-          <Col xs={24} sm={12} lg={8} xl={6} key={product.id}>
+          <Col xs={12} sm={8} md={6} lg={6} xl={6} key={product.id}>
             <RetailProductCard
               product={product}
               isWishlisted={wishlist.includes(product.id)}

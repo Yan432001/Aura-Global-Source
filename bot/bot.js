@@ -1,8 +1,12 @@
 require('dotenv').config();
 const { Bot, InlineKeyboard } = require('grammy');
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8643956334:AAE91Unzq3DmkZkr-U-w91LLOlauSRvbJIU';
-const WEBAPP_URL = process.env.WEBAPP_URL || 'https://aluminium-letters-shapes-santa.trycloudflare.com/';
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8613686625:AAFe8-04LvQumEXZ8-MBjbNSDozba3E1lCw';
+const WEBAPP_URL = (
+  process.env.WEBAPP_URL ||
+  process.env.PUBLIC_APP_URL ||
+  'https://ais-pre-td6tu5gqrfllupsasnufaq-616191327265.asia-east1.run.app'
+).replace(/\/$/, '');
 
 if (!BOT_TOKEN) {
   console.error('ERROR: TELEGRAM_BOT_TOKEN is missing from your environment.');
@@ -26,7 +30,12 @@ bot.command('start', async (ctx) => {
   let storeIdentifierText = 'our multi-store marketplace';
 
   if (payload) {
-    if (payload.startsWith('store_')) {
+    if (payload.startsWith('shop_')) {
+      const storeSlug = payload.replace('shop_', '');
+      targetUrl = `${WEBAPP_URL}/shop/${encodeURIComponent(storeSlug)}`;
+      buttonTitle = `View ${storeSlug} Menu`;
+      storeIdentifierText = `store "${storeSlug}"`;
+    } else if (payload.startsWith('store_')) {
       const storeSlug = payload.replace('store_', '');
       targetUrl = `${WEBAPP_URL}/shop/${encodeURIComponent(storeSlug)}`;
       buttonTitle = `View ${storeSlug} Menu`;

@@ -1,65 +1,126 @@
 const axios = require('axios');
 
-// In-memory queue of recent telegram order notifications dispatched to shop groups
+// In-memory record of all telegram dispatches
 const recentDispatches = [];
 
 /**
- * Formats and sends an order notification directly to the shop's Telegram group
+ * Format date in required readable format (e.g., "26 Sep 2026, 14:30")
  */
-async function sendOrderToShopGroup({ store, order, customer = {}, items = [] }) {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const targetGroupId = store.telegram_group_id || process.env.TELEGRAM_GROUP_CHAT_ID;
-  const storeName = store.company || store.name || 'Store';
-  const groupName = store.telegram_group_name || `${storeName} Staff Group`;
+function formatOrderDate(dateInput) {
+  const d = dateInput ? new Date(dateInput) : new Date();
+  const day = d.getDate();
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${day} ${month} ${year}, ${hours}:${minutes}`;
+}
 
-  const orderTime = new Date().toLocaleString('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  });
+/**
+ * Generates the clean formatted text message matching the required Telegram specification
+ */
+function buildTelegramOrderMessage({ store, order, customer = {}, items = [] }) {
+  const storeName = store.name || store.company || 'Store';
+  const orderRef = order.referenceNo || order.reference_no || `ORD-${String(order.id || 1001).padStart(6, '0')}`;
+  
+  const customerName = customer.name || customer.customerName || 'Telegram Guest';
+  const customerTelegram = customer.username ? (customer.username.startsWith('@') ? customer.username : `@${customer.username}`) : (customer.telegramUsername || '@guest');
+  const customerPhone = customer.phone || 'N/A';
 
-  const itemsListFormatted = items.map((item, idx) => {
-    const qty = item.qty || item.quantity || 1;
+  // Format product list with options, quantities, prices, and subtotals
+  const productsFormatted = items.map((item, idx) => {
+    const qty = item.quantity || item.qty || 1;
     const price = Number(item.price || item.unit_price || 0);
     const subtotal = Number(item.subtotal || qty * price);
-    const name = item.name || item.product_name || `Item #${item.id || idx + 1}`;
-    return `  <b>${idx + 1}. ${name}</b> x${qty} — <b>$${subtotal.toFixed(2)}</b> ($${price.toFixed(2)} ea)`;
-  }).join('\n');
+    const name = item.name || item.product_name || `Product #${item.id || idx + 1}`;
+    
+    // Format options/variants if present (e.g. Size: Large, Ice: No Ice)
+    let optionsText = '';
+    if (item.selectedOptions && Object.keys(item.selectedOptions).length > 0) {
+      const opts = Object.entries(item.selectedOptions)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ');
+      optionsText = `\n   <i>Options: ${opts}</i>`;
+    } else if (item.optionsText) {
+      optionsText = `\n   <i>Options: ${item.optionsText}</i>`;
+    }
 
-  const grandTotal = Number(order.grandTotal || order.total || 0).toFixed(2);
-  const currencySymbol = store.currency_symbol || '$';
+    return `${idx + 1}. <b>${name}</b>${optionsText}\n   Qty: ${qty}\n   Price: $${price.toFixed(2)}\n   Total: $${subtotal.toFixed(2)}`;
+  }).join('\n\n');
 
-  // Rich HTML message formatted for Telegram group readability
-  const messageText = [
-    `🔔 <b>NEW SHOP ORDER RECEIVED!</b>`,
-    `━━━━━━━━━━━━━━━━━━━━`,
-    `🏪 <b>Shop:</b> ${storeName}`,
-    `🔖 <b>Order Ref:</b> <code>${order.referenceNo || 'TMA-' + Date.now()}</code>`,
-    `🕒 <b>Time:</b> ${orderTime}`,
+  const subtotal = Number(order.subtotal || items.reduce((s, it) => s + Number(it.price || 0) * (it.quantity || it.qty || 1), 0)).toFixed(2);
+  const deliveryFee = Number(order.deliveryFee !== undefined ? order.deliveryFee : (customer.orderType === 'delivery' ? 2.00 : 0.00)).toFixed(2);
+  const discount = Number(order.discount || 0).toFixed(2);
+  const total = Number(order.grandTotal || order.total || (Number(subtotal) + Number(deliveryFee) - Number(discount))).toFixed(2);
+  const customerNote = customer.note || order.note || 'None';
+  const orderDate = formatOrderDate(order.createdAt || order.date);
+  const status = (order.status || 'Pending').charAt(0).toUpperCase() + (order.status || 'Pending').slice(1);
+
+  return [
+    `🛒 <b>NEW ORDER</b>`,
     ``,
-    `👤 <b>Customer:</b> ${customer.name || customer.customerName || 'Telegram Customer'}`,
-    customer.phone ? `📞 <b>Phone:</b> ${customer.phone}` : null,
-    customer.address ? `📍 <b>Table / Delivery:</b> ${customer.address}` : null,
-    customer.note ? `📝 <b>Order Note:</b> <i>${customer.note}</i>` : null,
+    `━━━━━━━━━━━━━━━━`,
     ``,
-    `📦 <b>Order Items (${items.length}):</b>`,
-    itemsListFormatted,
+    `<b>Order #:</b> <code>${orderRef}</code>`,
+    `<b>Store:</b> ${storeName}`,
     ``,
-    `━━━━━━━━━━━━━━━━━━━━`,
-    `💰 <b>TOTAL TO COLLECT: ${currencySymbol}${grandTotal}</b>`,
-    `⚡ <i>Status: Pending Preparation</i>`
+    `👤 <b>CUSTOMER</b>`,
+    `Name: ${customerName}`,
+    `Telegram: ${customerTelegram}`,
+    `Phone: ${customerPhone}`,
+    customer.address ? `Address / Table: ${customer.address}` : null,
+    ``,
+    `📦 <b>PRODUCTS</b>`,
+    ``,
+    productsFormatted,
+    ``,
+    `━━━━━━━━━━━━━━━━`,
+    ``,
+    `Subtotal: $${subtotal}`,
+    `Delivery Fee: $${deliveryFee}`,
+    Number(discount) > 0 ? `Discount: -$${discount}` : null,
+    `<b>TOTAL: $${total}</b>`,
+    ``,
+    `📝 <b>Note:</b>`,
+    `${customerNote}`,
+    ``,
+    `📅 <b>Date:</b>`,
+    `${orderDate}`,
+    ``,
+    `📌 <b>Status:</b>`,
+    `<b>${status}</b>`
   ].filter(Boolean).join('\n');
+}
+
+/**
+ * Formats and sends an order notification strictly to the store's assigned Telegram group.
+ * If sending fails, marks notification as failed without throwing or canceling the order.
+ */
+async function sendOrderToShopGroup({ store, order, customer = {}, items = [] }) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN || '8613686625:AAFe8-04LvQumEXZ8-MBjbNSDozba3E1lCw';
+  // Destination must be strictly isolated to the selected store's telegram_group_id
+  const targetGroupId = store.telegram_group_id || process.env.TELEGRAM_GROUP_CHAT_ID;
+  const storeName = store.name || store.company || 'Store';
+  const groupName = store.telegram_group_name || `${storeName} Notification Group`;
+  const orderRef = order.referenceNo || order.reference_no || `ORD-${String(order.id || 1001).padStart(6, '0')}`;
+
+  const messageText = buildTelegramOrderMessage({ store, order, customer, items });
 
   const dispatchRecord = {
-    id: `disp-${Date.now()}`,
-    orderRef: order.referenceNo,
+    id: `disp-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    orderRef: orderRef,
     storeId: store.id,
+    storeSlug: store.slug,
     storeName: storeName,
-    targetGroupId: targetGroupId || 'Simulated Shop Group',
+    targetGroupId: targetGroupId || 'Simulated Destination',
     groupName: groupName,
     timestamp: new Date().toISOString(),
     messageText,
+    notification_status: 'pending',
+    error: null,
     sent: false,
-    channel: 'Telegram Bot Group Broadcast'
+    attempts: 1
   };
 
   if (botToken && targetGroupId) {
@@ -71,29 +132,62 @@ async function sendOrderToShopGroup({ store, order, customer = {}, items = [] })
           text: messageText,
           parse_mode: 'HTML'
         },
-        { timeout: 5000 }
+        { timeout: 7000 }
       );
 
       if (response.data && response.data.ok) {
         dispatchRecord.sent = true;
+        dispatchRecord.notification_status = 'sent';
         dispatchRecord.telegramMessageId = response.data.result?.message_id;
-        console.log(`[Telegram Group Dispatch] Successfully sent order ${order.referenceNo} to ${groupName} (${targetGroupId})`);
+        console.log(`[Telegram Group Dispatch] Sent order ${orderRef} to ${groupName} (${targetGroupId})`);
+      } else {
+        dispatchRecord.sent = false;
+        dispatchRecord.notification_status = 'failed';
+        dispatchRecord.error = response.data?.description || 'Telegram API rejected message';
+        console.warn(`[Telegram Group Dispatch Failed] Order ${orderRef} to ${groupName}: ${dispatchRecord.error}`);
       }
     } catch (err) {
-      console.warn(`[Telegram Group Dispatch] Telegram API notice (${err.response?.data?.description || err.message}). Order recorded in local queue.`);
+      const errMsg = err.response?.data?.description || err.message;
       dispatchRecord.sent = false;
-      dispatchRecord.error = err.response?.data?.description || err.message;
+      dispatchRecord.notification_status = 'failed';
+      dispatchRecord.error = errMsg;
+      console.warn(`[Telegram Group Dispatch Notice] Order ${orderRef} preserved, telegram notification recorded as failed (${errMsg})`);
     }
   } else {
+    // If running in development without live bot token, record simulation
     dispatchRecord.sent = true;
-    dispatchRecord.simulated = true;
-    console.log(`[Telegram Group Dispatch (Simulated)] Order ${order.referenceNo} dispatched to ${groupName}: \n${messageText}`);
+    dispatchRecord.notification_status = 'simulated';
+    console.log(`[Telegram Group Dispatch (Simulated)] Order ${orderRef} sent to ${groupName} (${targetGroupId}):\n${messageText}`);
+  }
+
+  // Update order record if passed
+  if (order) {
+    order.store_notification = dispatchRecord.notification_status === 'sent' || dispatchRecord.notification_status === 'simulated'
+      ? 'Sent'
+      : 'Failed';
+    order.dispatchInfo = dispatchRecord;
   }
 
   recentDispatches.unshift(dispatchRecord);
-  if (recentDispatches.length > 50) recentDispatches.pop();
+  if (recentDispatches.length > 100) recentDispatches.pop();
 
   return dispatchRecord;
+}
+
+/**
+ * Retries sending a notification for an order
+ */
+async function retryOrderNotification(order, store) {
+  if (!order || !store) {
+    throw new Error('Order and Store are required for retry');
+  }
+
+  return await sendOrderToShopGroup({
+    store,
+    order,
+    customer: order.customer || {},
+    items: order.items || []
+  });
 }
 
 function getRecentDispatches() {
@@ -102,5 +196,8 @@ function getRecentDispatches() {
 
 module.exports = {
   sendOrderToShopGroup,
-  getRecentDispatches
+  retryOrderNotification,
+  getRecentDispatches,
+  buildTelegramOrderMessage
 };
+

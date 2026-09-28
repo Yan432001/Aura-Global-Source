@@ -2,7 +2,7 @@ const crypto = require('crypto');
 
 function verifyTelegramWebAppData(req, res, next) {
   const initData = req.headers['x-telegram-init-data'];
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const botToken = process.env.TELEGRAM_BOT_TOKEN || '8613686625:AAFe8-04LvQumEXZ8-MBjbNSDozba3E1lCw';
 
   if (!initData) {
     return res.status(401).json({ status: false, message: 'Missing Telegram initData credentials' });

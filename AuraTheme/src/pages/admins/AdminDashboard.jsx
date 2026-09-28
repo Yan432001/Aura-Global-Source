@@ -417,7 +417,7 @@ const AdminDashboard = () => {
                 {securityCompliance.map((item) => (
                   <Flex key={item.label} justify="space-between" align="center">
                     <div>
-                      <Title level={3} style={{ margin: 0, color: adminTheme.text, display: 'inline-block', marginRight: 10 }}>{item.value}</Title>
+                      <Title level={3} style={{ marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 10, color: adminTheme.text, display: 'inline-block' }}>{item.value}</Title>
                       <Text style={{ color: adminTheme.text, fontSize: 12.5, fontWeight: 600 }}>{item.label}</Text>
                       <Text style={{ color: adminTheme.subtext, fontSize: 11.5, display: 'block' }}>{item.sub}</Text>
                     </div>

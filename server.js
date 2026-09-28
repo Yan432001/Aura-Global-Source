@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -52,15 +53,29 @@ app.listen(PORT, '0.0.0.0', () => {
 
   // Start Telegram bot long-polling if token configured
   try {
+    if (!process.env.TELEGRAM_BOT_TOKEN) {
+      process.env.TELEGRAM_BOT_TOKEN = '8613686625:AAFe8-04LvQumEXZ8-MBjbNSDozba3E1lCw';
+    }
     const bot = require('./API/app/services/telegramBot.service.js');
     if (process.env.TELEGRAM_BOT_TOKEN && bot && typeof bot.start === 'function') {
       bot.start({
+        drop_pending_updates: true,
         onStart: (botInfo) => console.log(`[Telegram Bot] @${botInfo.username} online and ready!`),
-      }).catch((err) => console.warn('[Telegram Bot] Polling warning:', err.message));
+      }).catch((err) => {
+        const errorMsg = err?.message || String(err);
+        if (errorMsg.includes('409') || errorMsg.includes('Conflict') || errorMsg.includes('terminated by other getUpdates')) {
+          console.log('[Telegram Bot] 409 Conflict: Another bot runner is actively polling. Local polling gracefully deferred.');
+          try {
+            bot.stop();
+          } catch (_) {}
+        } else {
+          console.log('[Telegram Bot] Polling status:', errorMsg);
+        }
+      });
     } else {
       console.log('[Telegram Bot] Ready: TELEGRAM_BOT_TOKEN not set in environment (mock/local testing active)');
     }
   } catch (err) {
-    console.warn('[Telegram Bot] Initialization notice:', err.message);
+    console.log('[Telegram Bot] Initialization notice:', err.message);
   }
 });

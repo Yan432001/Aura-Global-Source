@@ -2,12 +2,12 @@ const { Bot, InlineKeyboard } = require('grammy');
 const EMenuModel = require('../models/emenu.model');
 const simpleData = require('../../../data/simpleData');
 
-const botToken = process.env.TELEGRAM_BOT_TOKEN;
+const botToken = process.env.TELEGRAM_BOT_TOKEN || '8613686625:AAFe8-04LvQumEXZ8-MBjbNSDozba3E1lCw';
 // Telegram Mini Apps strictly require HTTPS URLs
 const webAppBaseUrl = (
   process.env.WEBAPP_URL ||
   process.env.PUBLIC_APP_URL ||
-  'https://ais-dev-td6tu5gqrfllupsasnufaq-616191327265.asia-east1.run.app'
+  'https://ais-pre-td6tu5gqrfllupsasnufaq-616191327265.asia-east1.run.app'
 ).replace(/\/$/, '');
 
 let bot = null;
@@ -20,7 +20,9 @@ if (botToken) {
     const rawParam = (ctx.match || '').trim();
     let targetStoreSlug = null;
 
-    if (rawParam.startsWith('store_')) {
+    if (rawParam.startsWith('shop_')) {
+      targetStoreSlug = rawParam.replace('shop_', '');
+    } else if (rawParam.startsWith('store_')) {
       targetStoreSlug = rawParam.replace('store_', '');
     } else if (rawParam.startsWith('biller_')) {
       const billerId = rawParam.replace('biller_', '');
@@ -38,9 +40,9 @@ if (botToken) {
       const keyboard = new InlineKeyboard()
         .webApp(`🛍️ Open ${storeName} Menu`, destinationUrl)
         .row()
-        .webApp('📋 My Orders', `${webAppBaseUrl}/tma/${targetStoreSlug}`)
+        .webApp('📋 My Orders', `${webAppBaseUrl}/shop/${targetStoreSlug}?view=orders`)
         .row()
-        .webApp('🏪 View All Shops', `${webAppBaseUrl}/shop`);
+        .webApp('🏪 View All Shops', `${webAppBaseUrl}/shop/sbc-store`);
 
       return ctx.reply(
         `👋 Welcome to *${storeName}*!\n\n` +
@@ -116,7 +118,15 @@ if (botToken) {
   });
 
   bot.catch((err) => {
-    console.warn(`[Telegram Bot] Error: ${err.message}`);
+    const errorMsg = err?.error?.message || err?.message || String(err);
+    if (errorMsg.includes('409') || errorMsg.includes('Conflict') || errorMsg.includes('terminated by other getUpdates')) {
+      console.log('[Telegram Bot] 409 Conflict: Another bot runner is actively polling. Local polling stopped gracefully.');
+      try {
+        bot.stop();
+      } catch (_) {}
+      return;
+    }
+    console.log(`[Telegram Bot] Notice: ${errorMsg}`);
   });
 }
 

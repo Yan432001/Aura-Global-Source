@@ -26,16 +26,17 @@ const mockStore = {
 };
 
 let realPool = null;
-let useMock = false;
+const host = process.env.DB_HOST || config.db?.HOST;
+let useMock = !host || host === 'localhost';
 
 try {
-  if (process.env.DB_HOST || config.db?.HOST) {
+  if (host && host !== 'localhost') {
     realPool = mysql.createPool({
-      host: process.env.DB_HOST || config.db.HOST,
-      user: process.env.DB_USER || config.db.USER,
-      password: process.env.DB_PASSWORD || config.db.PASSWORD,
-      database: process.env.DB_NAME || config.db.DATABASE,
-      port: Number(process.env.DB_PORT || config.db.PORT || 3306),
+      host,
+      user: process.env.DB_USER || config.db?.USER || 'root',
+      password: process.env.DB_PASSWORD || config.db?.PASSWORD || '',
+      database: process.env.DB_NAME || config.db?.DATABASE || 'aura_v1_db',
+      port: Number(process.env.DB_PORT || config.db?.PORT || 3306),
       namedPlaceholders: true,
       connectTimeout: 2000,
     });
@@ -134,8 +135,7 @@ const poolWrapper = {
     if (realPool && !useMock) {
       try {
         return await realPool.query(sql, params);
-      } catch (err) {
-        console.warn('[AI Studio] MySQL offline or error — using in-memory mock active');
+      } catch {
         useMock = true;
         return handleMockQuery(sql, params);
       }

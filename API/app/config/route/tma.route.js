@@ -4,6 +4,13 @@ const StoreController = require('../../controller/tma/store.controller');
 const OrderController = require('../../controller/tma/order.controller');
 const { verifyTelegramWebAppData } = require('../../middleware/telegramAuth.middleware');
 
+// Telegram user authentication
+router.post('/auth', OrderController.authTelegramUser);
+
+// Store selection endpoints
+router.get('/stores', StoreController.getStores);
+router.get('/shops', StoreController.getStores);
+
 // Public tenant read endpoints
 router.get('/shop/:slug', StoreController.getStore);
 router.get('/shop/:slug/categories', StoreController.getCategories);
@@ -15,20 +22,35 @@ router.get('/store/:slug/categories', StoreController.getCategories);
 router.get('/store/:slug/products', StoreController.getProducts);
 router.get('/store/:slug/catalog', StoreController.getProducts);
 
-// Orders query endpoint
+// Orders query endpoints
 router.get('/orders', OrderController.getOrders);
+router.get('/orders/:id', OrderController.getOrderById);
 router.get('/shop/:slug/orders', OrderController.getOrders);
 router.get('/store/:slug/orders', OrderController.getOrders);
 
-// Secure checkout (Permits conditional local testing or strict initData enforcement)
-const authMiddleware = process.env.NODE_ENV === 'development'
-  ? (req, res, next) => {
-      if (req.headers['x-telegram-init-data']) return verifyTelegramWebAppData(req, res, next);
-      req.telegramUser = { id: 999999, first_name: 'Local Dev User' };
-      next();
-    }
-  : verifyTelegramWebAppData;
+// Order status update & retry notification endpoints
+router.put('/orders/:id/status', OrderController.updateOrderStatus);
+router.patch('/orders/:id/status', OrderController.updateOrderStatus);
+router.post('/orders/:id/status', OrderController.updateOrderStatus);
+router.post('/orders/:id/retry-notification', OrderController.retryNotification);
 
+// Secure checkout (Permits conditional local testing or strict initData enforcement)
+const authMiddleware = (req, res, next) => {
+  if (req.headers['x-telegram-init-data']) {
+    return verifyTelegramWebAppData(req, res, next);
+  }
+  // If Telegram user payload is in body or local development
+  if (req.body?.customer?.telegramId) {
+    req.telegramUser = {
+      id: req.body.customer.telegramId,
+      first_name: req.body.customer.name || 'Telegram User',
+      username: req.body.customer.username?.replace('@', '') || ''
+    };
+  }
+  next();
+};
+
+router.post('/orders', authMiddleware, OrderController.createOrder);
 router.post('/shop/:slug/orders', authMiddleware, OrderController.createOrder);
 router.post('/store/:slug/order', authMiddleware, OrderController.createOrder);
 router.post('/checkout', authMiddleware, OrderController.createOrder);

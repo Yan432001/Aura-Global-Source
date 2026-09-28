@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Avatar, Button, Card, Col, Row, Space, Tag, Typography } from 'antd';
+import { Avatar, Button, Card, Col, Grid, Row, Space, Tag, Typography } from 'antd';
 import {
   SendOutlined,
   ShopOutlined,
@@ -10,9 +10,11 @@ import { products, shops } from '../../data/shopData';
 import { formatCompact, publicTheme } from '../../utils/webTheme';
 import TelegramMiniAppModal, { BOTFATHER_CONFIG } from '../../components/web/shared/TelegramMiniAppModal';
 
+const { useBreakpoint } = Grid;
 const { Paragraph, Text, Title } = Typography;
 
 const Shops = () => {
+  const screens = useBreakpoint();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('q') || '';
@@ -42,15 +44,15 @@ const Shops = () => {
       <Card
         className="frosted-panel stagger-rise"
         style={{
-          borderRadius: 34,
+          borderRadius: screens.xs ? 22 : 34,
           border: `1px solid ${publicTheme.border}`,
           boxShadow: publicTheme.shadow,
           background: publicTheme.heroBackground,
-          marginBottom: 24,
+          marginBottom: screens.xs ? 16 : 24,
         }}
-        styles={{ body: { padding: 28 } }}
+        styles={{ body: { padding: screens.xs ? 18 : 28 } }}
       >
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+        <Space direction="vertical" size={screens.xs ? 10 : 16} style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <Tag
               style={{
@@ -59,7 +61,8 @@ const Shops = () => {
                 background: publicTheme.pill,
                 color: publicTheme.primary,
                 fontWeight: 700,
-                padding: '8px 14px',
+                padding: screens.xs ? '4px 10px' : '8px 14px',
+                fontSize: screens.xs ? 11 : 12,
               }}
             >
               Shop by shop
@@ -71,7 +74,8 @@ const Shops = () => {
                 background: 'rgba(36, 129, 204, 0.08)',
                 color: '#2481cc',
                 fontWeight: 700,
-                padding: '6px 12px',
+                padding: screens.xs ? '4px 10px' : '6px 12px',
+                fontSize: screens.xs ? 11 : 12,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
@@ -87,8 +91,8 @@ const Shops = () => {
             style={{
               margin: 0,
               color: publicTheme.text,
-              fontSize: 'clamp(30px, 4vw, 52px)',
-              lineHeight: 1.05,
+              fontSize: 'clamp(24px, 4vw, 52px)',
+              lineHeight: 1.1,
             }}
           >
             Browse shops first, then view all products inside each shop.
@@ -127,7 +131,7 @@ const Shops = () => {
       </Card>
 
       {/* 3-Column Grid Layout - matches image.png exactly */}
-      <Row gutter={[18, 18]}>
+      <Row gutter={screens.xs ? [12, 12] : [18, 18]}>
         {filteredShops.map((shop) => {
           const shopProducts = products.filter((product) => product.shopId === shop.id);
 
@@ -136,7 +140,7 @@ const Shops = () => {
               <Card
                 hoverable
                 style={{
-                  borderRadius: 28,
+                  borderRadius: screens.xs ? 20 : 28,
                   border: `1px solid ${publicTheme.border}`,
                   background: publicTheme.cardBackground,
                   boxShadow: publicTheme.lightShadow,
@@ -147,7 +151,7 @@ const Shops = () => {
                 }}
                 styles={{
                   body: {
-                    padding: 18,
+                    padding: screens.xs ? 12 : 18,
                     flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
@@ -155,7 +159,7 @@ const Shops = () => {
                   },
                 }}
                 cover={
-                  <div style={{ position: 'relative', height: 220 }}>
+                  <div style={{ position: 'relative', height: screens.xs ? 140 : 220 }}>
                     <img
                       src={shop.heroImage}
                       alt={shop.name}
@@ -170,11 +174,11 @@ const Shops = () => {
                       }}
                     />
                     <Avatar
-                      size={52}
+                      size={screens.xs ? 40 : 52}
                       style={{
                         position: 'absolute',
-                        left: 18,
-                        bottom: 18,
+                        left: screens.xs ? 12 : 18,
+                        bottom: screens.xs ? 12 : 18,
                         background: publicTheme.ribbon,
                         fontWeight: 800,
                         boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
@@ -254,8 +258,8 @@ const Shops = () => {
                     </span>
                   </div>
 
-                  {/* Bottom Action Buttons: Visit shop (matching image) + Telegram E-Menu */}
-                  <Space size={10} wrap style={{ marginTop: 2 }}>
+                  {/* Bottom Action Button: Visit shop */}
+                  <div style={{ marginTop: 2 }}>
                     <Button
                       type="primary"
                       icon={<ShopOutlined />}
@@ -271,23 +275,7 @@ const Shops = () => {
                     >
                       Visit shop
                     </Button>
-                    <Button
-                      type="default"
-                      icon={<SendOutlined style={{ color: '#2481cc' }} />}
-                      onClick={() => handleOpenTelegram(shop)}
-                      style={{
-                        height: 44,
-                        borderRadius: 16,
-                        border: '1px solid rgba(36, 129, 204, 0.3)',
-                        background: 'rgba(36, 129, 204, 0.08)',
-                        color: '#2481cc',
-                        fontWeight: 700,
-                        paddingInline: 16,
-                      }}
-                    >
-                      Telegram E-Menu
-                    </Button>
-                  </Space>
+                  </div>
                 </Space>
               </Card>
             </Col>

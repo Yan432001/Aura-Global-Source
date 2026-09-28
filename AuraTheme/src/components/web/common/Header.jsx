@@ -86,7 +86,21 @@ const Header = ({ currentPage }) => {
   const [activeCategory, setActiveCategory] = useState('all'); // 'all' | 'shops' | 'products' | 'services' | 'learn' | 'pages'
 
   const searchContainerRef = useRef(null);
-  const isMobile = !screens.md;
+  
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1200
+  );
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isPhone = screens.xs !== undefined ? (screens.xs && !screens.sm) : windowWidth < 576;
+  const isTablet = screens.sm !== undefined ? (screens.sm && !screens.lg) : (windowWidth >= 576 && windowWidth < 992);
+  const isDesktop = !isPhone && !isTablet;
+  const isMobile = isPhone;
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -183,7 +197,7 @@ const Header = ({ currentPage }) => {
 
   const quickLinks = [
     { key: '/wishlist', icon: <HeartOutlined />, label: 'Wishlist' },
-    { key: '/cart', icon: <ShoppingCartOutlined />, label: 'Orders' },
+    { key: '/cart', icon: <ShoppingCartOutlined />, label: 'Cart' },
   ];
 
   const mobileShortcuts = [
@@ -274,17 +288,18 @@ const Header = ({ currentPage }) => {
       <div
         style={{
           position: 'absolute',
-          top: 48,
+          top: isPhone ? 40 : 46,
           right: 0,
-          width: isMobile ? '100%' : 460,
-          maxHeight: 480,
+          left: isPhone ? 0 : 'auto',
+          width: isPhone ? '100%' : isTablet ? 380 : 460,
+          maxHeight: isPhone ? 380 : 480,
           overflowY: 'auto',
           background: '#ffffff',
-          borderRadius: 20,
+          borderRadius: isPhone ? 16 : 20,
           boxShadow: '0 20px 60px rgba(15, 23, 42, 0.18)',
           border: `1px solid ${publicTheme.softBorder}`,
           zIndex: 1200,
-          padding: 12,
+          padding: isPhone ? 10 : 12,
         }}
       >
         {/* Header & Category Pills */}
@@ -587,160 +602,356 @@ const Header = ({ currentPage }) => {
 
   return (
     <>
-      <div style={{ padding: isMobile ? '12px 12px 0' : '14px 16px 0' }}>
-        <div
-          className="frosted-panel"
-          style={{
-            padding: isMobile ? '14px' : '14px 18px',
-            borderRadius: isMobile ? 24 : 28,
-            background: 'rgba(255,255,255,0.88)',
-            border: `1px solid ${publicTheme.border}`,
-            boxShadow: publicTheme.shadow,
-          }}
-        >
-          {isMobile ? (
-            <Space direction="vertical" size={14} style={{ width: '100%' }}>
-              <Flex justify="space-between" align="center" gap={12}>
-                <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                  <div
-                    style={{
-                      width: 46,
-                      height: 46,
-                      borderRadius: 18,
-                      background: publicTheme.ribbon,
-                      boxShadow: '0 14px 28px rgba(47, 111, 237, 0.22)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 800,
-                      fontSize: 16,
-                      flexShrink: 0,
-                    }}
-                  >
-                    AS
+      {isPhone ? (
+        /* Phone View: Clean Modern Single-Row Header (< 576px) */
+        <div style={{ padding: '6px 8px 0' }}>
+          <div
+            className="frosted-panel"
+            style={{
+              padding: '6px 10px',
+              borderRadius: 16,
+              background: 'rgba(255, 255, 255, 0.95)',
+              border: `1px solid ${publicTheme.softBorder}`,
+              boxShadow: '0 4px 18px rgba(15, 23, 42, 0.05)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+            }}
+          >
+            {/* 1. Logo on the left */}
+            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', flexShrink: 0 }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  background: publicTheme.ribbon,
+                  boxShadow: '0 4px 12px rgba(47, 111, 237, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 800,
+                  fontSize: 13,
+                  flexShrink: 0,
+                }}
+              >
+                AS
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 800, color: publicTheme.text, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>
+                Aura
+              </span>
+            </Link>
+
+            {/* 2. Search Box in the middle */}
+            <div ref={searchContainerRef} style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onPressEnter={() => handlePerformGlobalSearch()}
+                placeholder="Search..."
+                prefix={<SearchOutlined style={{ color: publicTheme.primary, fontSize: 13, marginRight: 2 }} />}
+                allowClear
+                style={{
+                  width: '100%',
+                  height: 34,
+                  borderRadius: 999,
+                  border: `1px solid ${publicTheme.softBorder}`,
+                  background: 'rgba(240, 244, 255, 0.75)',
+                  fontSize: 12.5,
+                  paddingLeft: 8,
+                }}
+              />
+              {renderSearchDropdown()}
+            </div>
+
+            {/* Right Action Icons: 3. Menu (hamburger) & 4. Account/Profile */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              {/* Menu (hamburger) icon */}
+              <Button
+                type="text"
+                aria-label="Open Menu"
+                icon={<MenuOutlined style={{ fontSize: 15, color: publicTheme.text }} />}
+                onClick={() => setDrawerVisible(true)}
+                style={{
+                  height: 34,
+                  width: 34,
+                  minWidth: 34,
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 10,
+                  background: publicTheme.cardMuted,
+                  border: `1px solid ${publicTheme.softBorder}`,
+                }}
+              />
+
+              {/* Account/Profile icon on the right */}
+              <Button
+                type="text"
+                aria-label="User Account"
+                icon={<UserOutlined style={{ fontSize: 15, color: publicTheme.text }} />}
+                onClick={() => {
+                  if (user) {
+                    navigate('/profile');
+                  } else {
+                    navigate('/login');
+                  }
+                }}
+                style={{
+                  height: 34,
+                  width: 34,
+                  minWidth: 34,
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 10,
+                  background: user ? publicTheme.pill : publicTheme.cardMuted,
+                  border: `1px solid ${user ? publicTheme.primary : publicTheme.softBorder}`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : isTablet ? (
+        /* Tablet View: Balanced Compact 2-Row Header (576px - 991px) */
+        <div style={{ padding: '8px 12px 0' }}>
+          <div
+            className="frosted-panel"
+            style={{
+              padding: '10px 14px',
+              borderRadius: 18,
+              background: 'rgba(255, 255, 255, 0.94)',
+              border: `1px solid ${publicTheme.softBorder}`,
+              boxShadow: '0 4px 20px rgba(15, 23, 42, 0.06)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
+          >
+            {/* Row 1: Tablet Top Bar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0, textDecoration: 'none', flexShrink: 0 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 9,
+                    background: publicTheme.ribbon,
+                    boxShadow: '0 6px 16px rgba(47, 111, 237, 0.22)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontWeight: 800,
+                    fontSize: 13,
+                  }}
+                >
+                  AS
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 800, color: publicTheme.text, lineHeight: 1.2 }}>
+                    Aura Supply
                   </div>
-                  <div style={{ minWidth: 0 }}>
-                    <Title level={5} style={{ margin: 0, color: publicTheme.text }}>
-                      Aura Supply
-                    </Title>
-                    <Text style={{ fontSize: 12, color: publicTheme.subtext }}>
-                      B2B sourcing, service, and learning
-                    </Text>
+                  <div style={{ fontSize: 10.5, color: publicTheme.subtext, lineHeight: 1 }}>
+                    B2B Marketplace
                   </div>
-                </Link>
+                </div>
+              </Link>
 
-                <Space size={8}>
-                  <Badge count={wishlistItemCount} size="small">
-                    <Button
-                      icon={<HeartOutlined />}
-                      onClick={() => navigate('/wishlist')}
-                      style={{
-                        height: 40,
-                        width: 40,
-                        borderRadius: 14,
-                        background: publicTheme.cardMuted,
-                        border: `1px solid ${publicTheme.softBorder}`,
-                      }}
-                    />
-                  </Badge>
-
-                  <Badge count={cartItemCount} size="small">
-                    <Button
-                      data-cart-target="true"
-                      icon={<ShoppingCartOutlined />}
-                      onClick={() => navigate('/cart')}
-                      style={{
-                        height: 40,
-                        width: 40,
-                        borderRadius: 14,
-                        background: publicTheme.cardMuted,
-                        border: `1px solid ${publicTheme.softBorder}`,
-                      }}
-                    />
-                  </Badge>
-
-                  <Button
-                    icon={<MenuOutlined />}
-                    onClick={() => setDrawerVisible(true)}
-                    style={{
-                      height: 40,
-                      width: 40,
-                      borderRadius: 14,
-                      background: publicTheme.cardMuted,
-                      border: `1px solid ${publicTheme.softBorder}`,
-                    }}
-                  />
-                </Space>
-              </Flex>
-
-              {/* Mobile Universal Search Input */}
-              <div ref={searchContainerRef} style={{ position: 'relative', width: '100%' }}>
+              <div ref={searchContainerRef} style={{ position: 'relative', flex: 1, maxWidth: 340, marginLeft: 6, marginRight: 6 }}>
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setIsSearchFocused(true)}
                   onPressEnter={() => handlePerformGlobalSearch()}
-                  placeholder="Search shops, products, support, or courses"
-                  prefix={<SearchOutlined style={{ color: publicTheme.primary, fontSize: 16 }} />}
+                  placeholder="Search shops, products, courses..."
+                  prefix={<SearchOutlined style={{ color: publicTheme.primary, fontSize: 13 }} />}
                   allowClear
                   style={{
                     width: '100%',
-                    height: 46,
-                    borderRadius: 18,
+                    height: 36,
+                    borderRadius: 999,
                     border: `1px solid ${publicTheme.softBorder}`,
-                    background: 'linear-gradient(135deg, rgba(244,248,245,0.96), rgba(255,255,255,0.98))',
-                    fontSize: 14,
+                    background: 'rgba(240, 244, 255, 0.75)',
+                    fontSize: 12.5,
                   }}
                 />
                 {renderSearchDropdown()}
               </div>
 
-              <Row gutter={[10, 10]}>
-                {mobileShortcuts.map((item) => {
-                  const active =
-                    currentPage === item.key || (item.key !== '/' && currentPage.startsWith(item.key));
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <Badge count={wishlistItemCount} size="small">
+                  <Button
+                    type="text"
+                    icon={<HeartOutlined style={{ fontSize: 14, color: publicTheme.text }} />}
+                    onClick={() => navigate('/wishlist')}
+                    style={{
+                      height: 34,
+                      width: 34,
+                      minWidth: 34,
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 11,
+                      background: publicTheme.cardMuted,
+                      border: `1px solid ${publicTheme.softBorder}`,
+                    }}
+                  />
+                </Badge>
 
-                  return (
-                    <Col span={8} key={item.key}>
-                      <Button
-                        block
-                        icon={item.icon}
-                        onClick={() => navigate(item.key)}
-                        style={{
-                          height: 50,
-                          borderRadius: 16,
-                          background: active ? publicTheme.ribbon : publicTheme.cardMuted,
-                          color: active ? 'white' : publicTheme.text,
-                          border: active ? 'none' : `1px solid ${publicTheme.softBorder}`,
-                          fontWeight: 700,
-                          boxShadow: active ? '0 12px 28px rgba(47, 111, 237, 0.18)' : 'none',
-                        }}
-                      >
-                        {item.label}
-                      </Button>
-                    </Col>
-                  );
-                })}
-              </Row>
-            </Space>
-          ) : (
+                <Badge count={cartItemCount} size="small">
+                  <Button
+                    type="text"
+                    data-cart-target="true"
+                    icon={<ShoppingCartOutlined style={{ fontSize: 14, color: publicTheme.text }} />}
+                    onClick={() => navigate('/cart')}
+                    style={{
+                      height: 34,
+                      width: 34,
+                      minWidth: 34,
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 11,
+                      background: publicTheme.cardMuted,
+                      border: `1px solid ${publicTheme.softBorder}`,
+                    }}
+                  />
+                </Badge>
+
+                <Dropdown
+                  menu={{
+                    items: userMenuItems,
+                    onClick: handleMenuClick,
+                  }}
+                  placement="bottomRight"
+                  trigger={['click']}
+                >
+                  <Button
+                    type="text"
+                    style={{
+                      height: 34,
+                      padding: '0 8px',
+                      borderRadius: 11,
+                      background: publicTheme.cardMuted,
+                      border: `1px solid ${publicTheme.softBorder}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <Avatar icon={<UserOutlined />} size={22} style={{ background: publicTheme.primary }} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: publicTheme.text, maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {user ? user.name : 'Guest'}
+                    </span>
+                  </Button>
+                </Dropdown>
+
+                <Button
+                  type="text"
+                  icon={<MenuOutlined style={{ fontSize: 14 }} />}
+                  onClick={() => setDrawerVisible(true)}
+                  style={{
+                    height: 34,
+                    width: 34,
+                    minWidth: 34,
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 11,
+                    background: publicTheme.cardMuted,
+                    border: `1px solid ${publicTheme.softBorder}`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Row 2: Tablet Navigation Pills */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {navItems.map((item) => {
+                const active =
+                  currentPage === item.key || (item.key !== '/' && currentPage.startsWith(item.key));
+                return (
+                  <Link
+                    key={item.key}
+                    to={item.key}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '5px 13px',
+                      borderRadius: 999,
+                      color: active ? '#ffffff' : publicTheme.text,
+                      background: active ? publicTheme.primary : publicTheme.cardMuted,
+                      fontWeight: active ? 700 : 600,
+                      fontSize: 12,
+                      textDecoration: 'none',
+                      transition: 'all 0.15s ease',
+                      boxShadow: active ? '0 4px 10px rgba(47, 111, 237, 0.22)' : 'none',
+                    }}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+              <Button
+                type="text"
+                icon={<ThunderboltOutlined style={{ fontSize: 12 }} />}
+                onClick={() => navigate('/admins/dashboard')}
+                style={{
+                  height: 28,
+                  borderRadius: 999,
+                  padding: '0 10px',
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: publicTheme.subtext,
+                  background: 'transparent',
+                  border: `1px dashed ${publicTheme.softBorder}`,
+                }}
+              >
+                Portal
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Desktop View (>= 992px) */
+        <div style={{ padding: '12px 16px 0' }}>
+          <div
+            className="frosted-panel"
+            style={{
+              padding: '12px 18px',
+              borderRadius: 24,
+              background: 'rgba(255,255,255,0.92)',
+              border: `1px solid ${publicTheme.border}`,
+              boxShadow: publicTheme.shadow,
+            }}
+          >
             <Row align="middle" justify="space-between" gutter={[12, 12]}>
               <Col xs={14} md={6} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div
                     style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 16,
+                      width: 40,
+                      height: 40,
+                      borderRadius: 14,
                       background: publicTheme.ribbon,
-                      boxShadow: '0 12px 30px rgba(47, 111, 237, 0.24)',
+                      boxShadow: '0 10px 24px rgba(47, 111, 237, 0.24)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       color: 'white',
                       fontWeight: 700,
-                      fontSize: 16,
+                      fontSize: 15,
                     }}
                   >
                     AS
@@ -749,7 +960,7 @@ const Header = ({ currentPage }) => {
                     <Title level={5} style={{ margin: 0, color: publicTheme.text, fontFamily: '"Aptos", "Segoe UI", sans-serif' }}>
                       Aura Supply
                     </Title>
-                    <Text style={{ fontSize: 12, color: publicTheme.subtext }}>
+                    <Text style={{ fontSize: 11.5, color: publicTheme.subtext }}>
                       B2B sourcing, service, and learning
                     </Text>
                   </div>
@@ -761,7 +972,7 @@ const Header = ({ currentPage }) => {
                   align="center"
                   gap={6}
                   style={{
-                    padding: 6,
+                    padding: 5,
                     borderRadius: 999,
                     background: publicTheme.cardMuted,
                     border: `1px solid ${publicTheme.softBorder}`,
@@ -775,7 +986,7 @@ const Header = ({ currentPage }) => {
 
               <Col xs={10} md={9} lg={10}>
                 <Flex justify="flex-end" align="center" gap={10} wrap="wrap">
-                  {/* Desktop Universal Search Box (Only In Header) */}
+                  {/* Desktop Universal Search Box */}
                   <div ref={searchContainerRef} style={{ position: 'relative' }}>
                     <Input
                       value={searchQuery}
@@ -786,11 +997,12 @@ const Header = ({ currentPage }) => {
                       prefix={<SearchOutlined style={{ color: publicTheme.subtext }} />}
                       allowClear
                       style={{
-                        width: screens.lg ? 290 : 220,
-                        height: 42,
+                        width: screens.lg ? 270 : 210,
+                        height: 40,
                         borderRadius: 999,
                         background: publicTheme.cardMuted,
                         border: `1px solid ${publicTheme.softBorder}`,
+                        fontSize: 13,
                       }}
                     />
                     {renderSearchDropdown()}
@@ -801,13 +1013,14 @@ const Header = ({ currentPage }) => {
                       icon={<ThunderboltOutlined />}
                       onClick={() => navigate('/admins/dashboard')}
                       style={{
-                        height: 42,
+                        height: 40,
                         borderRadius: 999,
-                        paddingInline: 18,
+                        paddingInline: 16,
                         background: publicTheme.ribbon,
                         border: 'none',
                         color: 'white',
                         fontWeight: 700,
+                        fontSize: 13,
                       }}
                     >
                       Operations Portal
@@ -819,8 +1032,9 @@ const Header = ({ currentPage }) => {
                       icon={<HeartOutlined />}
                       onClick={() => navigate('/wishlist')}
                       style={{
-                        height: 42,
-                        borderRadius: 16,
+                        height: 40,
+                        width: 40,
+                        borderRadius: 14,
                         background: publicTheme.cardMuted,
                         border: `1px solid ${publicTheme.softBorder}`,
                       }}
@@ -833,8 +1047,9 @@ const Header = ({ currentPage }) => {
                       icon={<ShoppingCartOutlined />}
                       onClick={() => navigate('/cart')}
                       style={{
-                        height: 42,
-                        borderRadius: 16,
+                        height: 40,
+                        width: 40,
+                        borderRadius: 14,
                         background: publicTheme.cardMuted,
                         border: `1px solid ${publicTheme.softBorder}`,
                       }}
@@ -851,21 +1066,21 @@ const Header = ({ currentPage }) => {
                   >
                     <Button
                       style={{
-                        height: 42,
-                        borderRadius: 16,
+                        height: 40,
+                        borderRadius: 14,
                         paddingInline: 10,
                         background: publicTheme.cardMuted,
                         border: `1px solid ${publicTheme.softBorder}`,
                       }}
                     >
                       <Space>
-                        <Avatar icon={<UserOutlined />} size={28} style={{ background: publicTheme.primary }} />
+                        <Avatar icon={<UserOutlined />} size={26} style={{ background: publicTheme.primary }} />
                         <div style={{ textAlign: 'left' }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: publicTheme.text }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 700, color: publicTheme.text }}>
                             {user ? user.name : 'Guest'}
                           </div>
-                          <div style={{ fontSize: 11, color: publicTheme.subtext }}>
-                            {user ? 'Workspace ready' : 'Sign in to track orders'}
+                          <div style={{ fontSize: 10.5, color: publicTheme.subtext }}>
+                            {user ? 'Workspace ready' : 'Sign in'}
                           </div>
                         </div>
                       </Space>
@@ -874,27 +1089,31 @@ const Header = ({ currentPage }) => {
                 </Flex>
               </Col>
             </Row>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
+      {/* Responsive Navigation Drawer */}
       <Drawer
         title={
           <Space>
             <Avatar icon={<UserOutlined />} size={32} style={{ background: publicTheme.primary }} />
-            <span>{user ? `${user.name}'s workspace` : 'Guest workspace'}</span>
+            <span style={{ fontWeight: 700 }}>{user ? `${user.name}'s workspace` : 'Guest workspace'}</span>
           </Space>
         }
         placement="left"
         onClose={() => setDrawerVisible(false)}
         open={drawerVisible}
         styles={{
-          body: { padding: 20 },
-          header: { padding: '16px 20px' },
+          body: { padding: '16px' },
+          header: { padding: '14px 16px' },
         }}
-        width={300}
+        width={screens.xs ? 280 : 320}
       >
         <Space direction="vertical" size={8} style={{ width: '100%' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 6px' }}>
+            Navigation
+          </div>
           {navItems.map((item) => (
             <Button
               key={item.key}
@@ -905,19 +1124,66 @@ const Header = ({ currentPage }) => {
               }}
               icon={item.icon}
               style={{
-                height: 46,
-                borderRadius: 14,
+                height: 42,
+                borderRadius: 12,
                 textAlign: 'left',
                 justifyContent: 'flex-start',
                 background: currentPage === item.key ? publicTheme.pill : 'transparent',
                 color: currentPage === item.key ? publicTheme.primary : publicTheme.text,
                 borderColor: currentPage === item.key ? publicTheme.border : 'transparent',
                 fontWeight: currentPage === item.key ? 700 : 500,
+                fontSize: 13,
               }}
             >
               {item.label}
             </Button>
           ))}
+
+          <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 6px 4px' }}>
+            Quick Shortcuts
+          </div>
+          <Button
+            block
+            icon={<HeartOutlined />}
+            onClick={() => {
+              navigate('/wishlist');
+              setDrawerVisible(false);
+            }}
+            style={{
+              height: 42,
+              borderRadius: 12,
+              textAlign: 'left',
+              justifyContent: 'space-between',
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: 13,
+            }}
+          >
+            <span>Saved Wishlist</span>
+            {wishlistItemCount > 0 && <Tag color="blue">{wishlistItemCount}</Tag>}
+          </Button>
+
+          <Button
+            block
+            icon={<ShoppingCartOutlined />}
+            onClick={() => {
+              navigate('/cart');
+              setDrawerVisible(false);
+            }}
+            style={{
+              height: 42,
+              borderRadius: 12,
+              textAlign: 'left',
+              justifyContent: 'space-between',
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: 13,
+            }}
+          >
+            <span>Cart & Orders</span>
+            {cartItemCount > 0 && <Tag color="blue">{cartItemCount}</Tag>}
+          </Button>
+
           <Button
             block
             icon={<ThunderboltOutlined />}
@@ -926,19 +1192,81 @@ const Header = ({ currentPage }) => {
               setDrawerVisible(false);
             }}
             style={{
-              height: 46,
-              borderRadius: 14,
+              height: 42,
+              borderRadius: 12,
               textAlign: 'left',
               justifyContent: 'flex-start',
               fontWeight: 600,
+              fontSize: 13,
             }}
           >
             Operations Portal
           </Button>
+
+          <div style={{ fontSize: 11, fontWeight: 800, color: publicTheme.subtext, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 6px 4px' }}>
+            Account
+          </div>
+          {user ? (
+            <>
+              <Button
+                block
+                icon={<UserOutlined />}
+                onClick={() => {
+                  navigate('/profile');
+                  setDrawerVisible(false);
+                }}
+                style={{
+                  height: 42,
+                  borderRadius: 12,
+                  textAlign: 'left',
+                  justifyContent: 'flex-start',
+                  fontSize: 13,
+                }}
+              >
+                My Profile ({user.name})
+              </Button>
+              <Button
+                block
+                danger
+                onClick={() => {
+                  logout();
+                  navigate('/');
+                  setDrawerVisible(false);
+                }}
+                style={{
+                  height: 42,
+                  borderRadius: 12,
+                  fontSize: 13,
+                }}
+              >
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Button
+              block
+              type="primary"
+              onClick={() => {
+                navigate('/login');
+                setDrawerVisible(false);
+              }}
+              style={{
+                height: 42,
+                borderRadius: 12,
+                background: publicTheme.ribbon,
+                border: 'none',
+                fontWeight: 700,
+                fontSize: 13,
+              }}
+            >
+              Sign In / Register
+            </Button>
+          )}
         </Space>
       </Drawer>
     </>
   );
+
 };
 
 export default Header;

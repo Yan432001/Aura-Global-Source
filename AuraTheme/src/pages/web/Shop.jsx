@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Badge, Button, Card, Col, Drawer, Flex, Grid, Input, Row, Space, Tag, Typography } from 'antd';
+import { Badge, Button, Card, Col, Drawer, Flex, Grid, Input, Row, Space, Tag, Typography, notification } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import {
   AppstoreOutlined,
   CloseOutlined,
@@ -64,7 +65,9 @@ const SectionContainer = ({ title, children, onSeeMore, compact }) => (
 );
 
 const Shop = () => {
+  const navigate = useNavigate();
   const { addToCart } = useCart();
+  const [notificationApi, notificationContextHolder] = notification.useNotification();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState(null);
   const [selectedBranch, setSelectedBranch] = useState('all');
@@ -76,17 +79,66 @@ const Shop = () => {
 
   const screens = useBreakpoint();
 
-  const gridGutter = [
-    { xs: 8, sm: 12, md: 16, lg: 20, xl: 24, xxl: 24 },
-    { xs: 16, sm: 16, md: 24, lg: 24, xl: 32, xxl: 32 },
-  ];
+  const handleAddToCart = (product) => {
+    addToCart(product);
+    notificationApi.success({
+      message: (
+        <span style={{ fontWeight: 800, fontSize: 14 }}>
+          {product.name} Added to Cart!
+        </span>
+      ),
+      description: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, marginBottom: 8 }}>
+          <img
+            src={product.image}
+            alt=""
+            style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }}
+          />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: '#2563eb' }}>
+              ${Number(product.price).toFixed(2)}
+            </div>
+            <div style={{ fontSize: 11, color: '#64748b' }}>Item ready for checkout</div>
+          </div>
+        </div>
+      ),
+      actions: (
+        <Space size={8}>
+          <Button size="small" onClick={() => notificationApi.destroy()} style={{ borderRadius: 8, fontSize: 12 }}>
+            Continue
+          </Button>
+          <Button
+            type="primary"
+            size="small"
+            onClick={() => {
+              notificationApi.destroy();
+              navigate('/cart');
+            }}
+            style={{
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 800,
+              background: '#2563eb',
+              borderColor: '#2563eb',
+            }}
+          >
+            View Cart &amp; Checkout →
+          </Button>
+        </Space>
+      ),
+      duration: 5,
+      placement: 'topRight',
+    });
+  };
+
+  const gridGutter = screens.xs ? [10, 10] : screens.sm ? [12, 12] : [18, 18];
 
   const columnConfig = {
-    xs: 24,
-    sm: 12,
-    md: 12,
+    xs: 12,
+    sm: 8,
+    md: 8,
     lg: 8,
-    xl: 8,
+    xl: 6,
     xxl: 6,
   };
 
@@ -163,6 +215,7 @@ const Shop = () => {
 
   return (
     <div style={{ minHeight: '100vh' }}>
+      {notificationContextHolder}
       <Card
         className="frosted-panel stagger-rise"
         style={{
@@ -322,7 +375,7 @@ const Shop = () => {
                         product={product}
                         isFavorite={favorites.has(product.id)}
                         onToggleFavorite={toggleFavorite}
-                        onAddToCart={addToCart}
+                        onAddToCart={handleAddToCart}
                       />
                     </Col>
                   ))}
@@ -352,7 +405,7 @@ const Shop = () => {
                         product={product}
                         isFavorite={favorites.has(product.id)}
                         onToggleFavorite={toggleFavorite}
-                        onAddToCart={addToCart}
+                        onAddToCart={handleAddToCart}
                       />
                     </Col>
                   ))}
@@ -376,7 +429,7 @@ const Shop = () => {
                             product={product}
                             isFavorite={favorites.has(product.id)}
                             onToggleFavorite={toggleFavorite}
-                            onAddToCart={addToCart}
+                            onAddToCart={handleAddToCart}
                           />
                         </Col>
                       ))}

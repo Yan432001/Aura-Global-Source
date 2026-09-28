@@ -22,11 +22,18 @@ import {
   LockOutlined,
   SyncOutlined,
   StarFilled,
+  HeartOutlined,
+  HeartFilled,
+  PlusOutlined,
+  CheckOutlined,
+  ShareAltOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import simpleData from '../../../../data/simpleData';
+import { shops } from '../../data/shopData';
 import { useCart } from '../../contexts/CartContext';
-import { publicTheme, formatCurrency } from '../../utils/webTheme';
+import { publicTheme, formatCurrency, formatCompact } from '../../utils/webTheme';
+import TelegramMiniAppModal, { BOTFATHER_CONFIG } from '../../components/web/shared/TelegramMiniAppModal';
 
 const { Title, Text, Paragraph } = Typography;
 const { useBreakpoint } = Grid;
@@ -55,10 +62,109 @@ export default function Home() {
   const countdown = useCountdown(18);
   const { addItem } = useCart();
   const [activeCategory, setActiveCategory] = useState('all');
+  const [telegramShop, setTelegramShop] = useState(null);
+
+  // Persistent shop social states (likes, follows)
+  const [likedShops, setLikedShops] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('aura_liked_shops') || '{}');
+    } catch (_) {
+      return {};
+    }
+  });
+
+  const [followedShops, setFollowedShops] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('aura_followed_shops') || '{}');
+    } catch (_) {
+      return {};
+    }
+  });
 
   const stores = simpleData.stores || [];
   const categories = simpleData.categories || [];
   const products = simpleData.products || [];
+
+  const handleOpenTelegramModal = (storeOrShop) => {
+    if (!storeOrShop) return;
+    const found = shops.find(
+      (s) =>
+        s.id === storeOrShop.slug ||
+        s.slug === storeOrShop.slug ||
+        s.name?.toLowerCase() === storeOrShop.name?.toLowerCase()
+    );
+    if (found) {
+      setTelegramShop({ ...found, slug: storeOrShop.slug || found.slug || found.id });
+      return;
+    }
+    // Build compliant shop object for modal
+    setTelegramShop({
+      id: storeOrShop.slug || `store-${storeOrShop.id}`,
+      slug: storeOrShop.slug || 'sbc-store',
+      name: storeOrShop.name,
+      branch: storeOrShop.branch || 'bangkok-hub',
+      rating: storeOrShop.rating || 4.9,
+      followers: storeOrShop.followers || 5400,
+      heroImage:
+        storeOrShop.banner ||
+        storeOrShop.cover ||
+        'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200&h=800&fit=crop',
+      logoText: storeOrShop.name?.slice(0, 2)?.toUpperCase() || 'EM',
+      summary:
+        storeOrShop.tagline ||
+        storeOrShop.description ||
+        'Digital contactless dining and takeaway e-menu.',
+      specialties: ['E-Menu', 'Online Order', 'Telegram Mini App'],
+      responseTime: 'instant',
+    });
+  };
+
+  const handleToggleLikeShop = (storeId, storeName, e) => {
+    if (e) e.stopPropagation();
+    setLikedShops((prev) => {
+      const next = { ...prev, [storeId]: !prev[storeId] };
+      localStorage.setItem('aura_liked_shops', JSON.stringify(next));
+      if (next[storeId]) {
+        message.success(`❤️ Liked ${storeName}!`);
+      } else {
+        message.info(`Unliked ${storeName}`);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleFollowShop = (storeId, storeName, e) => {
+    if (e) e.stopPropagation();
+    setFollowedShops((prev) => {
+      const next = { ...prev, [storeId]: !prev[storeId] };
+      localStorage.setItem('aura_followed_shops', JSON.stringify(next));
+      if (next[storeId]) {
+        message.success(`➕ Following ${storeName}!`);
+      } else {
+        message.info(`Unfollowed ${storeName}`);
+      }
+      return next;
+    });
+  };
+
+  const handleShareShop = async (store, e) => {
+    if (e) e.stopPropagation();
+    const shareUrl = `${window.location.origin}/shop/${store.slug}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: store.name,
+          text: `Check out ${store.name} E-Menu on Telegram!`,
+          url: shareUrl,
+        });
+        return;
+      } catch (_) {}
+    }
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(shareUrl);
+      message.success(`🔗 ${store.name} link copied to clipboard!`);
+    }
+  };
 
   const filteredProducts = useMemo(() => {
     if (activeCategory === 'all') return products;
@@ -156,9 +262,9 @@ export default function Home() {
               level={1}
               style={{
                 color: publicTheme.text,
-                fontSize: screens.xs ? 32 : screens.md ? 44 : 52,
+                fontSize: screens.xs ? 28 : screens.md ? 44 : 52,
                 fontWeight: 800,
-                lineHeight: 1.12,
+                lineHeight: 1.15,
                 letterSpacing: '-0.02em',
                 marginBottom: 16,
               }}
@@ -170,10 +276,10 @@ export default function Home() {
             <Paragraph
               style={{
                 color: publicTheme.subtext,
-                fontSize: screens.xs ? 14 : 16,
-                lineHeight: 1.6,
+                fontSize: screens.xs ? 13.5 : 16,
+                lineHeight: 1.55,
                 maxWidth: 580,
-                marginBottom: 28,
+                marginBottom: 24,
               }}
             >
               Browse artisan food, specialty coffee, and curated lifestyle collections. Place orders
@@ -181,21 +287,22 @@ export default function Home() {
               for fast contactless dining and takeaway.
             </Paragraph>
 
-            <Space wrap size={14}>
+            <Space wrap size={12} style={{ width: screens.xs ? '100%' : 'auto' }}>
               <Button
                 type="primary"
                 size="large"
                 icon={<SendOutlined />}
-                onClick={() => navigate('/shop/sbc-store')}
+                onClick={() => handleOpenTelegramModal(stores[0] || shops[0])}
                 style={{
-                  height: 48,
+                  height: 46,
+                  width: screens.xs ? '100%' : 'auto',
                   borderRadius: 14,
                   background: publicTheme.primary,
                   borderColor: publicTheme.primary,
                   color: '#ffffff',
                   fontWeight: 700,
-                  fontSize: 14,
-                  paddingInline: 26,
+                  fontSize: screens.xs ? 13 : 14,
+                  paddingInline: 22,
                   boxShadow: '0 10px 24px rgba(47, 111, 237, 0.28)',
                 }}
               >
@@ -206,14 +313,15 @@ export default function Home() {
                 icon={<ShopOutlined />}
                 onClick={() => navigate('/products')}
                 style={{
-                  height: 48,
+                  height: 46,
+                  width: screens.xs ? '100%' : 'auto',
                   borderRadius: 14,
                   background: '#ffffff',
                   borderColor: publicTheme.accent,
                   color: publicTheme.accent,
                   fontWeight: 700,
-                  fontSize: 14,
-                  paddingInline: 24,
+                  fontSize: screens.xs ? 13 : 14,
+                  paddingInline: 22,
                 }}
               >
                 Browse Web Catalog
@@ -248,7 +356,7 @@ export default function Home() {
             </div>
           </Col>
 
-          {/* Interactive Telegram Order Simulator Card using Default Theme */}
+          {/* Live Telegram Kitchen Dispatch Preview Card using Default Theme */}
           <Col xs={24} lg={11}>
             <div
               style={{
@@ -371,52 +479,67 @@ export default function Home() {
       </div>
 
       {/* 2. Connected Multi-Store Concept Showcase (Full Screen 4-Card Layout) */}
-      <div style={{ width: '100%', marginBottom: 40 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
+      <div style={{ width: '100%', marginBottom: screens.xs ? 28 : 40 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: screens.xs ? 'flex-start' : 'flex-end', marginBottom: screens.xs ? 12 : 20, flexDirection: screens.xs ? 'column' : 'row', gap: screens.xs ? 6 : 0 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: publicTheme.primary, textTransform: 'uppercase', marginBottom: 4 }}>
               Multi-Concept Brands
             </div>
-            <Title level={2} style={{ margin: 0, fontWeight: 800, color: publicTheme.text }}>
+            <Title level={screens.xs ? 3 : 2} style={{ margin: 0, fontWeight: 800, color: publicTheme.text }}>
               Explore Our Shops & E-Menus
             </Title>
           </div>
-          <Button
-            type="link"
-            onClick={() => navigate('/shops')}
-            style={{ fontWeight: 700, color: publicTheme.primary, padding: 0 }}
-          >
-            All Locations <ArrowRightOutlined />
-          </Button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: screens.xs ? '100%' : 'auto' }}>
+            {screens.xs && (
+              <span style={{ fontSize: 11.5, color: publicTheme.subtext, fontWeight: 500 }}>
+                Swipe to explore 4 stores →
+              </span>
+            )}
+            <Button
+              type="link"
+              onClick={() => navigate('/shops')}
+              style={{ fontWeight: 700, color: publicTheme.primary, padding: 0 }}
+            >
+              All Locations <ArrowRightOutlined />
+            </Button>
+          </div>
         </div>
 
-        <Row gutter={[20, 20]} style={{ width: '100%', margin: 0 }}>
-          {stores.map((store) => (
-            <Col xs={24} sm={12} lg={6} key={store.id} style={{ padding: '0 10px' }}>
-              <Card
-                hoverable
-                onClick={() => navigate(`/shop/${store.slug}`)}
-                style={{
-                  borderRadius: 22,
-                  border: `1px solid ${publicTheme.border}`,
-                  overflow: 'hidden',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  background: '#ffffff',
-                  boxShadow: publicTheme.lightShadow,
-                }}
-                styles={{
-                  body: {
-                    padding: 16,
-                    flex: 1,
+        {screens.xs ? (
+          /* Mobile Phone App-Style Horizontal Snap-Scroll Track */
+          <div style={{ width: '100%' }}>
+            <div
+              className="shop-cards-mobile-scroll"
+              style={{
+                display: 'flex',
+                gap: 12,
+                overflowX: 'auto',
+                scrollSnapType: 'x mandatory',
+                WebkitOverflowScrolling: 'touch',
+                padding: '4px 2px 14px 2px',
+                margin: '0 -2px',
+              }}
+            >
+              {stores.map((store) => (
+                <div
+                  key={store.id}
+                  onClick={() => navigate(`/shop/${store.slug}`)}
+                  style={{
+                    flex: '0 0 min(310px, 85vw)',
+                    maxWidth: 330,
+                    scrollSnapAlign: 'start',
+                    borderRadius: 20,
+                    border: `1px solid ${publicTheme.border}`,
+                    overflow: 'hidden',
+                    background: '#ffffff',
+                    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'space-between',
-                  },
-                }}
-                cover={
-                  <div style={{ position: 'relative', height: 140, overflow: 'hidden' }}>
+                    cursor: 'pointer',
+                  }}
+                >
+                  {/* Shop Banner with Brand Logo & Floating Badges */}
+                  <div style={{ position: 'relative', height: 135, overflow: 'hidden' }}>
                     <img
                       src={store.banner}
                       alt={store.name}
@@ -426,9 +549,29 @@ export default function Home() {
                       style={{
                         position: 'absolute',
                         inset: 0,
-                        background: 'linear-gradient(to top, rgba(28, 35, 51, 0.75) 0%, transparent 60%)',
+                        background: 'linear-gradient(to top, rgba(28, 35, 51, 0.82) 0%, transparent 60%)',
                       }}
                     />
+                    {/* Top Status Badge */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        background: 'rgba(255, 255, 255, 0.94)',
+                        padding: '3px 8px',
+                        borderRadius: 999,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: publicTheme.text,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                      }}
+                    >
+                      <span style={{ color: publicTheme.accent }}>★ {store.rating || '4.9'}</span>
+                      <span style={{ color: publicTheme.subtext, marginLeft: 4 }}>• {store.hours}</span>
+                    </div>
+
+                    {/* Logo & Store Name */}
                     <div
                       style={{
                         position: 'absolute',
@@ -441,56 +584,327 @@ export default function Home() {
                     >
                       <Avatar
                         src={store.logo}
-                        size={38}
+                        size={36}
                         style={{ border: '2px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
                       />
-                      <span style={{ color: 'white', fontWeight: 700, fontSize: 13, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-                        {store.name}
+                      <div>
+                        <div style={{ color: 'white', fontWeight: 800, fontSize: 15, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                          {store.name}
+                        </div>
+                        <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11 }}>
+                          {store.branch || 'Flagship Branch'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Shop Details & Touch Actions */}
+                  <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div>
+                      <p style={{ fontSize: 12.5, color: publicTheme.subtext, margin: '0 0 8px', lineHeight: 1.45 }}>
+                        {store.tagline}
+                      </p>
+
+                      <div style={{ fontSize: 11.5, color: publicTheme.primary, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, marginBottom: 12 }}>
+                        <SendOutlined style={{ fontSize: 11 }} />
+                        <span>Telegram: {store.telegram_group_name?.split(' ')[1] || 'Staff Group'}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      {/* Social Actions (Like, Follow, Share) - 36px touch targets */}
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          marginBottom: 10,
+                        }}
+                      >
+                        <Button
+                          type="text"
+                          icon={
+                            likedShops[store.id] ? (
+                              <HeartFilled style={{ color: '#ef4444' }} />
+                            ) : (
+                              <HeartOutlined style={{ color: publicTheme.subtext }} />
+                            )
+                          }
+                          onClick={(e) => handleToggleLikeShop(store.id, store.name, e)}
+                          style={{
+                            flex: 1,
+                            height: 36,
+                            borderRadius: 10,
+                            background: likedShops[store.id] ? 'rgba(239, 68, 68, 0.08)' : publicTheme.cardMuted,
+                            color: likedShops[store.id] ? '#ef4444' : publicTheme.text,
+                            fontWeight: 600,
+                            fontSize: 12,
+                          }}
+                        >
+                          {likedShops[store.id] ? 'Liked' : 'Like'} ({formatCompact((store.likes || 120) + (likedShops[store.id] ? 1 : 0))})
+                        </Button>
+
+                        <Button
+                          type="text"
+                          icon={
+                            followedShops[store.id] ? (
+                              <CheckOutlined style={{ color: '#2563eb' }} />
+                            ) : (
+                              <PlusOutlined style={{ color: publicTheme.subtext }} />
+                            )
+                          }
+                          onClick={(e) => handleToggleFollowShop(store.id, store.name, e)}
+                          style={{
+                            flex: 1,
+                            height: 36,
+                            borderRadius: 10,
+                            background: followedShops[store.id] ? 'rgba(37, 99, 235, 0.08)' : publicTheme.cardMuted,
+                            color: followedShops[store.id] ? '#2563eb' : publicTheme.text,
+                            fontWeight: 600,
+                            fontSize: 12,
+                          }}
+                        >
+                          {followedShops[store.id] ? 'Following' : 'Follow'}
+                        </Button>
+
+                        <Button
+                          type="text"
+                          icon={<ShareAltOutlined style={{ color: publicTheme.subtext, fontSize: 13 }} />}
+                          onClick={(e) => handleShareShop(store, e)}
+                          style={{
+                            width: 36,
+                            height: 36,
+                            minWidth: 36,
+                            borderRadius: 10,
+                            background: publicTheme.cardMuted,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        />
+                      </div>
+
+                      {/* Primary Store Action Button */}
+                      <Button
+                        type="primary"
+                        block
+                        onClick={() => navigate(`/shop/${store.slug}`)}
+                        style={{
+                          height: 40,
+                          borderRadius: 12,
+                          background: publicTheme.primary,
+                          border: 'none',
+                          fontWeight: 700,
+                          fontSize: 13,
+                          boxShadow: '0 4px 14px rgba(47, 111, 237, 0.22)',
+                        }}
+                      >
+                        View Menu & Catalog ↗
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* Desktop & Tablet 4-Card Grid */
+          <Row gutter={[20, 20]} style={{ width: '100%' }}>
+            {stores.map((store) => (
+              <Col sm={12} md={8} lg={6} key={store.id} style={{ padding: '0 10px' }}>
+                <Card
+                  hoverable
+                  onClick={() => navigate(`/shop/${store.slug}`)}
+                  style={{
+                    borderRadius: 22,
+                    border: `1px solid ${publicTheme.border}`,
+                    overflow: 'hidden',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: '#ffffff',
+                    boxShadow: publicTheme.lightShadow,
+                  }}
+                  styles={{
+                    body: {
+                      padding: 16,
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                    },
+                  }}
+                  cover={
+                    <div style={{ position: 'relative', height: 140, overflow: 'hidden' }}>
+                      <img
+                        src={store.banner}
+                        alt={store.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: 'linear-gradient(to top, rgba(28, 35, 51, 0.75) 0%, transparent 60%)',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: 10,
+                          left: 12,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                        }}
+                      >
+                        <Avatar
+                          src={store.logo}
+                          size={38}
+                          style={{ border: '2px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
+                        />
+                        <span style={{ color: 'white', fontWeight: 700, fontSize: 13, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                          {store.name}
+                        </span>
+                      </div>
+                    </div>
+                  }
+                >
+                  <div>
+                    <p style={{ fontSize: 12, color: publicTheme.subtext, margin: '0 0 6px', lineHeight: 1.35, minHeight: 36, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {store.tagline}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: publicTheme.subtext, marginBottom: 6 }}>
+                      <span style={{ color: publicTheme.accent, fontWeight: 'bold' }}>★ {store.rating || '4.9'}</span>
+                      <span>·</span>
+                      <span>{store.hours}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: publicTheme.primary, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <SendOutlined style={{ fontSize: 10 }} />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        Group: {store.telegram_group_name?.split(' ')[1] || 'Staff Group'}
+                      </span>
+                    </div>
+
+                    {/* Social Concept: Like, Follow, Share */}
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        marginTop: 10,
+                        marginBottom: 4,
+                      }}
+                    >
+                      {/* Like button */}
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={
+                          likedShops[store.id] ? (
+                            <HeartFilled style={{ color: '#ef4444' }} />
+                          ) : (
+                            <HeartOutlined style={{ color: publicTheme.subtext }} />
+                          )
+                        }
+                        onClick={(e) => handleToggleLikeShop(store.id, store.name, e)}
+                        style={{
+                          flex: 1,
+                          fontSize: 11,
+                          height: 28,
+                          borderRadius: 8,
+                          padding: '0 6px',
+                          background: likedShops[store.id] ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0,0,0,0.03)',
+                          color: likedShops[store.id] ? '#ef4444' : publicTheme.text,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {likedShops[store.id] ? 'Liked' : 'Like'} ({formatCompact((store.likes || 120) + (likedShops[store.id] ? 1 : 0))})
+                      </Button>
+
+                      {/* Follow button */}
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={
+                          followedShops[store.id] ? (
+                            <CheckOutlined style={{ color: '#2563eb' }} />
+                          ) : (
+                            <PlusOutlined style={{ color: publicTheme.subtext }} />
+                          )
+                        }
+                        onClick={(e) => handleToggleFollowShop(store.id, store.name, e)}
+                        style={{
+                          flex: 1,
+                          fontSize: 11,
+                          height: 28,
+                          borderRadius: 8,
+                          padding: '0 6px',
+                          background: followedShops[store.id] ? 'rgba(37, 99, 235, 0.08)' : 'rgba(0,0,0,0.03)',
+                          color: followedShops[store.id] ? '#2563eb' : publicTheme.text,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {followedShops[store.id] ? 'Following' : 'Follow'}
+                      </Button>
+
+                      {/* Share button */}
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={<ShareAltOutlined style={{ color: publicTheme.subtext, fontSize: 12 }} />}
+                        onClick={(e) => handleShareShop(store, e)}
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 8,
+                          padding: 0,
+                          background: 'rgba(0,0,0,0.03)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                        title="Share shop"
+                      />
+                    </div>
+
+                    {/* Telegram Bot Connection Pill */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenTelegramModal(store);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '7px 12px',
+                        borderRadius: 10,
+                        background: 'rgba(36, 129, 204, 0.08)',
+                        border: '1px solid rgba(36, 129, 204, 0.2)',
+                        fontSize: 11,
+                        color: '#2481cc',
+                        cursor: 'pointer',
+                        marginTop: 6,
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <span>
+                        <SendOutlined style={{ marginRight: 5 }} />
+                        <strong>@{BOTFATHER_CONFIG.botUsername}</strong> • E-Menu
+                      </span>
+                      <span style={{ fontWeight: 700, textDecoration: 'underline' }}>
+                        Open to Telegram ↗
                       </span>
                     </div>
                   </div>
-                }
-              >
-                <div>
-                  <p style={{ fontSize: 12, color: publicTheme.subtext, margin: '0 0 10px', lineHeight: 1.45, minHeight: 36 }}>
-                    {store.tagline}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: publicTheme.subtext, marginBottom: 6 }}>
-                    <span style={{ color: publicTheme.accent, fontWeight: 'bold' }}>★ {store.rating || '4.9'}</span>
-                    <span>·</span>
-                    <span>{store.hours}</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: publicTheme.primary, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <SendOutlined style={{ fontSize: 10 }} />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      Group: {store.telegram_group_name?.split(' ')[1] || 'Staff Group'}
-                    </span>
-                  </div>
-                </div>
-
-                <Button
-                  block
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/shop/${store.slug}`);
-                  }}
-                  style={{
-                    marginTop: 14,
-                    height: 38,
-                    borderRadius: 12,
-                    background: 'rgba(240, 244, 255, 0.7)',
-                    borderColor: publicTheme.border,
-                    color: publicTheme.primary,
-                    fontWeight: 700,
-                    fontSize: 12,
-                  }}
-                >
-                  Open E-Menu →
-                </Button>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        )}
       </div>
 
       {/* 3. Telegram Mini App Ordering Flow (Full Screen 3-Card Row) */}
@@ -693,13 +1107,14 @@ export default function Home() {
         </div>
 
         {/* Full-Width Products Grid */}
-        <Row gutter={[18, 18]} style={{ width: '100%', margin: 0 }}>
+        <Row gutter={screens.xs ? [10, 10] : [18, 18]} style={{ width: '100%' }}>
           {filteredProducts.map((product) => (
-            <Col xs={12} sm={8} md={6} lg={4} key={product.id} style={{ padding: '0 9px' }}>
+            <Col xs={12} sm={8} md={6} lg={4} key={product.id} style={{ padding: screens.xs ? '0 5px' : '0 9px' }}>
               <Card
                 hoverable
+                className="app-product-card retail-product-card-wrapper"
                 style={{
-                  borderRadius: 20,
+                  borderRadius: screens.xs ? 16 : 20,
                   border: `1px solid ${publicTheme.border}`,
                   overflow: 'hidden',
                   height: '100%',
@@ -710,7 +1125,7 @@ export default function Home() {
                 }}
                 styles={{
                   body: {
-                    padding: 14,
+                    padding: screens.xs ? 8 : 14,
                     flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
@@ -728,14 +1143,14 @@ export default function Home() {
                       <span
                         style={{
                           position: 'absolute',
-                          top: 8,
-                          left: 8,
+                          top: screens.xs ? 5 : 8,
+                          left: screens.xs ? 5 : 8,
                           background: 'rgba(28, 35, 51, 0.82)',
                           backdropFilter: 'blur(4px)',
                           color: '#ffffff',
-                          fontSize: 10,
+                          fontSize: screens.xs ? 9 : 10,
                           fontWeight: 700,
-                          padding: '3px 8px',
+                          padding: screens.xs ? '2px 6px' : '3px 8px',
                           borderRadius: 6,
                         }}
                       >
@@ -746,17 +1161,17 @@ export default function Home() {
                 }
               >
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: publicTheme.text, marginBottom: 4, lineHeight: 1.3 }}>
+                  <div style={{ fontWeight: 700, fontSize: screens.xs ? 12 : 13, color: publicTheme.text, marginBottom: 2, lineHeight: 1.25, minHeight: screens.xs ? 30 : 'auto', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {product.name}
                   </div>
                   <p
                     style={{
-                      fontSize: 11,
+                      fontSize: screens.xs ? 10 : 11,
                       color: publicTheme.subtext,
-                      lineHeight: 1.4,
-                      margin: '0 0 10px',
+                      lineHeight: 1.35,
+                      margin: screens.xs ? '0 0 6px' : '0 0 10px',
                       display: '-webkit-box',
-                      WebkitLineClamp: 2,
+                      WebkitLineClamp: screens.xs ? 1 : 2,
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
                     }}
@@ -765,8 +1180,8 @@ export default function Home() {
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6 }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: publicTheme.text }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: screens.xs ? 4 : 6 }}>
+                  <div style={{ fontSize: screens.xs ? 13 : 15, fontWeight: 800, color: publicTheme.text }}>
                     ${Number(product.price).toFixed(2)}
                   </div>
                   <Button
@@ -774,12 +1189,13 @@ export default function Home() {
                     size="small"
                     onClick={(e) => handleAddToCart(product, e)}
                     style={{
-                      borderRadius: 10,
+                      borderRadius: 8,
                       background: publicTheme.primary,
                       borderColor: publicTheme.primary,
                       fontWeight: 700,
-                      fontSize: 11,
-                      height: 30,
+                      fontSize: screens.xs ? 10 : 11,
+                      height: screens.xs ? 26 : 30,
+                      padding: screens.xs ? '0 8px' : '0 12px',
                     }}
                   >
                     + Add
@@ -856,7 +1272,7 @@ export default function Home() {
       </div>
 
       {/* 6. Full-Width Trust & Quality Pillars */}
-      <Row gutter={[16, 16]} style={{ width: '100%', margin: 0 }}>
+      <Row gutter={[16, 16]} style={{ width: '100%' }}>
         {[
           { icon: <SendOutlined />, title: 'Real-Time Telegram Dispatch', text: 'Kitchen tickets sent instantly to shop groups' },
           { icon: <SafetyCertificateOutlined />, title: 'Artisan Quality', text: 'Farm-to-cup beans & European sourdough' },
@@ -890,6 +1306,13 @@ export default function Home() {
           </Col>
         ))}
       </Row>
+
+      {/* Telegram Mini App Gateway Modal */}
+      <TelegramMiniAppModal
+        open={Boolean(telegramShop)}
+        onClose={() => setTelegramShop(null)}
+        shop={telegramShop}
+      />
     </div>
   );
 }

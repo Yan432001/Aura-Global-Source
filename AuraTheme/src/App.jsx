@@ -69,6 +69,7 @@ const AppContent = () => {
     <Routes>
       {/* 1. Telegram Deep-Link Entry */}
       <Route path="/tg" element={<TelegramEntry />} />
+      <Route path="/menu" element={<TelegramEntry />} />
 
       {/* 2. Isolated Multi-Store E-Menu Routes (No Base Header/Footer) */}
       <Route path="/shop" element={<EMenuLayout />}>
@@ -93,8 +94,8 @@ const AppContent = () => {
         <Route path="community" element={<Navigate to="/service" replace />} />
         <Route path="learn" element={<Learn />} />
         <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
-        <Route path="wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
+        <Route path="cart" element={<Cart />} />
+        <Route path="wishlist" element={<Wishlist />} />
       </Route>
 
       {/* 4. Admin Management Routes */}
