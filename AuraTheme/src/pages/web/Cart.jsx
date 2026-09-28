@@ -654,7 +654,7 @@ const Cart = () => {
                       borderColor: deliveryMethod === 'standard' ? '#2563eb' : '#e2e8f0',
                       background: deliveryMethod === 'standard' ? '#eff6ff' : '#ffffff',
                     }}
-                    bodyStyle={{ padding: 12, textAlign: 'center' }}
+                    styles={{ body: { padding: 12, textAlign: 'center' } }}
                   >
                     <Radio value="standard" style={{ display: 'none' }} />
                     <div style={{ fontSize: 18, marginBottom: 4 }}>🛵</div>
@@ -672,7 +672,7 @@ const Cart = () => {
                       borderColor: deliveryMethod === 'express' ? '#2563eb' : '#e2e8f0',
                       background: deliveryMethod === 'express' ? '#eff6ff' : '#ffffff',
                     }}
-                    bodyStyle={{ padding: 12, textAlign: 'center' }}
+                    styles={{ body: { padding: 12, textAlign: 'center' } }}
                   >
                     <Radio value="express" style={{ display: 'none' }} />
                     <div style={{ fontSize: 18, marginBottom: 4 }}>⚡</div>
@@ -690,7 +690,7 @@ const Cart = () => {
                       borderColor: deliveryMethod === 'pickup' ? '#2563eb' : '#e2e8f0',
                       background: deliveryMethod === 'pickup' ? '#eff6ff' : '#ffffff',
                     }}
-                    bodyStyle={{ padding: 12, textAlign: 'center' }}
+                    styles={{ body: { padding: 12, textAlign: 'center' } }}
                   >
                     <Radio value="pickup" style={{ display: 'none' }} />
                     <div style={{ fontSize: 18, marginBottom: 4 }}>🏪</div>
@@ -726,7 +726,7 @@ const Cart = () => {
                       borderColor: paymentMethod === 'khqr' ? '#2563eb' : '#e2e8f0',
                       background: paymentMethod === 'khqr' ? '#eff6ff' : '#ffffff',
                     }}
-                    bodyStyle={{ padding: 12, textAlign: 'center' }}
+                    styles={{ body: { padding: 12, textAlign: 'center' } }}
                   >
                     <div style={{ fontSize: 18, marginBottom: 4 }}>📱</div>
                     <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>ABA KHQR Pay</div>
@@ -743,7 +743,7 @@ const Cart = () => {
                       borderColor: paymentMethod === 'cod' ? '#2563eb' : '#e2e8f0',
                       background: paymentMethod === 'cod' ? '#eff6ff' : '#ffffff',
                     }}
-                    bodyStyle={{ padding: 12, textAlign: 'center' }}
+                    styles={{ body: { padding: 12, textAlign: 'center' } }}
                   >
                     <div style={{ fontSize: 18, marginBottom: 4 }}>💵</div>
                     <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>Cash on Delivery</div>
@@ -760,7 +760,7 @@ const Cart = () => {
                       borderColor: paymentMethod === 'card' ? '#2563eb' : '#e2e8f0',
                       background: paymentMethod === 'card' ? '#eff6ff' : '#ffffff',
                     }}
-                    bodyStyle={{ padding: 12, textAlign: 'center' }}
+                    styles={{ body: { padding: 12, textAlign: 'center' } }}
                   >
                     <div style={{ fontSize: 18, marginBottom: 4 }}>💳</div>
                     <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>Credit / Debit Card</div>

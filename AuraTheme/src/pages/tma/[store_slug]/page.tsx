@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
+import jsQR from 'jsqr';
 import {
   ShopOutlined,
   ShoppingCartOutlined,
@@ -27,7 +28,10 @@ import {
   FireOutlined,
   CopyOutlined,
   ThunderboltOutlined,
-  BellOutlined
+  BellOutlined,
+  QrcodeOutlined,
+  ScanOutlined,
+  CameraOutlined
 } from '@ant-design/icons';
 import { useTelegram } from '../../../hooks/useTelegram';
 import { useStoreCart } from '../../../hooks/useStoreCart';
@@ -268,9 +272,381 @@ export default function StoreFront() {
     }
   }, [searchParams, products]);
 
-  // Handle Store Selection
-  const handleSelectStore = (store: any) => {
+  // QR Code Scanner State & Camera Controls
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannerError, setScannerError] = useState<string | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [hasTorch, setHasTorch] = useState(false);
+  const [isTorchOn, setIsTorchOn] = useState(false);
+  const [manualQrInput, setManualQrInput] = useState('');
+  const [scanSuccessBanner, setScanSuccessBanner] = useState<{
+    message: string;
+    storeName: string;
+    table?: string;
+  } | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Stop camera tracks and animation loops cleanly
+  const stopCamera = useCallback(() => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraActive(false);
+    setIsTorchOn(false);
+  }, []);
+
+  const closeScanner = useCallback(() => {
+    stopCamera();
+    setIsScannerOpen(false);
+    setScannerError(null);
+  }, [stopCamera]);
+
+  // Robust QR payload parser: parses URLs, deep-links, JSON, or slug_table strings
+  const parseQrPayload = useCallback(
+    (rawText: string) => {
+      if (!rawText) return { targetSlug: '', targetTable: '' };
+      const text = rawText.trim();
+      let targetSlug = '';
+      let targetTable = '';
+
+      // 1. Try parsing JSON if present: e.g. {"store":"sbc-store","table":"Table 4"}
+      if (text.startsWith('{') && text.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(text);
+          if (parsed.store || parsed.slug) targetSlug = parsed.store || parsed.slug;
+          if (parsed.table || parsed.tableNumber || parsed.counter || parsed.table_no) {
+            targetTable = parsed.table || parsed.tableNumber || parsed.counter || parsed.table_no;
+          }
+        } catch {
+          // not valid JSON
+        }
+      }
+
+      // 2. If it's a URL or deep-link query
+      if (!targetSlug && (text.startsWith('http://') || text.startsWith('https://') || text.includes('?') || text.includes('t.me') || text.includes('startapp='))) {
+        try {
+          const urlObj = new URL(text.startsWith('http') ? text : `https://${text}`);
+          const startApp = urlObj.searchParams.get('startapp') || urlObj.searchParams.get('start');
+          const storeParam = urlObj.searchParams.get('store') || urlObj.searchParams.get('store_slug') || urlObj.searchParams.get('slug');
+          const tableParam = urlObj.searchParams.get('table') || urlObj.searchParams.get('table_no') || urlObj.searchParams.get('tbl') || urlObj.searchParams.get('seat') || urlObj.searchParams.get('counter');
+
+          if (tableParam) targetTable = tableParam;
+
+          if (startApp) {
+            const cleaned = startApp.replace(/^shop_/, '').replace(/^store_/, '');
+            if (cleaned.includes('_table_')) {
+              const parts = cleaned.split('_table_');
+              targetSlug = parts[0];
+              if (!targetTable) targetTable = `Table #${parts[1]}`;
+            } else if (cleaned.includes('_counter_')) {
+              const parts = cleaned.split('_counter_');
+              targetSlug = parts[0];
+              if (!targetTable) targetTable = `Counter #${parts[1]}`;
+            } else if (cleaned.includes('_station_')) {
+              const parts = cleaned.split('_station_');
+              targetSlug = parts[0];
+              if (!targetTable) targetTable = `Station #${parts[1]}`;
+            } else {
+              targetSlug = cleaned;
+            }
+          } else if (storeParam) {
+            targetSlug = storeParam;
+          } else {
+            // Path check e.g. /shop/aura-bakery or /tma/sbc-store
+            const pathParts = urlObj.pathname.split('/').filter(Boolean);
+            if (pathParts.includes('shop') || pathParts.includes('tma')) {
+              const idx = Math.max(pathParts.indexOf('shop'), pathParts.indexOf('tma'));
+              if (idx !== -1 && pathParts[idx + 1]) {
+                targetSlug = pathParts[idx + 1];
+              }
+            }
+          }
+        } catch {
+          // url parse failed
+        }
+      }
+
+      // 3. Delimited string: e.g. "sbc-store_table_4" or "aura-bakery_counter_1"
+      if (!targetSlug && (text.includes('_table_') || text.includes('_counter_') || text.includes('_station_'))) {
+        if (text.includes('_table_')) {
+          const parts = text.split('_table_');
+          targetSlug = parts[0];
+          targetTable = `Table #${parts[1]}`;
+        } else if (text.includes('_counter_')) {
+          const parts = text.split('_counter_');
+          targetSlug = parts[0];
+          targetTable = `Counter #${parts[1]}`;
+        } else if (text.includes('_station_')) {
+          const parts = text.split('_station_');
+          targetSlug = parts[0];
+          targetTable = `Station #${parts[1]}`;
+        }
+      }
+
+      // 4. Fallback search slug tokens
+      if (!targetSlug) {
+        const lower = text.toLowerCase();
+        if (lower.includes('sbc') || lower.includes('coffee')) targetSlug = 'sbc-store';
+        else if (lower.includes('bakery')) targetSlug = 'aura-bakery';
+        else if (lower.includes('bistro')) targetSlug = 'aura-bistro';
+        else if (lower.includes('tech')) targetSlug = 'aura-tech';
+      }
+
+      // 5. Extract table from text if not extracted
+      if (!targetTable) {
+        const tableMatch = text.match(/(?:table|tbl|counter|seat|bar|station)[_:\s#-]*([a-zA-Z0-9]+)/i);
+        if (tableMatch && tableMatch[1]) {
+          const isCounter = text.toLowerCase().includes('counter');
+          const isStation = text.toLowerCase().includes('station');
+          const prefix = isCounter ? 'Counter' : isStation ? 'Station' : 'Table';
+          targetTable = `${prefix} #${tableMatch[1].toUpperCase()}`;
+        }
+      }
+
+      return { targetSlug, targetTable };
+    },
+    []
+  );
+
+  // Process scanned QR code
+  const handleProcessScannedQr = useCallback(
+    (rawText: string) => {
+      if (!rawText) return;
+      const { targetSlug, targetTable } = parseQrPayload(rawText);
+
+      // Find matched store
+      const matchedStore = stores.find(
+        (s) =>
+          s.slug.toLowerCase() === targetSlug.toLowerCase() ||
+          s.name.toLowerCase().includes(targetSlug.toLowerCase()) ||
+          String(s.id) === targetSlug
+      );
+
+      if (!matchedStore) {
+        setScannerError(
+          `QR Code "${rawText.slice(0, 35)}..." was not recognized as an Aura store. Please scan a table or counter QR from one of our locations.`
+        );
+        triggerHaptic('medium');
+        return;
+      }
+
+      // Close scanner
+      closeScanner();
+      triggerHaptic('heavy');
+
+      // Table / Counter assignment
+      const finalTable = targetTable || 'Counter / Table Service';
+      setCustomerAddress(finalTable);
+      setOrderType('dine_in');
+
+      // Banner feedback
+      setScanSuccessBanner({
+        message: `Scanned ${finalTable}! Switching to ${matchedStore.name}`,
+        storeName: matchedStore.name,
+        table: finalTable
+      });
+      setTimeout(() => setScanSuccessBanner(null), 5000);
+
+      // Multi-Store Guard: If user has items from another store in cart
+      if (cart.length > 0 && currentCartStoreSlug && currentCartStoreSlug !== matchedStore.slug) {
+        setPendingStoreSwitch(matchedStore);
+        return;
+      }
+
+      // Switch Store & Open Menu
+      setActiveSlug(matchedStore.slug);
+      fetchStoreData(matchedStore.slug);
+      navigate(`/shop/${matchedStore.slug}`);
+      setViewMode('menu');
+    },
+    [
+      stores,
+      parseQrPayload,
+      closeScanner,
+      triggerHaptic,
+      setCustomerAddress,
+      setOrderType,
+      cart.length,
+      currentCartStoreSlug,
+      fetchStoreData,
+      navigate
+    ]
+  );
+
+  // Open QR Scanner (Telegram Native Popup if supported, or custom Viewfinder Modal)
+  const handleOpenScanner = () => {
+    triggerHaptic('medium');
+    setScannerError(null);
+
+    // If running in Telegram client with native scanner
+    if (tg?.showScanQrPopup) {
+      try {
+        tg.showScanQrPopup(
+          { text: 'Point camera at Table or Counter QR code' },
+          (qrText: string) => {
+            if (qrText) {
+              tg.closeScanQrPopup?.();
+              handleProcessScannedQr(qrText);
+              return true;
+            }
+            return false;
+          }
+        );
+        return;
+      } catch (err) {
+        console.warn('Native Telegram QR failed, fallback to modal:', err);
+      }
+    }
+    // Web / in-app viewfinder modal
+    setIsScannerOpen(true);
+  };
+
+  // Start Camera & Frame Analysis
+  const startCamera = useCallback(async () => {
+    stopCamera();
+    setScannerError(null);
+    try {
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        setScannerError(
+          'Live camera video is not accessible in this environment. Use the quick Table Presets or manual entry below.'
+        );
+        return;
+      }
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        setIsCameraActive(true);
+
+        const track = stream.getVideoTracks()[0];
+        const capabilities: any = track?.getCapabilities?.() || {};
+        setHasTorch(Boolean(capabilities.torch));
+
+        const tick = () => {
+          if (!videoRef.current || !canvasRef.current) return;
+          const video = videoRef.current;
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (ctx) {
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const qr = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: 'dontInvert'
+              });
+              if (qr && qr.data) {
+                handleProcessScannedQr(qr.data);
+                return;
+              }
+            }
+          }
+          animFrameRef.current = requestAnimationFrame(tick);
+        };
+        animFrameRef.current = requestAnimationFrame(tick);
+      }
+    } catch (err: any) {
+      console.warn('Camera stream error:', err);
+      setIsCameraActive(false);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setScannerError('Camera permission was denied. Please allow camera permissions or test with the Table Presets below.');
+      } else {
+        setScannerError(`Camera not available (${err.message || 'not found'}). You can use the instant Table Presets or manual input below.`);
+      }
+    }
+  }, [facingMode, handleProcessScannedQr, stopCamera]);
+
+  useEffect(() => {
+    if (isScannerOpen) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [isScannerOpen, startCamera, stopCamera]);
+
+  // Flashlight / Torch toggle
+  const toggleTorch = async () => {
+    if (!streamRef.current) return;
+    try {
+      const track = streamRef.current.getVideoTracks()[0];
+      const nextTorch = !isTorchOn;
+      await (track as any).applyConstraints({
+        advanced: [{ torch: nextTorch }]
+      });
+      setIsTorchOn(nextTorch);
+      triggerHaptic('light');
+    } catch (err) {
+      console.warn('Torch failed:', err);
+    }
+  };
+
+  // Flip camera (back / front)
+  const flipCamera = () => {
     triggerHaptic('light');
+    setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
+  };
+
+  // Handle Photo Upload from Gallery
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    triggerHaptic('light');
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const qr = jsQR(imgData.data, imgData.width, imgData.height);
+          if (qr && qr.data) {
+            handleProcessScannedQr(qr.data);
+          } else {
+            setScannerError('Could not detect a valid QR code in this image. Please try another photo or use the presets.');
+            triggerHaptic('medium');
+          }
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle Store Selection
+  const handleSelectStore = (store: any, tableInfo?: string) => {
+    triggerHaptic('light');
+
+    if (tableInfo) {
+      setCustomerAddress(tableInfo);
+      setOrderType('dine_in');
+    }
 
     // Multi-Store Guard: If user has items from another store in cart
     if (cart.length > 0 && currentCartStoreSlug && currentCartStoreSlug !== store.slug) {
@@ -623,8 +999,17 @@ export default function StoreFront() {
           </div>
         </div>
 
-        {/* Staff / Testing Mode Switch & Store Switcher */}
+        {/* Quick Scan QR & Staff / Testing Mode Switch */}
         <div className="flex items-center space-x-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={handleOpenScanner}
+            className="px-2.5 py-1 rounded-xl text-[10.5px] font-extrabold bg-sky-500/15 text-sky-400 border border-sky-500/30 hover:bg-sky-500/25 active:scale-95 transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+            title="Scan Table or Counter QR Code"
+          >
+            <ScanOutlined style={{ fontSize: 11 }} />
+            <span>Scan QR</span>
+          </button>
           <button
             type="button"
             onClick={() => setIsStaffMode(!isStaffMode)}
@@ -635,7 +1020,7 @@ export default function StoreFront() {
             }`}
             title="Toggle Staff Management Controls"
           >
-            {isStaffMode ? '⚡ Staff Mode' : 'Customer'}
+            {isStaffMode ? '⚡ Staff' : 'Customer'}
           </button>
         </div>
       </header>
@@ -647,16 +1032,95 @@ export default function StoreFront() {
         {/* ======================================================== */}
         {viewMode === 'stores' && (
           <div className="space-y-4 animate-fadeIn">
-            <div className="bg-gradient-to-r from-blue-950/60 via-indigo-950/50 to-slate-900/90 border border-blue-800/40 rounded-3xl p-4 shadow-xl">
-              <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest">
-                Store Selection
-              </span>
-              <h2 className="text-xl font-black text-white mt-0.5 mb-1 tracking-tight">
-                Choose Store &amp; E-Menu
-              </h2>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Each location features its own artisan catalog, real-time kitchen queue, and direct Telegram notification dispatch.
-              </p>
+            {/* Success Banner if QR code just scanned */}
+            {scanSuccessBanner && (
+              <div className="bg-gradient-to-r from-emerald-500 via-teal-500 to-sky-500 text-slate-950 p-3.5 rounded-3xl font-black text-xs flex items-center justify-between shadow-2xl shadow-emerald-500/30 animate-bounce">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-slate-950/20 flex items-center justify-center text-lg shrink-0">
+                    ⚡
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-black truncate">{scanSuccessBanner.message}</div>
+                    <div className="text-[10px] text-slate-900/80 font-bold truncate">
+                      Assigned to {scanSuccessBanner.table} • Ready to order
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setScanSuccessBanner(null)}
+                  className="text-slate-950 hover:bg-black/10 px-2 py-1 rounded-lg font-black text-xs shrink-0"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* Store Selection Hero Banner with QR Scanner Action */}
+            <div className="bg-gradient-to-r from-blue-950/70 via-indigo-950/60 to-slate-900/90 border border-blue-800/40 rounded-3xl p-4 shadow-xl space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <ShopOutlined /> Store Selection
+                </span>
+                <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-sky-300 border border-blue-500/30">
+                  {stores.length} Locations
+                </span>
+              </div>
+
+              <div>
+                <h2 className="text-xl font-black text-white mt-0.5 mb-1 tracking-tight">
+                  Choose Store &amp; E-Menu
+                </h2>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Select a store or scan your table / counter QR code to instantly load that location's digital menu and route kitchen tickets.
+                </p>
+              </div>
+
+              {/* DEDICATED QR CODE SCANNER BUTTON & CARD */}
+              <div className="bg-slate-950/80 border border-sky-500/35 rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg ring-1 ring-sky-500/20">
+                <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-500/25 to-blue-600/25 border border-sky-500/40 flex items-center justify-center text-sky-400 text-xl shrink-0 shadow-inner">
+                    <QrcodeOutlined />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-extrabold text-white text-xs">At a Table or Counter?</span>
+                      <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        ⚡ Quick Scan
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-400 leading-tight mt-0.5">
+                      Scan printed QR to auto-load menu &amp; assign table number
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleOpenScanner}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-sky-500/30 active:scale-95 transition-all shrink-0 cursor-pointer"
+                >
+                  <ScanOutlined style={{ fontSize: 13 }} />
+                  <span>Scan Table / Counter QR</span>
+                </button>
+              </div>
+
+              {/* Currently Linked Table Info (if any) */}
+              {customerAddress && customerAddress.toLowerCase().includes('table') && (
+                <div className="flex items-center justify-between text-[11px] px-2.5 text-slate-300 bg-slate-900/60 rounded-xl py-1.5 border border-slate-800">
+                  <span className="flex items-center gap-1.5 truncate">
+                    <span className="text-emerald-400 font-bold">📍 Linked:</span>
+                    <b className="text-white truncate">{customerAddress}</b>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleOpenScanner}
+                    className="text-sky-400 font-extrabold text-[10.5px] underline hover:text-sky-300 shrink-0 ml-2"
+                  >
+                    Rescan QR
+                  </button>
+                </div>
+              )}
             </div>
 
             {loadingStores ? (
@@ -2429,6 +2893,221 @@ export default function StoreFront() {
                 className="w-full py-2.5 rounded-xl border border-slate-800 text-slate-400 font-bold text-xs"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. QR CODE SCANNER MODAL (Table & Counter Scanner) */}
+      {isScannerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 animate-fadeIn">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-base">
+                  <QrcodeOutlined />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-sm">Scan Table / Counter QR</h3>
+                  <p className="text-[10px] text-slate-400">Point camera at QR code or pick a test preset</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeScanner}
+                className="w-8 h-8 rounded-xl bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center font-bold text-xs cursor-pointer active:scale-90 transition-transform"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body / Camera Viewfinder */}
+            <div className="p-4 space-y-3.5 overflow-y-auto">
+              {/* Camera Stream Viewfinder */}
+              <div className="relative w-full aspect-square max-h-[250px] bg-black rounded-2xl overflow-hidden border-2 border-slate-800 shadow-inner flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  playsInline
+                  autoPlay
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+                {/* Laser Scanning Reticle & Corner Brackets */}
+                <div className="absolute inset-4 pointer-events-none flex flex-col justify-between">
+                  <div className="flex justify-between">
+                    <span className="w-6 h-6 border-t-2 border-l-2 border-sky-400 rounded-tl-lg" />
+                    <span className="w-6 h-6 border-t-2 border-r-2 border-sky-400 rounded-tr-lg" />
+                  </div>
+
+                  {/* Animated Scanning Laser Line */}
+                  <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-sky-400 to-transparent shadow-[0_0_12px_#38bdf8] animate-pulse" />
+
+                  <div className="flex justify-between">
+                    <span className="w-6 h-6 border-b-2 border-l-2 border-sky-400 rounded-bl-lg" />
+                    <span className="w-6 h-6 border-b-2 border-r-2 border-sky-400 rounded-br-lg" />
+                  </div>
+                </div>
+
+                {/* Fallback Viewfinder if video inactive */}
+                {!isCameraActive && (
+                  <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center space-y-2">
+                    <CameraOutlined style={{ fontSize: 32, color: '#38bdf8' }} />
+                    <span className="text-xs font-bold text-slate-300">
+                      Camera viewfinder inactive
+                    </span>
+                    <button
+                      type="button"
+                      onClick={startCamera}
+                      className="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs active:scale-95 transition-transform"
+                    >
+                      Start Camera
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Viewfinder Controls (Torch, Flip Camera, Upload Image) */}
+              <div className="flex items-center justify-center gap-2">
+                {hasTorch && (
+                  <button
+                    type="button"
+                    onClick={toggleTorch}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all ${
+                      isTorchOn
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                        : 'bg-slate-800 text-slate-300 border-slate-700'
+                    }`}
+                  >
+                    <span>💡</span>
+                    <span>{isTorchOn ? 'Flash On' : 'Flashlight'}</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={flipCamera}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+                >
+                  <SyncOutlined />
+                  <span>Flip ({facingMode === 'environment' ? 'Rear' : 'Front'})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+                >
+                  <span>🖼️</span>
+                  <span>Photo</span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+              </div>
+
+              {/* Error feedback if any */}
+              {scannerError && (
+                <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-[11px] leading-relaxed">
+                  ⚠️ {scannerError}
+                </div>
+              )}
+
+              {/* FAST TEST: 1-Tap Table & Counter QR Presets */}
+              <div className="space-y-2 pt-1 border-t border-slate-800/80">
+                <div className="flex items-center justify-between text-[10.5px]">
+                  <span className="font-extrabold text-slate-400 uppercase tracking-wider">
+                    ⚡ Instant Table Presets:
+                  </span>
+                  <span className="text-[10px] text-sky-400 font-semibold">1-Tap Test</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    {
+                      label: 'Table #04',
+                      store: 'Aura Coffee',
+                      emoji: '☕',
+                      code: 'https://t.me/aura_emenu_order_bot/app?startapp=sbc-store_table_4'
+                    },
+                    {
+                      label: 'Counter #01',
+                      store: 'Aura Bakery',
+                      emoji: '🥐',
+                      code: 'https://t.me/aura_emenu_order_bot/app?startapp=aura-bakery_counter_1'
+                    },
+                    {
+                      label: 'Table #12',
+                      store: 'Aura Bistro',
+                      emoji: '🥗',
+                      code: 'https://t.me/aura_emenu_order_bot/app?startapp=aura-bistro_table_12'
+                    },
+                    {
+                      label: 'Station #01',
+                      store: 'Aura Tech',
+                      emoji: '⚡',
+                      code: 'https://t.me/aura_emenu_order_bot/app?startapp=aura-tech_station_1'
+                    }
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => handleProcessScannedQr(preset.code)}
+                      className="p-2 rounded-xl bg-slate-950/90 hover:bg-slate-800 border border-slate-800 hover:border-sky-500/50 text-left transition-all active:scale-95 group shadow-sm cursor-pointer"
+                    >
+                      <div className="flex items-center gap-1.5 font-bold text-xs text-white">
+                        <span>{preset.emoji}</span>
+                        <span className="group-hover:text-sky-400 transition-colors">{preset.label}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate mt-0.5">{preset.store}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Manual URL or Table String input fallback */}
+              <div className="space-y-1.5 pt-1 border-t border-slate-800/80">
+                <span className="text-[10.5px] font-bold text-slate-400 block">
+                  Or enter URL / Table Code manually:
+                </span>
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={manualQrInput}
+                    onChange={(e) => setManualQrInput(e.target.value)}
+                    placeholder="e.g. sbc-store_table_4 or /shop/aura-bakery"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (manualQrInput.trim()) {
+                        handleProcessScannedQr(manualQrInput.trim());
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shrink-0 active:scale-95 transition-all cursor-pointer"
+                  >
+                    Open
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 border-t border-slate-800 bg-slate-950/80 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={closeScanner}
+                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-colors cursor-pointer active:scale-98"
+              >
+                Close Scanner
               </button>
             </div>
           </div>

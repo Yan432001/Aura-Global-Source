@@ -65,7 +65,7 @@ const ModernCardLogin = () => {
           border: 'none',
           overflow: 'hidden'
         }}
-        bodyStyle={{ padding: 40 }}
+        styles={{ body: { padding: 40 } }}
       >
         {/* Logo Header */}
         <Flex vertical align="center" gap={8} style={{ marginBottom: 32 }}>
