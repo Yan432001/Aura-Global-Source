@@ -378,82 +378,84 @@ const Cart = () => {
             </Button>
           </div>
 
-          <Space direction="vertical" style={{ width: '100%' }} size={14}>
+          <Space direction="vertical" style={{ width: '100%' }} size={10}>
             {cart.map((item) => (
               <Card
                 key={item.id}
                 style={{
-                  borderRadius: 20,
+                  borderRadius: 16,
                   border: '1px solid #e2e8f0',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
                   overflow: 'hidden',
                 }}
-                bodyStyle={{ padding: 16 }}
+                styles={{ body: { padding: '10px 14px' } }}
               >
-                <Row gutter={[16, 16]} align="middle">
-                  <Col xs={7} sm={5}>
+                <Row gutter={[12, 12]} align="middle">
+                  <Col xs={5} sm={3}>
                     <img
                       src={item.image}
                       alt={item.name}
                       style={{
                         width: '100%',
+                        maxWidth: 64,
                         aspectRatio: '1 / 1',
                         objectFit: 'cover',
-                        borderRadius: 14,
+                        borderRadius: 10,
                         border: '1px solid #f1f5f9',
+                        display: 'block',
                       }}
                     />
                   </Col>
 
-                  <Col xs={17} sm={10}>
+                  <Col xs={19} sm={11}>
                     <div>
-                      <h4 style={{ margin: '0 0 4px 0', fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
+                      <h4 style={{ margin: '0 0 2px 0', fontSize: 13.5, fontWeight: 800, color: '#0f172a', lineHeight: 1.3 }}>
                         {item.name}
                       </h4>
                       {item.seller && (
-                        <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>
+                        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>
                           Store: <strong style={{ color: '#334155' }}>{item.seller}</strong>
                         </div>
                       )}
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#2563eb' }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#2563eb' }}>
                         ${Number(item.price).toFixed(2)}
                       </div>
                     </div>
                   </Col>
 
                   <Col xs={12} sm={5}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       <Button
                         type="default"
                         size="small"
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        style={{ borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        icon={<MinusOutlined style={{ fontSize: 10 }} />}
+                        style={{ borderRadius: 6, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        icon={<MinusOutlined style={{ fontSize: 9 }} />}
                       />
-                      <span style={{ fontWeight: 800, fontSize: 14, minWidth: 26, textAlign: 'center' }}>
+                      <span style={{ fontWeight: 800, fontSize: 13, minWidth: 22, textAlign: 'center' }}>
                         {item.quantity}
                       </span>
                       <Button
                         type="default"
                         size="small"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        style={{ borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        icon={<PlusOutlined style={{ fontSize: 10 }} />}
+                        style={{ borderRadius: 6, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        icon={<PlusOutlined style={{ fontSize: 9 }} />}
                       />
                     </div>
                   </Col>
 
-                  <Col xs={12} sm={4} style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 900, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>
+                  <Col xs={12} sm={5} style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 900, fontSize: 13.5, color: '#0f172a', marginBottom: 2 }}>
                       ${(Number(item.price) * item.quantity).toFixed(2)}
                     </div>
                     <Button
                       type="text"
                       danger
                       size="small"
-                      icon={<DeleteOutlined />}
+                      icon={<DeleteOutlined style={{ fontSize: 11 }} />}
                       onClick={() => removeFromCart(item.id)}
-                      style={{ fontSize: 12, padding: 0 }}
+                      style={{ fontSize: 11, padding: 0 }}
                     >
                       Remove
                     </Button>

@@ -6,6 +6,7 @@ import {
   ShoppingCartOutlined,
   ClockCircleOutlined,
   CheckCircleFilled,
+  CheckCircleOutlined,
   SyncOutlined,
   CloseCircleFilled,
   ArrowRightOutlined,
@@ -22,7 +23,11 @@ import {
   ExclamationCircleOutlined,
   SearchOutlined,
   SettingOutlined,
-  CheckOutlined
+  CheckOutlined,
+  FireOutlined,
+  CopyOutlined,
+  ThunderboltOutlined,
+  BellOutlined
 } from '@ant-design/icons';
 import { useTelegram } from '../../../hooks/useTelegram';
 import { useStoreCart } from '../../../hooks/useStoreCart';
@@ -96,11 +101,15 @@ export default function StoreFront() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastCreatedOrder, setLastCreatedOrder] = useState<any>(null);
 
-  // My Orders State
+  // My Orders State & Real-Time Sync
   const [pastOrders, setPastOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
+  const [syncSecondsAgo, setSyncSecondsAgo] = useState(0);
+  const [expandedTimelineId, setExpandedTimelineId] = useState<string | null>(null);
+  const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
 
   // Staff Mode Toggle for testing order status update & Telegram notification retry
   const [isStaffMode, setIsStaffMode] = useState(false);
@@ -142,20 +151,56 @@ export default function StoreFront() {
     }
   }, []);
 
-  // 3. Fetch Past Orders
-  const fetchPastOrders = useCallback(async () => {
-    setLoadingOrders(true);
+  // 3. Fetch Past Orders with silent mode for real-time background sync
+  const fetchPastOrders = useCallback(async (silent = false) => {
+    if (!silent) setLoadingOrders(true);
     try {
       const res = await axios.get('/api/tma/orders');
       if (res.data?.status) {
-        setPastOrders(res.data.orders || res.data.data || []);
+        const orderList = res.data.orders || res.data.data || [];
+        setPastOrders(orderList);
+        setLastSyncTime(new Date());
       }
     } catch (err) {
       console.warn('Error loading orders:', err);
     } finally {
-      setLoadingOrders(false);
+      if (!silent) setLoadingOrders(false);
     }
   }, []);
+
+  // Timer to show relative time since last backend sync ("Synced 3s ago")
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSyncSecondsAgo(Math.floor((Date.now() - lastSyncTime.getTime()) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lastSyncTime]);
+
+  // Real-time backend polling: Automatically poll orders every 3.5s when viewing 'orders' or active orders exist
+  useEffect(() => {
+    let interval: any = null;
+    const hasActiveOrders = pastOrders.some((o) =>
+      ['pending', 'confirmed', 'preparing', 'ready'].includes((o.status || '').toLowerCase())
+    );
+
+    if (viewMode === 'orders' || hasActiveOrders) {
+      interval = setInterval(() => {
+        fetchPastOrders(true);
+      }, 3500);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [viewMode, pastOrders, fetchPastOrders]);
+
+  const handleCopyOrderRef = (refNo: string) => {
+    if (!refNo) return;
+    navigator.clipboard?.writeText(refNo);
+    setCopiedOrderId(refNo);
+    triggerHaptic('light');
+    setTimeout(() => setCopiedOrderId(null), 2000);
+  };
 
   // Sync activeSlug when URL parameter changes (/shop/:storeSlug)
   useEffect(() => {
@@ -383,6 +428,77 @@ export default function StoreFront() {
       return matchCat && matchSearch && matchQuick;
     });
   }, [products, activeCategory, searchQuery, quickFilter]);
+
+  // Dynamically aggregated Best Sellers for current store
+  const bestSellerProducts = useMemo(() => {
+    const tagged = products.filter(
+      (p) =>
+        p.popular ||
+        p.is_best_seller ||
+        (p.badge && ['best', 'popular', 'signature', 'top'].some((b) => p.badge.toLowerCase().includes(b)))
+    );
+    if (tagged.length > 0) return tagged.slice(0, 6);
+    return products.slice(0, 4);
+  }, [products]);
+
+  // Order Lifecycle Milestones Configuration
+  const ORDER_STATUS_STEPS = useMemo(() => [
+    {
+      key: 'pending',
+      label: 'Order Placed',
+      shortLabel: 'Placed',
+      subtitle: 'Sent to store',
+      icon: '📋',
+      estTime: '~15-20 min',
+      desc: 'Order registered via Telegram and transmitted to store queue.'
+    },
+    {
+      key: 'confirmed',
+      label: 'Confirmed',
+      shortLabel: 'Confirmed',
+      subtitle: 'Store accepted',
+      icon: '👨‍🍳',
+      estTime: '~12-15 min',
+      desc: 'Store team confirmed ticket and queued it in kitchen station.'
+    },
+    {
+      key: 'preparing',
+      label: 'Preparing',
+      shortLabel: 'Preparing',
+      subtitle: 'In the kitchen',
+      icon: '🍳',
+      estTime: '~5-8 min',
+      desc: 'Baristas & chefs are crafting your food and beverages fresh.'
+    },
+    {
+      key: 'ready',
+      label: 'Ready for Pickup',
+      shortLabel: 'Ready',
+      subtitle: 'At counter',
+      icon: '🔔',
+      estTime: 'Ready now!',
+      desc: 'Your order is packaged, fresh, and waiting at pickup counter / table.'
+    },
+    {
+      key: 'completed',
+      label: 'Completed',
+      shortLabel: 'Done',
+      subtitle: 'Fulfilled',
+      icon: '✨',
+      estTime: 'Fulfilled',
+      desc: 'Order handed over. Enjoy your artisan meal & drinks!'
+    }
+  ], []);
+
+  const formatStepTime = (dateStr?: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
 
   // Proceed to Order Confirmation Screen
   const handleProceedToConfirmation = () => {
@@ -783,6 +899,89 @@ export default function StoreFront() {
               ))}
             </div>
 
+            {/* 4b. DYNAMIC BEST SELLERS SECTION */}
+            {bestSellerProducts.length > 0 && !searchQuery && activeCategory === 'all' && (
+              <div className="space-y-2 pt-1 pb-0.5 bg-gradient-to-b from-amber-500/5 via-slate-900/40 to-transparent p-2.5 rounded-2xl border border-amber-500/15 shadow-sm">
+                <div className="flex items-center justify-between px-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-amber-400 text-sm">🔥</span>
+                    <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                      Best Sellers
+                    </h3>
+                    <span className="text-[9.5px] font-black px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Popular Picks
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-semibold">
+                    Customer favorites
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+                  {bestSellerProducts.map((prod, idx) => {
+                    const inCartCount = items
+                      .filter((i) => i.id === prod.id)
+                      .reduce((acc, curr) => acc + curr.quantity, 0);
+
+                    return (
+                      <div
+                        key={prod.id}
+                        onClick={() => openCustomizationModal(prod)}
+                        className="w-36 shrink-0 bg-slate-900/90 hover:bg-slate-900 border border-slate-800/90 hover:border-amber-500/40 rounded-2xl p-2 cursor-pointer transition-all active:scale-95 shadow-md flex flex-col justify-between group"
+                      >
+                        <div className="relative h-24 w-full rounded-xl overflow-hidden bg-slate-950 mb-1.5">
+                          <img
+                            src={prod.image}
+                            alt={prod.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <span className="absolute top-1 left-1 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-[9px] px-1.5 py-0.2 rounded shadow">
+                            #{idx + 1} Best
+                          </span>
+                          {inCartCount > 0 && (
+                            <span className="absolute bottom-1 right-1 bg-emerald-500 text-white font-black text-[9px] px-1.5 py-0.2 rounded shadow">
+                              ✓ {inCartCount}
+                            </span>
+                          )}
+                        </div>
+
+                        <div>
+                          <h4 className="font-extrabold text-white text-[11.5px] leading-tight line-clamp-1">
+                            {prod.name}
+                          </h4>
+                          <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5 font-medium">
+                            {prod.details}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-slate-800/80">
+                          <span className="font-black text-xs text-sky-400">
+                            ${Number(prod.price).toFixed(2)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              triggerHaptic('medium');
+                              if (prod.options && prod.options.length > 0) {
+                                openCustomizationModal(prod);
+                              } else {
+                                addItem(prod, {}, 1, 0);
+                              }
+                            }}
+                            className="px-2.5 py-0.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-black text-[10px] flex items-center gap-0.5 shadow-sm active:scale-90 transition-all"
+                          >
+                            <PlusOutlined style={{ fontSize: 9 }} />
+                            <span>Add</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* 5. STICKY CATEGORY NAV PILLS */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none sticky top-12 z-20 bg-slate-950/90 backdrop-blur-xl pt-1">
               <button
@@ -991,57 +1190,57 @@ export default function StoreFront() {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Items List */}
-                <div className="space-y-2.5">
+                {/* Items List (Smaller, Compact Rows) */}
+                <div className="space-y-2">
                   {cart.map((item) => (
                     <div
                       key={item.itemKey}
-                      className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 flex items-center gap-3 shadow-md"
+                      className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-2.5 flex items-center gap-2.5 shadow-sm"
                     >
                       <img
                         src={item.image}
                         alt=""
-                        className="w-14 h-14 rounded-xl object-cover border border-slate-700 shrink-0"
+                        className="w-11 h-11 rounded-xl object-cover border border-slate-700/80 shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-extrabold text-white text-xs truncate">
+                        <h4 className="font-extrabold text-white text-xs truncate leading-tight">
                           {item.name}
                         </h4>
                         {item.optionsText && (
-                          <p className="text-[10.5px] text-slate-400 line-clamp-1 mt-0.5">
+                          <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5 font-medium">
                             {item.optionsText}
                           </p>
                         )}
-                        <span className="font-black text-xs text-blue-400 mt-1 block">
-                          ${Number(item.price).toFixed(2)} each
+                        <span className="font-black text-[11px] text-sky-400 mt-0.5 block">
+                          ${Number(item.price).toFixed(2)}
                         </span>
                       </div>
 
                       {/* Quantity Controls */}
-                      <div className="flex items-center space-x-1.5 shrink-0 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                      <div className="flex items-center space-x-1 shrink-0 bg-slate-950 p-0.5 rounded-xl border border-slate-800">
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.itemKey, -1)}
-                          className="w-7 h-7 rounded-lg bg-slate-800 text-white flex items-center justify-center active:scale-95 text-xs"
+                          className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center active:scale-95 text-[10px]"
                         >
-                          <MinusOutlined style={{ fontSize: 10 }} />
+                          <MinusOutlined style={{ fontSize: 9 }} />
                         </button>
-                        <span className="w-6 text-center font-bold text-xs text-white">
+                        <span className="w-5 text-center font-bold text-xs text-white">
                           {item.quantity}
                         </span>
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.itemKey, 1)}
-                          className="w-7 h-7 rounded-lg bg-slate-800 text-white flex items-center justify-center active:scale-95 text-xs"
+                          className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-white flex items-center justify-center active:scale-95 text-[10px]"
                         >
-                          <PlusOutlined style={{ fontSize: 10 }} />
+                          <PlusOutlined style={{ fontSize: 9 }} />
                         </button>
                       </div>
 
                       <button
                         type="button"
                         onClick={() => removeItem(item.itemKey)}
-                        className="text-slate-500 hover:text-rose-400 p-1 text-sm ml-1"
+                        className="text-slate-500 hover:text-rose-400 p-1 text-xs ml-0.5 active:scale-90 transition-transform"
                       >
                         <DeleteOutlined />
                       </button>
@@ -1451,54 +1650,125 @@ export default function StoreFront() {
         {/* ======================================================== */}
         {viewMode === 'orders' && (
           <div className="space-y-4 animate-fadeIn">
-            <div className="flex items-center justify-between pb-1 border-b border-slate-800">
-              <button
-                type="button"
-                onClick={() => setViewMode('menu')}
-                className="text-xs text-blue-400 font-bold flex items-center gap-1"
-              >
-                <ArrowLeftOutlined /> Back to Menu
-              </button>
-              <h2 className="text-base font-black text-white">My Orders</h2>
-              <button
-                type="button"
-                onClick={fetchPastOrders}
-                className="text-xs text-slate-400 hover:text-white"
-              >
-                <ReloadOutlined spin={loadingOrders} />
-              </button>
+            {/* Top Navigation & Real-Time Sync Bar */}
+            <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-3.5 space-y-2.5 shadow-md">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('menu')}
+                  className="text-xs text-sky-400 font-extrabold flex items-center gap-1 active:scale-95 transition-transform"
+                >
+                  <ArrowLeftOutlined /> Back to Menu
+                </button>
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-sm font-black text-white">My Orders</h2>
+                  <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                    {pastOrders.length}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fetchPastOrders(false)}
+                  className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 border border-slate-700/80 active:scale-95"
+                  title="Force refresh status from backend"
+                >
+                  <ReloadOutlined spin={loadingOrders} style={{ fontSize: 11 }} />
+                  <span className="text-[10.5px]">Sync</span>
+                </button>
+              </div>
+
+              {/* Real-Time Live Status Pill */}
+              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800/80 text-slate-400">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
+                  <span className="font-semibold text-emerald-400 text-[10.5px]">
+                    Real-Time Tracking Active
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400">
+                  {syncSecondsAgo === 0 ? 'Synced just now' : `Synced ${syncSecondsAgo}s ago`}
+                </span>
+              </div>
             </div>
 
             {/* Filter Pills */}
-            <div className="flex gap-2">
-              {(['all', 'pending', 'completed'] as const).map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setOrderFilter(filter)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
-                    orderFilter === filter
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-900 border border-slate-800 text-slate-400'
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
+            <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
+              {(
+                [
+                  { id: 'all', label: 'All Orders', count: pastOrders.length },
+                  {
+                    id: 'pending',
+                    label: '⚡ In Progress',
+                    count: pastOrders.filter((o) =>
+                      ['pending', 'confirmed', 'preparing', 'ready'].includes((o.status || '').toLowerCase())
+                    ).length
+                  },
+                  {
+                    id: 'completed',
+                    label: 'Completed',
+                    count: pastOrders.filter((o) =>
+                      ['completed', 'cancelled'].includes((o.status || '').toLowerCase())
+                    ).length
+                  }
+                ] as const
+              ).map((filter) => {
+                const isActive = orderFilter === filter.id;
+                return (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setOrderFilter(filter.id);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 border active:scale-95 ${
+                      isActive
+                        ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30'
+                        : 'bg-slate-900/90 text-slate-400 border-slate-800 hover:text-white'
+                    }`}
+                  >
+                    <span>{filter.label}</span>
+                    <span
+                      className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {filter.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
-            {loadingOrders ? (
+            {/* Orders Feed */}
+            {loadingOrders && pastOrders.length === 0 ? (
               <div className="space-y-3">
                 {[1, 2].map((n) => (
-                  <div key={n} className="h-36 bg-slate-900 rounded-2xl animate-pulse border border-slate-800" />
+                  <div key={n} className="h-44 bg-slate-900 rounded-3xl animate-pulse border border-slate-800" />
                 ))}
               </div>
             ) : pastOrders.length === 0 ? (
-              <div className="text-center py-12 bg-slate-900/50 rounded-2xl border border-slate-800/80 p-6">
-                <p className="text-slate-400 text-xs">No orders found.</p>
+              <div className="text-center py-12 bg-slate-900/50 rounded-3xl border border-slate-800/80 p-6 space-y-2">
+                <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-2xl mx-auto text-slate-400">
+                  📋
+                </div>
+                <h3 className="font-extrabold text-white text-sm">No orders yet</h3>
+                <p className="text-slate-400 text-xs max-w-xs mx-auto">
+                  Browse our artisanal menus and place an order to track real-time kitchen progress!
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('menu')}
+                  className="mt-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-black text-xs shadow-md shadow-blue-600/30"
+                >
+                  Browse Menu
+                </button>
               </div>
             ) : (
-              <div className="space-y-3.5">
+              <div className="space-y-4">
                 {pastOrders
                   .filter((o) => {
                     if (orderFilter === 'all') return true;
@@ -1511,119 +1781,327 @@ export default function StoreFront() {
                     }
                     return true;
                   })
-                  .map((order) => {
+                  .map((order, orderIdx) => {
                     const statusStr = (order.status || 'Pending').toLowerCase();
-                    const steps = ['Pending', 'Confirmed', 'Preparing', 'Ready', 'Completed'];
-                    const currentStepIdx = steps.findIndex(
-                      (s) => s.toLowerCase() === statusStr
+                    const isCancelled = statusStr === 'cancelled';
+                    const currentStepIdx = ORDER_STATUS_STEPS.findIndex(
+                      (s) => s.key === statusStr
                     );
+                    const activeStepConfig = ORDER_STATUS_STEPS[currentStepIdx] || ORDER_STATUS_STEPS[0];
+                    const orderRefNo = order.referenceNo || `ORD-${order.id}`;
+                    const isCopied = copiedOrderId === orderRefNo;
+                    const isTimelineExpanded = expandedTimelineId === orderRefNo;
+                    const isOrderActive = ['pending', 'confirmed', 'preparing', 'ready'].includes(statusStr);
+
+                    // Calculate progress percentage along the 5 milestones (0% to 100%)
+                    const progressPercentage = isCancelled
+                      ? 100
+                      : currentStepIdx >= 0
+                      ? Math.min(100, Math.max(0, (currentStepIdx / (ORDER_STATUS_STEPS.length - 1)) * 100))
+                      : 0;
 
                     return (
                       <div
-                        key={order.referenceNo || order.id}
-                        className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg"
+                        key={orderRefNo}
+                        className={`bg-slate-900/90 border rounded-3xl p-4 space-y-3.5 shadow-xl transition-all relative overflow-hidden ${
+                          isOrderActive
+                            ? 'border-blue-500/40 ring-1 ring-blue-500/20 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950'
+                            : 'border-slate-800/80 hover:border-slate-700'
+                        }`}
                       >
-                        {/* Header: Order Ref & Store */}
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <span className="font-mono font-black text-sm text-blue-400 block">
-                              {order.referenceNo || `ORD-${order.id}`}
-                            </span>
-                            <span className="text-xs font-bold text-white">
-                              {order.store_name}
-                            </span>
-                          </div>
-                          <span className="font-black text-sm text-white">
-                            ${Number(order.grandTotal || 0).toFixed(2)}
-                          </span>
-                        </div>
-
-                        {/* Status Pipeline Step Indicator */}
-                        <div className="py-1">
-                          <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 mb-1.5">
-                            {steps.map((st, idx) => {
-                              const isCompleted = currentStepIdx >= idx;
-                              const isCurrent = currentStepIdx === idx;
-                              return (
-                                <span
-                                  key={st}
-                                  className={
-                                    isCurrent
-                                      ? 'text-blue-400 font-black'
-                                      : isCompleted
-                                      ? 'text-emerald-400'
-                                      : 'text-slate-600'
-                                  }
-                                >
-                                  {isCompleted ? '●' : '○'} {st}
-                                </span>
-                              );
-                            })}
-                          </div>
-
-                          <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden flex">
-                            <div
-                              className="bg-blue-500 h-full transition-all duration-500"
-                              style={{
-                                width: `${Math.min(100, Math.max(10, ((currentStepIdx + 1) / steps.length) * 100))}%`
-                              }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Order Items Preview */}
-                        <div className="bg-slate-950/60 rounded-xl p-2.5 text-xs text-slate-300 space-y-1">
-                          {(order.items || []).map((it: any, i: number) => (
-                            <div key={i} className="flex justify-between text-[11.5px]">
-                              <span>
-                                {it.name} × {it.quantity}
+                        {/* Top Card Header: Order Reference, Store Name & Live Status Badge */}
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-black text-sm text-sky-400 truncate">
+                                {orderRefNo}
                               </span>
-                              <span className="font-bold text-slate-200">
-                                ${Number(it.subtotal || it.price * it.quantity).toFixed(2)}
+                              <button
+                                type="button"
+                                onClick={() => handleCopyOrderRef(orderRefNo)}
+                                className="text-slate-500 hover:text-sky-400 p-0.5 text-xs transition-colors"
+                                title="Copy order number"
+                              >
+                                {isCopied ? (
+                                  <CheckOutlined className="text-emerald-400 font-bold" />
+                                ) : (
+                                  <CopyOutlined />
+                                )}
+                              </button>
+                            </div>
+                            <div className="text-xs font-bold text-white flex items-center gap-1.5 mt-0.5 truncate">
+                              <span className="truncate">{order.store_name || currentStore?.name}</span>
+                              <span className="text-[10px] text-slate-500">•</span>
+                              <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                                {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
-                          ))}
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <span className="font-black text-base text-white block">
+                              ${Number(order.grandTotal || 0).toFixed(2)}
+                            </span>
+                            {/* Live Status Pill */}
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider mt-0.5 shadow-sm ${
+                                isCancelled
+                                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                  : statusStr === 'completed'
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                  : statusStr === 'ready'
+                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 ring-1 ring-emerald-500/20 animate-pulse'
+                                  : statusStr === 'preparing'
+                                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 ring-1 ring-indigo-500/20'
+                                  : statusStr === 'confirmed'
+                                  ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              }`}
+                            >
+                              {!isCancelled && isOrderActive && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                              )}
+                              <span>{order.status || 'Pending'}</span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* ======================================================== */}
+                        {/* STEP-BY-STEP PROGRESS VISUALIZER RAIL                    */}
+                        {/* ======================================================== */}
+                        {isCancelled ? (
+                          <div className="bg-rose-950/40 border border-rose-500/30 rounded-2xl p-3 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold text-lg shrink-0">
+                              ✕
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="font-black text-rose-300 text-xs">Order Cancelled</h4>
+                              <p className="text-[11px] text-rose-200/80 mt-0.5">
+                                This order was cancelled. Please speak with store staff or place a new order.
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-3 shadow-inner">
+                            {/* Visual Progress Steps Track with Connecting Gradient Line */}
+                            <div className="relative pt-2 pb-1">
+                              {/* Background Connecting Rail */}
+                              <div className="absolute top-[17px] left-5 right-5 h-1.5 bg-slate-800 rounded-full" />
+
+                              {/* Active Filled Gradient Progress Rail */}
+                              <div
+                                className="absolute top-[17px] left-5 h-1.5 bg-gradient-to-r from-emerald-500 via-sky-500 to-blue-500 rounded-full transition-all duration-700 ease-out shadow-sm shadow-sky-500/30"
+                                style={{ width: `calc(${progressPercentage}% * 0.9 + 5px)` }}
+                              />
+
+                              {/* Milestones Nodes Strip */}
+                              <div className="relative flex items-center justify-between z-10">
+                                {ORDER_STATUS_STEPS.map((step, idx) => {
+                                  const isCompleted = currentStepIdx > idx;
+                                  const isCurrent = currentStepIdx === idx;
+                                  const isUpcoming = currentStepIdx < idx;
+
+                                  // Extract timestamp from status history if this step was completed
+                                  const historyItem = (order.statusHistory || []).find(
+                                    (h: any) => (h.status || '').toLowerCase() === step.key
+                                  );
+                                  const stepTime = historyItem ? formatStepTime(historyItem.timestamp) : '';
+
+                                  return (
+                                    <div
+                                      key={step.key}
+                                      className="flex flex-col items-center text-center w-14 shrink-0"
+                                    >
+                                      {/* Node Circle */}
+                                      <div
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 relative ${
+                                          isCurrent
+                                            ? 'bg-gradient-to-tr from-blue-600 to-sky-400 text-white font-black text-xs ring-4 ring-sky-500/30 shadow-lg shadow-sky-500/40 scale-110'
+                                            : isCompleted
+                                            ? 'bg-emerald-500 text-slate-950 font-black text-xs shadow-sm shadow-emerald-500/30'
+                                            : 'bg-slate-900 border-2 border-slate-700/80 text-slate-500 text-[10px] font-bold'
+                                        }`}
+                                      >
+                                        {isCurrent && (
+                                          <span className="absolute -inset-1 rounded-full bg-sky-400 opacity-40 animate-ping pointer-events-none" />
+                                        )}
+                                        {isCompleted ? (
+                                          <CheckOutlined style={{ fontSize: 11 }} />
+                                        ) : (
+                                          <span className="text-xs">{step.icon}</span>
+                                        )}
+                                      </div>
+
+                                      {/* Step Label */}
+                                      <span
+                                        className={`text-[9.5px] mt-1.5 leading-tight font-extrabold truncate w-full ${
+                                          isCurrent
+                                            ? 'text-sky-300 font-black'
+                                            : isCompleted
+                                            ? 'text-emerald-400'
+                                            : 'text-slate-500'
+                                        }`}
+                                      >
+                                        {step.shortLabel}
+                                      </span>
+
+                                      {/* Timestamp or Stage Meta */}
+                                      <span className="text-[8.5px] text-slate-400 font-medium leading-none mt-0.5 truncate w-full">
+                                        {stepTime || (isCurrent ? 'Now' : '')}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Current Stage Context Banner */}
+                            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-lg shrink-0">{activeStepConfig.icon}</span>
+                                <div className="min-w-0">
+                                  <div className="font-extrabold text-white text-[11.5px] truncate">
+                                    {activeStepConfig.label}
+                                  </div>
+                                  <p className="text-[10px] text-slate-400 font-medium line-clamp-1">
+                                    {activeStepConfig.desc}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {isOrderActive && (
+                                <div className="shrink-0 text-right">
+                                  <span className="text-[10px] font-black text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                                    ⏱️ {activeStepConfig.estTime}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Order Items Preview (Compact Rows) */}
+                        <div className="bg-slate-950/60 rounded-2xl p-2.5 text-xs text-slate-300 space-y-1.5">
+                          <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-wider px-0.5">
+                            <span>Items Ordered ({(order.items || []).length})</span>
+                            <span className="text-slate-400">{order.orderType === 'takeaway' ? '🥡 Takeaway' : '🍽️ Dine-In'}</span>
+                          </div>
+
+                          <div className="space-y-1 pt-0.5">
+                            {(order.items || []).map((it: any, i: number) => (
+                              <div
+                                key={i}
+                                className="flex justify-between items-center text-[11px] bg-slate-900/60 px-2.5 py-1.5 rounded-xl border border-slate-800/60"
+                              >
+                                <div className="min-w-0 flex-1 pr-2">
+                                  <div className="font-bold text-slate-200 truncate">
+                                    {it.name} <span className="text-sky-400 font-black">× {it.quantity}</span>
+                                  </div>
+                                  {it.selectedOptions && Object.keys(it.selectedOptions).length > 0 && (
+                                    <div className="text-[9.5px] text-slate-400 truncate mt-0.5">
+                                      {Object.entries(it.selectedOptions)
+                                        .map(([k, v]) => `${k}: ${v}`)
+                                        .join(' • ')}
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="font-black text-white shrink-0">
+                                  ${Number(it.subtotal || it.price * it.quantity).toFixed(2)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
                           {order.customer?.note && (
-                            <div className="text-[10.5px] text-amber-300/80 italic pt-1 border-t border-slate-800">
+                            <div className="text-[10px] text-amber-300/90 italic pt-1 border-t border-slate-800/80 px-1">
                               Note: "{order.customer.note}"
                             </div>
                           )}
                         </div>
 
                         {/* Store Telegram Notification Destination Status */}
-                        <div className="flex items-center justify-between text-[10.5px] text-slate-400 pt-1">
-                          <span>
-                            Telegram Dispatch: <b>{order.store_notification || 'Dispatched'}</b>
+                        <div className="flex items-center justify-between text-[10.5px] text-slate-400 pt-0.5 px-0.5">
+                          <span className="flex items-center gap-1.5 font-medium">
+                            <SendOutlined className="text-sky-400" />
+                            <span>Telegram Alert:</span>
+                            <b
+                              className={
+                                order.store_notification === 'Sent'
+                                  ? 'text-emerald-400'
+                                  : 'text-amber-400'
+                              }
+                            >
+                              {order.store_notification === 'Sent' ? 'Dispatched ✓' : order.store_notification || 'Dispatched'}
+                            </b>
                           </span>
-                          <span className="text-[10px] text-slate-500">
-                            {new Date(order.createdAt).toLocaleDateString()}
-                          </span>
+
+                          {/* Toggle History Milestones Log */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedTimelineId(isTimelineExpanded ? null : orderRefNo)
+                            }
+                            className="text-[10.5px] text-sky-400 font-extrabold underline hover:text-sky-300 transition-colors"
+                          >
+                            {isTimelineExpanded ? 'Hide History ▲' : 'View Milestones ▼'}
+                          </button>
                         </div>
+
+                        {/* Expandable Step-by-Step History Log (Audited Timestamps) */}
+                        {isTimelineExpanded && (
+                          <div className="mt-2 bg-slate-950/80 border border-slate-800 rounded-2xl p-3 space-y-2 text-xs animate-fadeIn">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                              Live Status Audit History
+                            </span>
+                            <div className="space-y-2 border-l-2 border-slate-800 pl-3 ml-1.5 py-0.5">
+                              {(order.statusHistory || [
+                                { status: order.status || 'Pending', timestamp: order.createdAt, note: 'Order placed by customer via Telegram Mini App' }
+                              ]).map((item: any, histIdx: number) => (
+                                <div key={histIdx} className="space-y-0.5 relative">
+                                  <div className="absolute -left-[19px] top-1 w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-slate-900" />
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="font-black text-white capitalize">
+                                      {item.status}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 font-mono">
+                                      {item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : ''}
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-slate-400 leading-tight">
+                                    {item.note || `Order advanced to ${item.status}`}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Staff Mode Controls: Status Transitions & Retry Notification */}
                         {isStaffMode && (
-                          <div className="mt-3 pt-2.5 border-t border-slate-800/80 space-y-2 bg-slate-950/80 p-2.5 rounded-xl">
+                          <div className="mt-3 pt-2.5 border-t border-slate-800/80 space-y-2 bg-slate-950/90 p-3 rounded-2xl">
                             <div className="flex items-center justify-between text-[11px] font-bold text-amber-300">
-                              <span>Staff Controls (Live Status Update):</span>
+                              <span className="flex items-center gap-1 font-extrabold">
+                                <span>⚡</span> Staff Live State Control:
+                              </span>
                               <button
                                 type="button"
-                                onClick={() => handleRetryNotification(order.referenceNo || order.id)}
-                                className="text-[10.5px] text-blue-400 underline font-bold flex items-center gap-1"
+                                onClick={() => handleRetryNotification(orderRefNo)}
+                                className="text-[10.5px] text-sky-400 underline font-bold flex items-center gap-1"
                               >
-                                <SendOutlined /> Retry Telegram Alert
+                                <SendOutlined /> Resend Bot Alert
                               </button>
                             </div>
 
-                            <div className="flex flex-wrap gap-1.5">
+                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
                               {['Pending', 'Confirmed', 'Preparing', 'Ready', 'Completed', 'Cancelled'].map((st) => (
                                 <button
                                   key={st}
                                   type="button"
-                                  onClick={() => handleStaffUpdateStatus(order.referenceNo || order.id, st)}
-                                  className={`px-2 py-1 rounded text-[10px] font-bold border transition-colors ${
+                                  onClick={() => handleStaffUpdateStatus(orderRefNo, st)}
+                                  className={`py-1.5 px-2 rounded-xl text-[10px] font-black border transition-all active:scale-95 ${
                                     order.status?.toLowerCase() === st.toLowerCase()
-                                      ? 'bg-blue-600 text-white border-blue-500'
-                                      : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'
+                                      ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30'
+                                      : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-600 hover:text-white'
                                   }`}
                                 >
                                   {st}
