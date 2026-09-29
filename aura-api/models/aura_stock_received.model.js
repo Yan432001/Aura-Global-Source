@@ -1,0 +1,33 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_stock_received",
+  primaryKey: ["id"],
+  hidden: [],
+  columns: [
+    {"name":"id","type":"int","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"date","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"biller_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"project_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"biller","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"supplier_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"supplier","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"warehouse_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"purchase_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"purchase_order_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"reward_exchange_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"re_reference_no","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"pu_reference_no","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"address","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"note","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"status","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"attachment","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"received_by","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"updated_at","type":"timestamp","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"updated_by","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"created_by","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"si_reference_no","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"dn_reference","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"truck","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+  ],
+});
