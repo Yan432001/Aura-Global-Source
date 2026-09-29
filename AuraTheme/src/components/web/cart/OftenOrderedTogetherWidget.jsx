@@ -11,7 +11,6 @@ import {
 } from '@ant-design/icons';
 import { useCart } from '../../../contexts/CartContext';
 import { products } from '../../../data/shopData';
-import simpleData from '../../../../../data/simpleData';
 
 const { Text, Title } = Typography;
 

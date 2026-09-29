@@ -1,13 +1,12 @@
 {
-  "name": "aura-global-source",
+  "name": "aura-global",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "node server.js",
     "build": "vite build AuraTheme",
-    "start": "NODE_ENV=production node server.js",
-    "lint": "node -e \"console.log('Lint check passed: no syntax errors detected.')\""
+    "start": "node server.js",
+    "lint": "eslint AuraTheme"
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
@@ -33,9 +32,15 @@
     "useragent": "^2.3.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.1.0",
+    "baseline-browser-mapping": "^2.10.10",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
     "vite": "^7.2.2"
   }
 }

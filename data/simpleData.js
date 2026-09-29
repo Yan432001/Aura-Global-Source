@@ -1,635 +1,497 @@
-// Universal simple dataset for Aura Global E-Menu & Multi-Store Telegram Mini App
+const stores = [
+  {
+    id: 1,
+    name: "Aura Specialty Coffee",
+    company: "Aura Specialty Coffee Bar Group",
+    slug: "sbc-store",
+    tagline: "Artisan Roasts, Handcrafted Espresso & Pour-Overs",
+    description: "Flagship specialty coffee bar serving single-origin roasts, signature iced creations, and fresh cafe bites.",
+    address: "No. 128 Preah Norodom Blvd, BKK1, Phnom Penh",
+    phone: "+855 12 888 777",
+    email: "sbc@auraglobal.com",
+    branch: "bangkok-hub",
+    rating: 4.9,
+    reviewsCount: 230,
+    followers: 14200,
+    banner: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
+    cover: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
+    logo: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=300&q=80",
+    theme_color: "#0284c7",
+    currency_code: "USD",
+    currency_symbol: "$",
+    is_active: 1,
+    telegram_group_id: "-1002345678901",
+    telegram_group_name: "☕ Aura Specialty Coffee Bar Group",
+    openStatus: "open",
+    openingHours: "07:00 - 21:00"
+  },
+  {
+    id: 2,
+    name: "Aura Artisan Bakery",
+    company: "Aura Artisan Bakery Co.",
+    slug: "aura-bakery",
+    tagline: "Fresh French Viennoiserie & Sourdough Pastries",
+    description: "Handcrafted European bakery offering golden almond croissants, naturally leavened sourdough, and artisan cakes.",
+    address: "No. 45 St 214, Daun Penh, Phnom Penh",
+    phone: "+855 12 888 778",
+    email: "bakery@auraglobal.com",
+    branch: "bangkok-hub",
+    rating: 4.8,
+    reviewsCount: 185,
+    followers: 11900,
+    banner: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1200&q=80",
+    cover: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1200&q=80",
+    logo: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=300&q=80",
+    theme_color: "#d97706",
+    currency_code: "USD",
+    currency_symbol: "$",
+    is_active: 1,
+    telegram_group_id: "-1002345678902",
+    telegram_group_name: "🥐 Aura Artisan Bakery Kitchen Group",
+    openStatus: "open",
+    openingHours: "06:30 - 20:00"
+  },
+  {
+    id: 3,
+    name: "Aura Healthy Bistro",
+    company: "Aura Bistro Kitchen",
+    slug: "aura-bistro",
+    tagline: "Nutrient-Dense Poke Bowls, Salads & Cold Juices",
+    description: "Farm-to-table kitchen serving fresh poke bowls, organic greens, high-protein brunch, and cold-pressed botanical juices.",
+    address: "No. 88 St 302, BKK1, Phnom Penh",
+    phone: "+855 12 888 779",
+    email: "bistro@auraglobal.com",
+    branch: "bangkok-hub",
+    rating: 4.9,
+    reviewsCount: 160,
+    followers: 9800,
+    banner: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&q=80",
+    cover: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&q=80",
+    logo: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=300&q=80",
+    theme_color: "#16a34a",
+    currency_code: "USD",
+    currency_symbol: "$",
+    is_active: 1,
+    telegram_group_id: "-1002345678903",
+    telegram_group_name: "🥗 Aura Bistro Kitchen Orders Group",
+    openStatus: "open",
+    openingHours: "08:00 - 21:00"
+  },
+  {
+    id: 4,
+    name: "Aura Tech & Gadgets",
+    company: "Aura Tech Fulfillment",
+    slug: "aura-tech",
+    tagline: "Specialty Brewing Gear, Scales & Accessories",
+    description: "High-grade barista equipment, precision espresso scales, and specialized home brewing accessories.",
+    address: "No. 12 Toul Kork, Phnom Penh",
+    phone: "+855 12 888 780",
+    email: "tech@auraglobal.com",
+    branch: "bangkok-hub",
+    rating: 4.7,
+    reviewsCount: 110,
+    followers: 7400,
+    banner: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
+    cover: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
+    logo: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=300&q=80",
+    theme_color: "#8b5cf6",
+    currency_code: "USD",
+    currency_symbol: "$",
+    is_active: 1,
+    telegram_group_id: "-1002345678904",
+    telegram_group_name: "⚡ Aura Tech Store Fulfillment Group",
+    openStatus: "open",
+    openingHours: "09:00 - 20:00"
+  }
+];
+
+const categories = [
+  {
+    id: 1,
+    name: "Espresso & Coffee",
+    code: "CAT-COF",
+    description: "Handcrafted espresso, lattes, and specialty brews",
+    image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=400&q=80",
+    status: 1
+  },
+  {
+    id: 2,
+    name: "Cold Brew & Tea",
+    code: "CAT-TEA",
+    description: "Slow-steeped cold brews and premium organic teas",
+    image: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=400&q=80",
+    status: 1
+  },
+  {
+    id: 3,
+    name: "Pastries & Bites",
+    code: "CAT-PST",
+    description: "Oven-fresh pastries and quick cafe bites",
+    image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400&q=80",
+    status: 1
+  },
+  {
+    id: 4,
+    name: "French Viennoiserie",
+    code: "CAT-BAK",
+    description: "Butter croissants, pain au chocolat, brioche",
+    image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80",
+    status: 1
+  },
+  {
+    id: 5,
+    name: "Sourdough & Bread",
+    code: "CAT-BRD",
+    description: "Naturally fermented sourdough loaves and rustic breads",
+    image: "https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?auto=format&fit=crop&w=400&q=80",
+    status: 1
+  },
+  {
+    id: 6,
+    name: "Cakes & Tarts",
+    code: "CAT-CAK",
+    description: "Artisan desserts, cheesecakes, and fruit tarts",
+    image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=400&q=80",
+    status: 1
+  },
+  {
+    id: 7,
+    name: "Poke & Grain Bowls",
+    code: "CAT-POK",
+    description: "Fresh sashimi, avocado, quinoa, and grain bowls",
+    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80",
+    status: 1
+  },
+  {
+    id: 8,
+    name: "All-Day Brunch",
+    code: "CAT-BRN",
+    description: "Gourmet toasts, eggs benedict, and brunch classics",
+    image: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=400&q=80",
+    status: 1
+  },
+  {
+    id: 9,
+    name: "Cold-Pressed Juices",
+    code: "CAT-JUC",
+    description: "Raw organic fruit and botanical juices",
+    image: "https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=400&q=80",
+    status: 1
+  },
+  {
+    id: 10,
+    name: "Brewing Gear",
+    code: "CAT-GEAR",
+    description: "Scales, grinders, pour-over drippers",
+    image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=400&q=80",
+    status: 1
+  }
+];
+
+const standardCoffeeOptions = [
+  {
+    id: "size",
+    name: "Size",
+    choices: [
+      { label: "Regular (12oz)", priceDelta: 0, default: true },
+      { label: "Large (16oz)", priceDelta: 0.75, default: false }
+    ]
+  },
+  {
+    id: "ice",
+    name: "Ice Level",
+    choices: [
+      { label: "Normal Ice", priceDelta: 0, default: true },
+      { label: "Less Ice", priceDelta: 0, default: false },
+      { label: "No Ice", priceDelta: 0, default: false }
+    ]
+  },
+  {
+    id: "sweetness",
+    name: "Sweetness",
+    choices: [
+      { label: "100% Standard", priceDelta: 0, default: true },
+      { label: "50% Less Sweet", priceDelta: 0, default: false },
+      { label: "Sugar-Free", priceDelta: 0, default: false }
+    ]
+  }
+];
+
+const bakeryOptions = [
+  {
+    id: "preparation",
+    name: "Preparation",
+    choices: [
+      { label: "Warmed Up", priceDelta: 0, default: true },
+      { label: "Standard (Room Temp)", priceDelta: 0, default: false }
+    ]
+  }
+];
+
+const products = [
+  // Store 1: Aura Specialty Coffee (biller_id: 1)
+  {
+    id: 1,
+    biller_id: 1,
+    category_id: 1,
+    code: "PRD-COF-01",
+    name: "Spanish Iced Latte",
+    price: 4.25,
+    image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=600&q=80",
+    unit: "Cup",
+    details: "Signature espresso layered with sweetened condensed milk and fresh organic whole milk over iced cube crystals.",
+    rating: 4.9,
+    reviews: 142,
+    inStock: true,
+    options: standardCoffeeOptions
+  },
+  {
+    id: 2,
+    biller_id: 1,
+    category_id: 1,
+    code: "PRD-COF-02",
+    name: "Artisan Flat White",
+    price: 3.85,
+    image: "https://images.unsplash.com/photo-1577968897966-3d4325b36b61?auto=format&fit=crop&w=600&q=80",
+    unit: "Cup",
+    details: "Double ristretto shot finished with velvety microfoam milk and latte art.",
+    rating: 4.8,
+    reviews: 98,
+    inStock: true,
+    options: [
+      {
+        id: "milk",
+        name: "Milk Type",
+        choices: [
+          { label: "Whole Milk", priceDelta: 0, default: true },
+          { label: "Barista Oat Milk", priceDelta: 0.60, default: false },
+          { label: "Almond Milk", priceDelta: 0.60, default: false }
+        ]
+      }
+    ]
+  },
+  {
+    id: 3,
+    biller_id: 1,
+    category_id: 2,
+    code: "PRD-COF-03",
+    name: "Mondulkiri Cold Brew Reserve",
+    price: 4.50,
+    image: "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=600&q=80",
+    unit: "Cup",
+    details: "Slow steeped for 18 hours using high-altitude Mondulkiri single origin beans with natural chocolate and citrus notes.",
+    rating: 4.9,
+    reviews: 84,
+    inStock: true,
+    options: standardCoffeeOptions
+  },
+  {
+    id: 4,
+    biller_id: 1,
+    category_id: 2,
+    code: "PRD-COF-04",
+    name: "Ceremonial Uji Matcha Latte",
+    price: 4.75,
+    image: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=600&q=80",
+    unit: "Cup",
+    details: "First-harvest ceremonial grade Uji matcha whisked with warm bamboo chasen and blended with sweet oat milk.",
+    rating: 4.9,
+    reviews: 116,
+    inStock: true,
+    options: standardCoffeeOptions
+  },
+  {
+    id: 5,
+    biller_id: 1,
+    category_id: 3,
+    code: "PRD-BAK-01",
+    name: "Golden Almond Croissant",
+    price: 3.75,
+    image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80",
+    unit: "Piece",
+    details: "Twice-baked French butter croissant filled with luscious almond frangipane cream and topped with toasted sliced almonds.",
+    rating: 4.9,
+    reviews: 130,
+    inStock: true,
+    options: bakeryOptions
+  },
+  {
+    id: 6,
+    biller_id: 1,
+    category_id: 3,
+    code: "PRD-BAK-02",
+    name: "Pain au Chocolat",
+    price: 3.50,
+    image: "https://images.unsplash.com/photo-1530610476181-d83430b64dcd?auto=format&fit=crop&w=600&q=80",
+    unit: "Piece",
+    details: "Buttery, flaky laminated pastry wrapping double batons of dark French chocolate.",
+    rating: 4.8,
+    reviews: 75,
+    inStock: true,
+    options: bakeryOptions
+  },
+
+  // Store 2: Aura Artisan Bakery (biller_id: 2)
+  {
+    id: 7,
+    biller_id: 2,
+    category_id: 4,
+    code: "PRD-BAK-03",
+    name: "Classic Butter Croissant",
+    price: 2.80,
+    image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80",
+    unit: "Piece",
+    details: "Traditional honeycomb-structured croissant made with French Normandy butter and 72-hour cold fermentation.",
+    rating: 4.9,
+    reviews: 92,
+    inStock: true,
+    options: bakeryOptions
+  },
+  {
+    id: 8,
+    biller_id: 2,
+    category_id: 5,
+    code: "PRD-BRD-01",
+    name: "Country Sourdough Loaf (Whole)",
+    price: 5.50,
+    image: "https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?auto=format&fit=crop&w=600&q=80",
+    unit: "Loaf",
+    details: "Wild yeast fermented rustic sourdough with an open crumb and caramelized crust.",
+    rating: 4.9,
+    reviews: 110,
+    inStock: true,
+    options: [
+      {
+        id: "slicing",
+        name: "Slicing",
+        choices: [
+          { label: "Whole Uncut", priceDelta: 0, default: true },
+          { label: "Sliced (Toast Thickness)", priceDelta: 0, default: false }
+        ]
+      }
+    ]
+  },
+  {
+    id: 9,
+    biller_id: 2,
+    category_id: 6,
+    code: "PRD-CAK-01",
+    name: "Valrhona Chocolate Tart",
+    price: 4.90,
+    image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80",
+    unit: "Slice",
+    details: "Dark 70% Guanaja chocolate ganache in a crisp sable shell garnished with gold leaf.",
+    rating: 4.8,
+    reviews: 64,
+    inStock: true
+  },
+  {
+    id: 10,
+    biller_id: 2,
+    category_id: 6,
+    code: "PRD-CAK-02",
+    name: "Vanilla Bean Basque Cheesecake",
+    price: 5.25,
+    image: "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80",
+    unit: "Slice",
+    details: "Burnt caramelized exterior with an ultra-creamy, molten vanilla core.",
+    rating: 4.9,
+    reviews: 88,
+    inStock: true
+  },
+
+  // Store 3: Aura Healthy Bistro (biller_id: 3)
+  {
+    id: 11,
+    biller_id: 3,
+    category_id: 7,
+    code: "PRD-BIS-01",
+    name: "Norwegian Salmon Poke Bowl",
+    price: 8.50,
+    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80",
+    unit: "Bowl",
+    details: "Sashimi-grade salmon cubes, edamame, Hass avocado, furikake, pickled radish over warm brown rice.",
+    rating: 4.9,
+    reviews: 105,
+    inStock: true,
+    options: [
+      {
+        id: "base",
+        name: "Base",
+        choices: [
+          { label: "Organic Brown Rice", priceDelta: 0, default: true },
+          { label: "Tri-Color Quinoa", priceDelta: 0.50, default: false },
+          { label: "Mixed Salad Greens", priceDelta: 0, default: false }
+        ]
+      }
+    ]
+  },
+  {
+    id: 12,
+    biller_id: 3,
+    category_id: 8,
+    code: "PRD-BIS-02",
+    name: "Truffle Scrambled Eggs Sourdough",
+    price: 7.20,
+    image: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=600&q=80",
+    unit: "Plate",
+    details: "Pasture-raised eggs folded with black truffle oil and chives on toasted sourdough.",
+    rating: 4.8,
+    reviews: 72,
+    inStock: true
+  },
+  {
+    id: 13,
+    biller_id: 3,
+    category_id: 9,
+    code: "PRD-BIS-03",
+    name: "Vitality Green Glow Detox Juice",
+    price: 4.00,
+    image: "https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=600&q=80",
+    unit: "Bottle",
+    details: "Cold-pressed kale, green apple, cucumber, celery, and fresh ginger.",
+    rating: 4.7,
+    reviews: 58,
+    inStock: true
+  },
+
+  // Store 4: Aura Tech & Gadgets (biller_id: 4)
+  {
+    id: 14,
+    biller_id: 4,
+    category_id: 10,
+    code: "PRD-TCH-01",
+    name: "Precision Coffee Scale & Timer",
+    price: 34.00,
+    image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80",
+    unit: "Item",
+    details: "0.1g high accuracy scale with built-in brew flow timer, silicone mat, and USB-C fast charging.",
+    rating: 4.8,
+    reviews: 42,
+    inStock: true
+  },
+  {
+    id: 15,
+    biller_id: 4,
+    category_id: 10,
+    code: "PRD-TCH-02",
+    name: "Manual Ceramic Burr Hand Grinder",
+    price: 48.00,
+    image: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80",
+    unit: "Item",
+    details: "CNC stainless steel conical burrs with 24 click stepless grind adjustment from espresso to French press.",
+    rating: 4.9,
+    reviews: 51,
+    inStock: true
+  }
+];
+
 const simpleData = {
-  stores: [
-    {
-      id: 1,
-      name: "Aura Specialty Coffee",
-      company: "Aura Coffee Roasters Co.",
-      slug: "sbc-store",
-      tagline: "Farm-to-cup artisan coffee & matcha bar",
-      location: "BKK1, Phnom Penh",
-      address: "100 Central Boulevard, BKK1, Phnom Penh",
-      phone: "+855 12 345 678",
-      email: "coffee@auraglobal.com",
-      hours: "07:00 AM - 08:30 PM",
-      is_open: true,
-      status_text: "Open Now",
-      logo: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=200&h=200&fit=crop&crop=faces",
-      banner: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1200&h=400&fit=crop",
-      theme_color: "#0d9488",
-      currency_code: "USD",
-      currency_symbol: "$",
-      is_active: 1,
-      group_name: "biller",
-      // telegram_group_id: process.env.TELEGRAM_GROUP_CHAT_ID || "-1002345678901",
-      telegram_group_name: "☕ Aura Coffee Kitchen & Barista Group",
-      rating: 4.9,
-      reviewsCount: 342,
-    },
-    {
-      id: 2,
-      name: "Aura Artisan Bakery",
-      company: "Aura Pastry & Boulangerie",
-      slug: "aura-bakery",
-      tagline: "Freshly baked European sourdough & Viennoiserie",
-      location: "Daun Penh, Phnom Penh",
-      address: "42 Riverside Walk, Daun Penh, Phnom Penh",
-      phone: "+855 23 888 999",
-      email: "bakery@auraglobal.com",
-      hours: "06:30 AM - 07:00 PM",
-      is_open: true,
-      status_text: "Open Now",
-      logo: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=200&h=200&fit=crop&crop=faces",
-      banner: "https://images.unsplash.com/photo-1517433670267-08bbd4be890f?w=1200&h=400&fit=crop",
-      theme_color: "#d97706",
-      currency_code: "USD",
-      currency_symbol: "$",
-      is_active: 1,
-      group_name: "biller",
-      // telegram_group_id: process.env.TELEGRAM_GROUP_CHAT_ID || "-1002345678902",
-      telegram_group_name: "🥐 Aura Bakery Oven & Dispatch Group",
-      rating: 4.8,
-      reviewsCount: 219,
-    },
-    {
-      id: 3,
-      name: "Aura Green Bistro",
-      company: "Aura Organic Dining",
-      slug: "aura-bistro",
-      tagline: "Healthy grain bowls, poke, and fresh squeezed detox juices",
-      location: "Diamond Island, Phnom Penh",
-      address: "88 Diamond Island Promenade, Phnom Penh",
-      phone: "+855 10 999 111",
-      email: "bistro@auraglobal.com",
-      hours: "10:00 AM - 09:30 PM",
-      is_open: true,
-      status_text: "Open Now",
-      logo: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=200&h=200&fit=crop&crop=faces",
-      banner: "https://images.unsplash.com/photo-1543353071-10c8ba85a904?w=1200&h=400&fit=crop",
-      theme_color: "#16a34a",
-      currency_code: "USD",
-      currency_symbol: "$",
-      is_active: 1,
-      group_name: "biller",
-      // telegram_group_id: process.env.TELEGRAM_GROUP_CHAT_ID || "-1002345678903",
-      telegram_group_name: "🥗 Aura Bistro Kitchen Orders Group",
-      rating: 4.7,
-      reviewsCount: 185,
-    },
-    {
-      id: 4,
-      name: "Aura Lifestyle & Tech",
-      company: "Aura Smart Essentials",
-      slug: "aura-tech",
-      tagline: "Curated minimalist gadgets, tumblers, and everyday goods",
-      location: "Norodom, Phnom Penh",
-      address: "15 Norodom Blvd, Phnom Penh",
-      phone: "+855 17 555 444",
-      email: "tech@auraglobal.com",
-      hours: "09:00 AM - 09:00 PM",
-      is_open: true,
-      status_text: "Open Now",
-      logo: "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=200&h=200&fit=crop&crop=faces",
-      banner: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=1200&h=400&fit=crop",
-      theme_color: "#6366f1",
-      currency_code: "USD",
-      currency_symbol: "$",
-      is_active: 1,
-      group_name: "biller",
-      // telegram_group_id: process.env.TELEGRAM_GROUP_CHAT_ID || "-1002345678904",
-      telegram_group_name: "⚡ Aura Tech Store Fulfillment Group",
-      rating: 4.9,
-      reviewsCount: 420,
-    }
-  ],
-
-  categories: [
-    {
-      id: 1,
-      code: "CAT-COFFEE",
-      name: "Specialty Coffee",
-      description: "Artisan espresso, single origin pour-overs & cold brew",
-      icon: "☕",
-      status: 1
-    },
-    {
-      id: 2,
-      code: "CAT-TEAS",
-      name: "Teas & Refreshers",
-      description: "Japanese matcha, organic floral teas & sparkling sodas",
-      icon: "🍵",
-      status: 1
-    },
-    {
-      id: 3,
-      code: "CAT-BAKERY",
-      name: "Artisan Bakery",
-      description: "Warm croissants, Danish pastries & slow-fermented sourdough",
-      icon: "🥐",
-      status: 1
-    },
-    {
-      id: 4,
-      code: "CAT-BOWLS",
-      name: "Bistro Bowls & Mains",
-      description: "Fresh protein salads, poke bowls & gourmet sandwiches",
-      icon: "🥗",
-      status: 1
-    },
-    {
-      id: 5,
-      code: "CAT-DESSERTS",
-      name: "Desserts & Sweets",
-      description: "Basque cheesecakes, macarons & gelato treats",
-      icon: "🍰",
-      status: 1
-    },
-    {
-      id: 6,
-      code: "CAT-LIFESTYLE",
-      name: "Goods & Accessories",
-      description: "Thermal tumblers, ceramic drippers & tote bags",
-      icon: "🎒",
-      status: 1
-    }
-  ],
-
-  products: [
-    // Coffee & Beverages (Store 1)
-    {
-      id: 1,
-      code: "PRD-COF-01",
-      name: "Spanish Iced Latte",
-      price: 4.25,
-      unit: "cup",
-      category_id: 1,
-      biller_id: 1,
-      details: "Double shot espresso with condensed milk, whole milk, and crushed ice.",
-      image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=500&h=500&fit=crop",
-      in_stock: 50,
-      badge: "Best Seller",
-      popular: true,
-      variants: [
-        { id: "v-sm", name: "Small", size: "Small (12oz)", priceAdjustment: 0, priceDelta: 0, default: true },
-        { id: "v-md", name: "Medium", size: "Medium (16oz)", priceAdjustment: 0.75, priceDelta: 0.75 },
-        { id: "v-lg", name: "Large", size: "Large (20oz)", priceAdjustment: 1.50, priceDelta: 1.50 }
-      ],
-      options: [
-        {
-          id: "size",
-          name: "Size",
-          required: true,
-          choices: [
-            { label: "Regular (12oz)", priceDelta: 0, default: true },
-            { label: "Large (16oz)", priceDelta: 0.75 }
-          ]
-        },
-        {
-          id: "ice",
-          name: "Ice Level",
-          required: false,
-          choices: [
-            { label: "Normal Ice", priceDelta: 0, default: true },
-            { label: "Less Ice", priceDelta: 0 },
-            { label: "No Ice", priceDelta: 0 }
-          ]
-        },
-        {
-          id: "sweetness",
-          name: "Sweetness",
-          required: false,
-          choices: [
-            { label: "100% Normal", priceDelta: 0, default: true },
-            { label: "50% Less Sweet", priceDelta: 0 },
-            { label: "No Sugar", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-    {
-      id: 2,
-      code: "PRD-COF-02",
-      name: "Vanilla Cold Foam Cold Brew",
-      price: 4.50,
-      unit: "cup",
-      category_id: 1,
-      biller_id: 1,
-      details: "18-hour steeped Ethiopian cold brew topped with velvety sweet vanilla cream.",
-      image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=500&h=500&fit=crop",
-      in_stock: 35,
-      badge: "Popular",
-      popular: true,
-      variants: [
-        { id: "v-sm", name: "Small", size: "Small (12oz)", priceAdjustment: 0, priceDelta: 0, default: true },
-        { id: "v-md", name: "Medium", size: "Medium (16oz)", priceAdjustment: 0.75, priceDelta: 0.75 },
-        { id: "v-lg", name: "Large", size: "Large (20oz)", priceAdjustment: 1.50, priceDelta: 1.50 }
-      ],
-      options: [
-        {
-          id: "size",
-          name: "Size",
-          required: true,
-          choices: [
-            { label: "Regular (12oz)", priceDelta: 0, default: true },
-            { label: "Large (16oz)", priceDelta: 0.75 }
-          ]
-        },
-        {
-          id: "dairy",
-          name: "Milk Base",
-          required: false,
-          choices: [
-            { label: "Whole Milk", priceDelta: 0, default: true },
-            { label: "Oat Milk (+0.50)", priceDelta: 0.50 },
-            { label: "Almond Milk (+0.50)", priceDelta: 0.50 }
-          ]
-        }
-      ]
-    },
-    {
-      id: 3,
-      code: "PRD-COF-03",
-      name: "Kyoto Style Dirty Matcha",
-      price: 4.75,
-      unit: "cup",
-      category_id: 2,
-      biller_id: 1,
-      details: "Ceremonial Uji matcha layered over chilled oat milk with an espresso shot.",
-      image: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=500&h=500&fit=crop",
-      in_stock: 40,
-      badge: "Signature",
-      popular: true,
-      options: [
-        {
-          id: "size",
-          name: "Size",
-          required: true,
-          choices: [
-            { label: "Regular (12oz)", priceDelta: 0, default: true },
-            { label: "Large (16oz)", priceDelta: 0.75 }
-          ]
-        },
-        {
-          id: "shot",
-          name: "Espresso Shot",
-          required: false,
-          choices: [
-            { label: "Single Shot", priceDelta: 0, default: true },
-            { label: "Double Shot (+0.75)", priceDelta: 0.75 },
-            { label: "Decaf", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-    {
-      id: 4,
-      code: "PRD-COF-04",
-      name: "Sparkling Yuzu Citrus Tonic",
-      price: 3.95,
-      unit: "cup",
-      category_id: 2,
-      biller_id: 1,
-      details: "Japanese yuzu fruit puree with sparkling tonic water and mint garnish.",
-      image: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&h=500&fit=crop",
-      in_stock: 30,
-      badge: "Refreshing",
-      popular: false,
-      options: [
-        {
-          id: "ice",
-          name: "Ice Level",
-          required: false,
-          choices: [
-            { label: "Normal Ice", priceDelta: 0, default: true },
-            { label: "Less Ice", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-
-    // Bakery (Store 2)
-    {
-      id: 5,
-      code: "PRD-BAK-01",
-      name: "Golden Almond Croissant",
-      price: 3.75,
-      unit: "pc",
-      category_id: 3,
-      biller_id: 2,
-      details: "Twice-baked butter croissant loaded with almond frangipane and toasted flakes.",
-      image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500&h=500&fit=crop",
-      in_stock: 25,
-      badge: "Chef's Pick",
-      popular: true,
-      options: [
-        {
-          id: "serving",
-          name: "Preparation",
-          required: false,
-          choices: [
-            { label: "Warmed Up", priceDelta: 0, default: true },
-            { label: "Room Temperature", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-    {
-      id: 6,
-      code: "PRD-BAK-02",
-      name: "Pain au Chocolat (Dark Belgian)",
-      price: 3.50,
-      unit: "pc",
-      category_id: 3,
-      biller_id: 2,
-      details: "Flaky layered French pastry rolled with twin batons of 70% dark chocolate.",
-      image: "https://images.unsplash.com/photo-1608198093002-ad4e005484ec?w=500&h=500&fit=crop",
-      in_stock: 30,
-      badge: "Hot",
-      popular: true,
-      options: [
-        {
-          id: "serving",
-          name: "Preparation",
-          required: false,
-          choices: [
-            { label: "Warmed Up", priceDelta: 0, default: true },
-            { label: "Room Temperature", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-    {
-      id: 7,
-      code: "PRD-BAK-03",
-      name: "Country Sourdough Loaf (800g)",
-      price: 5.50,
-      unit: "loaf",
-      category_id: 3,
-      biller_id: 2,
-      details: "Natural wild yeast sourdough with blistered caramelised crust and open crumb.",
-      image: "https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=500&h=500&fit=crop",
-      in_stock: 18,
-      badge: "Artisan",
-      popular: false,
-      options: [
-        {
-          id: "slicing",
-          name: "Slicing",
-          required: false,
-          choices: [
-            { label: "Whole Loaf (Uncut)", priceDelta: 0, default: true },
-            { label: "Sliced (Toast thickness)", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-    {
-      id: 8,
-      code: "PRD-BAK-04",
-      name: "Burnt Basque Cheesecake Slice",
-      price: 4.80,
-      unit: "slice",
-      category_id: 5,
-      biller_id: 2,
-      details: "Creamy molten center with a caramelized crust. Baked fresh daily.",
-      image: "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=500&h=500&fit=crop",
-      in_stock: 20,
-      badge: "Must Try",
-      popular: true,
-      options: [
-        {
-          id: "topping",
-          name: "Topping",
-          required: false,
-          choices: [
-            { label: "Classic Sea Salt", priceDelta: 0, default: true },
-            { label: "Mixed Berry Compote (+0.60)", priceDelta: 0.60 }
-          ]
-        }
-      ]
-    },
-    {
-      id: 21,
-      code: "PRD-BAK-05",
-      name: "Cardamom Sugar Morning Bun",
-      price: 3.60,
-      unit: "pc",
-      category_id: 3,
-      biller_id: 2,
-      details: "Flaky layered brioche pastry rolled in brown sugar, Saigon cinnamon & freshly ground green cardamom.",
-      image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&h=500&fit=crop",
-      in_stock: 22,
-      badge: "Warm & Spiced",
-      popular: true,
-      options: [
-        {
-          id: "serving",
-          name: "Preparation",
-          required: false,
-          choices: [
-            { label: "Warmed Up", priceDelta: 0, default: true },
-            { label: "Room Temperature", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-    {
-      id: 22,
-      code: "PRD-BAK-06",
-      name: "Traditional French Sourdough Baguette",
-      price: 2.80,
-      unit: "baguette",
-      category_id: 3,
-      biller_id: 2,
-      details: "Slow cold fermentation, blistered crunchy golden crust, airy honeycomb crumb.",
-      image: "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=500&h=500&fit=crop",
-      in_stock: 35,
-      badge: "Boulangerie",
-      popular: false,
-      options: [
-        {
-          id: "slicing",
-          name: "Slicing",
-          required: false,
-          choices: [
-            { label: "Whole Uncut", priceDelta: 0, default: true },
-            { label: "Sliced in Halves", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-
-    // Bistro & Bowls (Store 3)
-    {
-      id: 9,
-      code: "PRD-BIS-01",
-      name: "Ahi Tuna Avocado Poke Bowl",
-      price: 8.90,
-      unit: "bowl",
-      category_id: 4,
-      biller_id: 3,
-      details: "Sashimi-grade tuna, edamame, ripe avocado, seaweed salad, sushi rice & sesame soy.",
-      image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&h=500&fit=crop",
-      in_stock: 25,
-      badge: "Top Rated",
-      popular: true,
-      options: [
-        {
-          id: "base",
-          name: "Grain Base",
-          required: true,
-          choices: [
-            { label: "Japanese Sushi Rice", priceDelta: 0, default: true },
-            { label: "Organic Brown Rice", priceDelta: 0 },
-            { label: "Mixed Salad Greens", priceDelta: 0 }
-          ]
-        },
-        {
-          id: "spice",
-          name: "Spice Level",
-          required: false,
-          choices: [
-            { label: "Mild Sesame Shoyu", priceDelta: 0, default: true },
-            { label: "Spicy Sriracha Mayo", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-    {
-      id: 10,
-      code: "PRD-BIS-02",
-      name: "Smoked Salmon & Poached Egg Toast",
-      price: 7.50,
-      unit: "plate",
-      category_id: 4,
-      biller_id: 3,
-      details: "Norwegian smoked salmon on toasted sourdough with smashed avocado and dill cream.",
-      image: "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=500&h=500&fit=crop",
-      in_stock: 20,
-      badge: "Breakfast",
-      popular: true,
-      options: [
-        {
-          id: "egg",
-          name: "Egg Doneness",
-          required: false,
-          choices: [
-            { label: "Soft Poached (Runny)", priceDelta: 0, default: true },
-            { label: "Medium Poached", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-    {
-      id: 11,
-      code: "PRD-BIS-03",
-      name: "Cold-Pressed Green Glow Juice",
-      price: 4.20,
-      unit: "bottle",
-      category_id: 2,
-      biller_id: 3,
-      details: "Organic kale, green apple, cucumber, celery, lemon and cold-pressed ginger.",
-      image: "https://images.unsplash.com/photo-1613478223719-2ab802602423?w=500&h=500&fit=crop",
-      in_stock: 35,
-      badge: "Healthy",
-      popular: false,
-      options: [
-        {
-          id: "temp",
-          name: "Temperature",
-          required: false,
-          choices: [
-            { label: "Chilled", priceDelta: 0, default: true },
-            { label: "With Ice Cup", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-
-    // Tech & Lifestyle (Store 4)
-    {
-      id: 12,
-      code: "PRD-TEC-01",
-      name: "Aura Double-Wall Ceramic Tumbler",
-      price: 24.00,
-      unit: "pc",
-      category_id: 6,
-      biller_id: 4,
-      details: "380ml vacuum-insulated tumbler with splash-proof lid. Keeps hot 6h, cold 12h.",
-      image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=500&h=500&fit=crop",
-      in_stock: 45,
-      badge: "Signature",
-      popular: true,
-      options: [
-        {
-          id: "color",
-          name: "Color",
-          required: true,
-          choices: [
-            { label: "Matte Charcoal", priceDelta: 0, default: true },
-            { label: "Chalk White", priceDelta: 0 },
-            { label: "Forest Sage", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-    {
-      id: 13,
-      code: "PRD-TEC-02",
-      name: "Organic Heavy Canvas Market Tote",
-      price: 16.50,
-      unit: "pc",
-      category_id: 6,
-      biller_id: 4,
-      details: "Durable 16oz cotton canvas with reinforced handles and interior zip pocket.",
-      image: "https://images.unsplash.com/photo-1597484662367-9b50af734493?w=500&h=500&fit=crop",
-      in_stock: 60,
-      badge: "Eco-Friendly",
-      popular: false,
-      options: [
-        {
-          id: "color",
-          name: "Fabric Color",
-          required: false,
-          choices: [
-            { label: "Natural Ecru", priceDelta: 0, default: true },
-            { label: "Vintage Navy", priceDelta: 0 }
-          ]
-        }
-      ]
-    },
-    {
-      id: 14,
-      code: "PRD-TEC-03",
-      name: "Minimalist Wireless Fast Charging Pad",
-      price: 28.00,
-      unit: "box",
-      category_id: 6,
-      biller_id: 4,
-      details: "15W Qi-certified fast charging pad with aluminium base and soft fabric top.",
-      image: "https://images.unsplash.com/photo-1622445262464-84b14e3295b6?w=500&h=500&fit=crop",
-      in_stock: 22,
-      badge: "Tech Essential",
-      popular: true,
-      options: [
-        {
-          id: "cable",
-          name: "Included Cable",
-          required: false,
-          choices: [
-            { label: "USB-C to USB-C (1.5m)", priceDelta: 0, default: true },
-            { label: "Braided 2m Cable (+3.00)", priceDelta: 3.00 }
-          ]
-        }
-      ]
-    }
-  ]
+  stores,
+  categories,
+  products
 };
 
-simpleData.default = simpleData;
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = simpleData;
-}
-
+export { stores, categories, products };
 export default simpleData;
+

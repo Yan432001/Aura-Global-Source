@@ -22,13 +22,14 @@ export default defineConfig({
       '@ant-design/v5-patch-for-react-19': path.resolve(__dirname, './src/utils/antdPatch.js'),
       'jspdf': resolveOptionalPackage('jspdf', './src/utils/jspdfStub.js'),
       'jsqr': resolveOptionalPackage('jsqr', './src/utils/jsqrStub.js'),
+      'data/simpleData': path.resolve(__dirname, '../data/simpleData.js'),
     },
   },
   server: {
-    host: true,         // Exposes the dev server to your local network (LAN IP) and external tunnels
-    port: 5173,
-    strictPort: true,   // Prevents Vite from automatically switching ports if 5173 is busy
-    allowedHosts: true, // Accepts all incoming tunnel and proxy domains (e.g., Cloudflare, ngrok)
+    host: '0.0.0.0',
+    port: 3000,
+    strictPort: true,
+    allowedHosts: true,
     fs: {
       allow: ['..'],
     },
