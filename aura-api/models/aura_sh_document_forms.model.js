@@ -1,0 +1,33 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_sh_document_forms",
+  primaryKey: ["id"],
+  hidden: [],
+  columns: [
+    {"name":"id","type":"int","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"date","type":"datetime","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"form_type","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"student_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"teacher_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"reference_no","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"biller_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"description","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"created_by","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"created_at","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"status","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"attachment","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"cf_start_date","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"cf_end_date","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"day","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"cf_start_time","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"cf_end_time","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"id_room","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"name_room","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"grade","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"skill","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"program","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"old_time","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"new_time","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+  ],
+});

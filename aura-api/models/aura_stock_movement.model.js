@@ -1,0 +1,30 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_stock_movement",
+  primaryKey: ["id"],
+  hidden: [],
+  columns: [
+    {"name":"id","type":"int","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"date","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"reference_no","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"transaction","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"transaction_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"warehouse_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"product_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"product_type","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"product_code","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"product_name","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"real_unit_cost","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"quantity","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"unit_quantity","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"weight","type":"double","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"unit_code","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"unit_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"option_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"serial_no","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"expiry","type":"date","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"user_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"actual_date","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+  ],
+});

@@ -1,0 +1,32 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_transfers",
+  primaryKey: ["id"],
+  hidden: [],
+  columns: [
+    {"name":"id","type":"int","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"transfer_no","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"date","type":"timestamp","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"from_biller","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"to_biller","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"from_warehouse_id","type":"int","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"from_warehouse_code","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"from_warehouse_name","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"to_warehouse_id","type":"int","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"to_warehouse_code","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"to_warehouse_name","type":"varchar","auto":false,"nullable":false,"hasDefault":false},
+    {"name":"note","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"total","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"total_tax","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"grand_total","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"created_by","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"status","type":"varchar","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"accepted_by","type":"tinyint","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"shipping","type":"decimal","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"attachment","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"cgst","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"sgst","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"igst","type":"decimal","auto":false,"nullable":true,"hasDefault":true},
+  ],
+});

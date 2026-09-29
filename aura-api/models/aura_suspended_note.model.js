@@ -1,0 +1,33 @@
+const BaseModel = require('../core/BaseModel');
+
+module.exports = new BaseModel({
+  table: "aura_suspended_note",
+  primaryKey: ["note_id"],
+  hidden: [],
+  columns: [
+    {"name":"note_id","type":"int","auto":true,"nullable":false,"hasDefault":false},
+    {"name":"sale_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"check_in","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"check_out","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"duration","type":"tinyint","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"code","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"qr_code","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"name","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"floor","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"bed","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"ppl_number","type":"int","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"type","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"suspend_type","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"description","type":"text","auto":false,"nullable":true,"hasDefault":false},
+    {"name":"warehouse_id","type":"int","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"price","type":"float","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"amount","type":"float","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"create_date","type":"datetime","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"booking","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"status","type":"tinyint","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"set_item","type":"varchar","auto":false,"nullable":true,"hasDefault":true},
+    {"name":"customer_qty","type":"int","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"tmp","type":"int","auto":false,"nullable":false,"hasDefault":true},
+    {"name":"saleman_by","type":"int","auto":false,"nullable":true,"hasDefault":true},
+  ],
+});
