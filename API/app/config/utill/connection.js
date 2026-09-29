@@ -26,22 +26,34 @@ const mockStore = {
 };
 
 let realPool = null;
-const host = process.env.DB_HOST || config.db?.HOST;
-let useMock = !host || host === 'localhost';
+const host = process.env.DB_HOST || config.db?.HOST || 'localhost';
+let useMock = false;
 
 try {
-  if (host && host !== 'localhost') {
-    realPool = mysql.createPool({
-      host,
-      user: process.env.DB_USER || config.db?.USER || 'root',
-      password: process.env.DB_PASSWORD || config.db?.PASSWORD || '',
-      database: process.env.DB_NAME || config.db?.DATABASE || 'aura_v1_db',
-      port: Number(process.env.DB_PORT || config.db?.PORT || 3306),
-      namedPlaceholders: true,
-      connectTimeout: 2000,
+  realPool = mysql.createPool({
+    host,
+    user: process.env.DB_USER || config.db?.USER || 'root',
+    password: process.env.DB_PASSWORD || config.db?.PASSWORD || '43200111',
+    database: process.env.DB_NAME || config.db?.DATABASE || 'bpas_v6_8_9_db',
+    port: Number(process.env.DB_PORT || config.db?.PORT || 3306),
+    namedPlaceholders: true,
+    connectTimeout: 2000,
+  });
+
+  // Attempt non-blocking test connection
+  realPool.getConnection()
+    .then((conn) => {
+      console.log(`[Database] Connected successfully to MySQL (${host}:${config.db?.PORT || 3306}/${config.db?.DATABASE || 'bpas_v6_8_9_db'})`);
+      conn.release();
+      const { bootstrapDatabase } = require("../../services/cmsDbBootstrap.service");
+      bootstrapDatabase(realPool).catch(() => {});
+    })
+    .catch((err) => {
+      console.log(`[Database] Notice: MySQL not reachable at ${host} (${err.code || err.message}). Active fallback layer engaged.`);
+      useMock = true;
     });
-  }
-} catch {
+} catch (err) {
+  console.log(`[Database] Pool initialization error: ${err.message}. Using fallback data layer.`);
   useMock = true;
 }
 

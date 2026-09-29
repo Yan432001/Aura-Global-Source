@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Card, Col, Flex, Grid, Row, Space, Tag, Typography } from 'antd';
 import {
   ApiOutlined,
@@ -9,6 +10,7 @@ import {
   DatabaseOutlined,
   DeleteOutlined,
   ExclamationCircleFilled,
+  GlobalOutlined,
   LockOutlined,
   PauseCircleOutlined,
   ReloadOutlined,
@@ -190,6 +192,8 @@ const AdminDashboard = () => {
     return '#c94f13';
   };
 
+  const navigate = useNavigate();
+
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
       <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
@@ -198,6 +202,14 @@ const AdminDashboard = () => {
           <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>Dashboard / IT Admin Dashboard</Text>
         </div>
         <Space size={10} wrap>
+          <Button
+            type="primary"
+            icon={<GlobalOutlined />}
+            onClick={() => navigate('/admins?module=cms&menu=cms-settings')}
+            style={{ fontWeight: 600, background: '#2563eb' }}
+          >
+            Website CMS Panel
+          </Button>
           <Tag icon={<CheckCircleFilled />} style={{ margin: 0, borderRadius: 8, border: 'none', background: c.greenSoft, color: c.green, padding: '6px 12px', fontWeight: 700 }}>
             Active Users 248
           </Tag>

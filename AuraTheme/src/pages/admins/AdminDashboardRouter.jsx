@@ -4,13 +4,20 @@ import AdminDashboard from './AdminDashboard';
 import ModuleWorkspace from './ModuleWorkspace';
 import SystemSettings from './SystemSettings';
 import Patients from './Patients';
+import AdminCmsManager from './cms/AdminCmsManager';
 
 const AdminDashboardRouter = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const hasModule = searchParams.has('module');
+  const moduleKey = searchParams.get('module');
   const menuKey = searchParams.get('menu');
   
+  // If module is 'cms' or menu is cms-*, render the Website CMS Admin Panel
+  if (moduleKey === 'cms' || (menuKey && menuKey.startsWith('cms'))) {
+    return <AdminCmsManager />;
+  }
+
   // If no module is specified, show the dashboard
   if (!hasModule) {
     return <AdminDashboard />;

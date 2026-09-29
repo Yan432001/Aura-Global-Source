@@ -16,6 +16,43 @@ const group = (key, label, description, children, options = {}) => ({
 
 export const erpModules = [
   {
+    key: 'cms',
+    label: 'Website CMS',
+    iconKey: 'portal',
+    accent: '#2563eb',
+    enabled: true,
+    health: 'stable',
+    kpiLabel: 'Live Website Modules',
+    kpiValue: '13 Modules',
+    description: 'Complete dynamic content management for public website pages, hero banners, menus, blog, and inquiries.',
+    statusNote: 'Real-time database sync with English and Khmer bilingual support.',
+    detailBullets: [
+      'Manage Site Settings, Branding, Logos, Contact details, and Social Links.',
+      'Configure Hero Slides, Navigation Menus, Custom Pages, and Blog Articles.',
+      'Manage Team, Testimonials, FAQs, Partners, Media Assets, and Inquiries.',
+      'Supports local MySQL (bpas_v6_8_9_db) with automatic table creation & migrations.',
+    ],
+    menus: [
+      leaf('cms-settings', 'Site Settings & SEO', 'Branding, logo, contact, footer, and SEO configuration.', { route: '/admins?module=cms&menu=cms-settings' }),
+      leaf('cms-menus', 'Navigation Menus', 'Header and footer link structure and reordering.', { route: '/admins?module=cms&menu=cms-menus' }),
+      leaf('cms-hero', 'Hero Banners & Slides', 'Home page slider images, titles, and CTA buttons.', { route: '/admins?module=cms&menu=cms-hero' }),
+      leaf('cms-pages', 'Custom Pages', 'About Us, Terms, Privacy, and custom rich-text pages.', { route: '/admins?module=cms&menu=cms-pages' }),
+      leaf('cms-blog', 'Blog & Articles', 'Manage news, brewing guides, and categories.', { route: '/admins?module=cms&menu=cms-blog' }),
+      leaf('cms-team', 'Team Members', 'Staff profiles, positions, photos, and social links.', { route: '/admins?module=cms&menu=cms-team' }),
+      leaf('cms-testimonials', 'Testimonials & Reviews', 'Customer quotes, ratings, and approval toggles.', { route: '/admins?module=cms&menu=cms-testimonials' }),
+      leaf('cms-faqs', 'Frequently Asked Questions', 'FAQ items, bilingual Q&A, and categories.', { route: '/admins?module=cms&menu=cms-faqs' }),
+      leaf('cms-partners', 'Partners & Clients', 'Brand logos and partner external links.', { route: '/admins?module=cms&menu=cms-partners' }),
+      leaf('cms-inquiries', 'Contact Messages', 'Inbox of incoming website contact inquiries.', { route: '/admins?module=cms&menu=cms-inquiries' }),
+      leaf('cms-subscribers', 'Newsletter Subscribers', 'Subscriber list and CSV export.', { route: '/admins?module=cms&menu=cms-subscribers' }),
+      leaf('cms-media', 'Media Library', 'Central image and asset management.', { route: '/admins?module=cms&menu=cms-media' }),
+      leaf('cms-database', 'Database & Migrations', 'Check MySQL connection to bpas_v6_8_9_db and run schema.', { route: '/admins?module=cms&menu=cms-database' }),
+    ],
+    submodules: [
+      { key: 'cms-bilingual', label: 'Khmer Bilingual Support', enabled: true, description: 'Allows dual-language content editing.' },
+      { key: 'cms-mysql', label: 'Local MySQL Sync', enabled: true, description: 'Synchronize directly to bpas_v6_8_9_db.' }
+    ]
+  },
+  {
     key: 'clinic',
     label: 'Clinic',
     iconKey: 'clinic',

@@ -22,6 +22,7 @@ require("./app/config/route/admin/product.variants.route")(app);
 require("./app/config/route/admin/auth.route")(app);
 require("./app/config/route/admin/setting.route")(app);
 require("./app/config/route/admin/permissions.route")(app);
+require("./app/config/route/cms.route")(app);
 
 // Telegram Mini App (TMA) Routes & Bot Integration
 const tmaRoutes = require("./app/config/route/tma.route");
