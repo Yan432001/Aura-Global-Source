@@ -52,5 +52,7 @@ module.exports = (app) => {
   app.post('/api/cms/media', cmsController.addMedia);
   app.delete('/api/cms/media/:id', cmsController.deleteMedia);
 
+  app.post('/api/cms/bulk-import/:collection', cmsController.bulkImport);
+
   app.get('/api/cms/db-status', cmsController.getDbStatus);
 };

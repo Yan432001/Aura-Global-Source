@@ -673,5 +673,23 @@ module.exports = {
     data.media = (data.media || []).filter(m => Number(m.id) !== Number(id));
     saveData(data);
     return true;
+  },
+
+  bulkImport(collection, items) {
+    const data = loadData();
+    const key = collection === 'story' ? 'stories' : collection;
+    if (!data[key]) {
+      data[key] = [];
+    }
+    const timestamp = new Date().toISOString();
+    const formatted = items.map((it, idx) => ({
+      ...it,
+      id: it.id || (Date.now() + idx),
+      created_at: it.created_at || timestamp,
+      updated_at: timestamp,
+    }));
+    data[key] = [...formatted, ...data[key]];
+    saveData(data);
+    return formatted;
   }
 };

@@ -398,6 +398,20 @@ const cmsController = {
     } catch (err) {
       return res.status(500).json({ status: false, message: err.message });
     }
+  },
+
+  bulkImport(req, res) {
+    try {
+      const { collection } = req.params;
+      const records = req.body?.records || req.body;
+      if (!Array.isArray(records)) {
+        return res.status(400).json({ status: false, message: 'Expected records array' });
+      }
+      const imported = cmsStorage.bulkImport(collection, records);
+      return res.json({ status: true, message: `Successfully imported ${imported.length} records into ${collection}`, data: imported });
+    } catch (err) {
+      return res.status(500).json({ status: false, message: err.message });
+    }
   }
 };
 

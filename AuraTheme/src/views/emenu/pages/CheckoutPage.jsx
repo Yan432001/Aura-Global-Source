@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTelegram } from '../context/TelegramContext';
 import { useCart } from '../context/CartContext';
 import { submitOrder, fetchStoreInfo } from '../services/emenuApi';
+import OfflineWarningBanner from '../../../../components/common/OfflineWarningBanner';
 
 export default function CheckoutPage() {
   const { storeSlug } = useParams();
@@ -25,9 +26,16 @@ export default function CheckoutPage() {
     webApp.BackButton.onClick(() => navigate(-1));
 
     if (cart.length > 0 && !submitting) {
-      webApp.MainButton.setText(`CHECKOUT (${store?.currency_symbol || '$'}${totalAmount.toFixed(2)})`);
-      webApp.MainButton.show();
-      webApp.MainButton.onClick(handleOrderSubmission);
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        webApp.MainButton.setText('OFFLINE - CONNECTION REQUIRED');
+        webApp.MainButton.disable?.();
+        webApp.MainButton.show();
+      } else {
+        webApp.MainButton.setText(`CHECKOUT (${store?.currency_symbol || '$'}${totalAmount.toFixed(2)})`);
+        webApp.MainButton.enable?.();
+        webApp.MainButton.show();
+        webApp.MainButton.onClick(handleOrderSubmission);
+      }
     } else {
       webApp.MainButton.hide();
     }
@@ -39,6 +47,10 @@ export default function CheckoutPage() {
   }, [webApp, cart, totalAmount, submitting, store]);
 
   const handleOrderSubmission = async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert('You are currently offline. Please restore your internet connection to submit your order.');
+      return;
+    }
     if (submitting || cart.length === 0) return;
     setSubmitting(true);
     haptic.impact('heavy');
@@ -59,6 +71,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="p-4 flex flex-col flex-1 space-y-4">
+      <OfflineWarningBanner variant="inline" style={{ borderRadius: 12 }} />
       <h1 className="text-xl font-bold">Review Your Order</h1>
       <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
         {cart.map((item) => (
@@ -99,10 +112,18 @@ export default function CheckoutPage() {
       {!webApp && (
         <button
           onClick={handleOrderSubmission}
-          disabled={submitting}
-          className="w-full min-h-[48px] bg-[var(--theme-accent)] text-white font-bold rounded-xl shadow-lg"
+          disabled={submitting || (typeof navigator !== 'undefined' && !navigator.onLine)}
+          className={`w-full min-h-[48px] font-bold rounded-xl shadow-lg transition-all ${
+            typeof navigator !== 'undefined' && !navigator.onLine
+              ? 'bg-slate-600 text-slate-300 cursor-not-allowed opacity-75'
+              : 'bg-[var(--theme-accent)] text-white hover:opacity-95'
+          }`}
         >
-          {submitting ? 'Submitting...' : `Place Order • $${totalAmount.toFixed(2)}`}
+          {typeof navigator !== 'undefined' && !navigator.onLine
+            ? 'Offline — Order Submissions Disabled'
+            : submitting
+            ? 'Submitting...'
+            : `Place Order • $${totalAmount.toFixed(2)}`}
         </button>
       )}
     </div>

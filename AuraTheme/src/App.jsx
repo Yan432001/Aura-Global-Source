@@ -1,10 +1,11 @@
 import React from 'react';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, App as AntApp } from 'antd';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { NetworkStatusProvider } from './contexts/NetworkStatusContext';
 
 // Base Web Layout & Pages
 import MainLayout from './layouts/MainLayout';
@@ -32,6 +33,7 @@ import CustomerAnalytics from './pages/admins/CustomerAnalytics';
 import SalesReport from './pages/admins/SalesReport';
 import InventoryReport from './pages/admins/InventoryReport';
 import UserManagement from './pages/admins/UserManagement';
+import AdminQrCodeGeneratorPage from './pages/admins/AdminQrCodeGeneratorPage';
 
 // E-Menu Telegram Mini App Layout & Views
 import EMenuLayout from './pages/emenu/EMenuLayout';
@@ -51,7 +53,9 @@ const AdminThemeWrapper = ({ children }) => {
   const { currentTheme } = useTheme();
   return (
     <ConfigProvider theme={currentTheme}>
-      {children}
+      <AntApp>
+        {children}
+      </AntApp>
     </ConfigProvider>
   );
 };
@@ -106,6 +110,8 @@ const AppContent = () => {
         <Route path="users" element={<AdminUsers />} />
         <Route path="customers" element={<CustomersManagement />} />
         <Route path="orders" element={<OrdersManagement />} />
+        <Route path="qrcode" element={<AdminQrCodeGeneratorPage />} />
+        <Route path="qr-generator" element={<AdminQrCodeGeneratorPage />} />
         <Route path="analytics/sales" element={<SalesAnalytics />} />
         <Route path="analytics/revenue" element={<RevenueAnalytics />} />
         <Route path="analytics/customers" element={<CustomerAnalytics />} />
@@ -122,15 +128,19 @@ const AppContent = () => {
 };
 
 const App = () => (
-  <AuthProvider>
-    <WishlistProvider>
-      <CartProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </CartProvider>
-    </WishlistProvider>
-  </AuthProvider>
+  <NetworkStatusProvider>
+    <AuthProvider>
+      <WishlistProvider>
+        <CartProvider>
+          <Router>
+            <AntApp>
+              <AppContent />
+            </AntApp>
+          </Router>
+        </CartProvider>
+      </WishlistProvider>
+    </AuthProvider>
+  </NetworkStatusProvider>
 );
 
 export default App;

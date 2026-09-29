@@ -23,11 +23,16 @@ import {
   CloseCircleOutlined,
   SyncOutlined,
   ClockCircleOutlined,
-  EyeOutlined
+  EyeOutlined,
+  FilePdfOutlined,
+  DownloadOutlined,
+  QrcodeOutlined,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { formatCurrency } from '../../utils/uiTheme';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { exportSingleOrderPdf, exportOrderHistoryPdf } from '../../utils/orderPdfExporter';
 
 const { Text, Title } = Typography;
 
@@ -41,6 +46,7 @@ const statusColor = {
 };
 
 const OrdersManagement = () => {
+  const navigate = useNavigate();
   const adminTheme = useAdminTheme();
   const cardStyle = {
     borderRadius: 16,
@@ -259,18 +265,33 @@ const OrdersManagement = () => {
     {
       title: 'Action',
       key: 'action',
+      width: 140,
       render: (_, record) => (
-        <Button
-          type="link"
-          size="small"
-          icon={<EyeOutlined />}
-          onClick={() => {
-            setSelectedOrder(record);
-            setDetailModalOpen(true);
-          }}
-        >
-          View
-        </Button>
+        <Space size={4}>
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => {
+              setSelectedOrder(record);
+              setDetailModalOpen(true);
+            }}
+          >
+            View
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            icon={<FilePdfOutlined style={{ color: '#ef4444' }} />}
+            onClick={() => {
+              exportSingleOrderPdf(record);
+              message.success(`Exported PDF for ${record.referenceNo || record.id}`);
+            }}
+            title="Download Order PDF Summary"
+          >
+            PDF
+          </Button>
+        </Space>
       )
     }
   ];
@@ -315,6 +336,36 @@ const OrdersManagement = () => {
 
           <Button icon={<ReloadOutlined />} onClick={fetchOrders} loading={loading}>
             Refresh
+          </Button>
+
+          <Button
+            icon={<QrcodeOutlined />}
+            onClick={() => navigate('/admins/qrcode')}
+            style={{
+              borderColor: '#3b82f6',
+              color: '#1d4ed8',
+              background: '#eff6ff',
+              fontWeight: 600,
+            }}
+          >
+            Table & Counter QR
+          </Button>
+
+          <Button
+            icon={<FilePdfOutlined />}
+            onClick={() => {
+              const currentStoreName = stores.find((s) => s.slug === selectedStore)?.name || 'All Stores';
+              exportOrderHistoryPdf(orders, { storeName: currentStoreName, status: selectedStatus });
+              message.success(`Exported order history PDF (${orders.length} orders)!`);
+            }}
+            style={{
+              borderColor: '#ef4444',
+              color: '#b91c1c',
+              background: '#fff5f5',
+              fontWeight: 600,
+            }}
+          >
+            Export History PDF
           </Button>
         </Space>
       </div>
@@ -361,6 +412,22 @@ const OrdersManagement = () => {
         footer={[
           <Button key="close" onClick={() => setDetailModalOpen(false)}>
             Close
+          </Button>,
+          <Button
+            key="pdf"
+            icon={<FilePdfOutlined />}
+            onClick={() => {
+              exportSingleOrderPdf(selectedOrder);
+              message.success(`Downloaded PDF for ${selectedOrder?.referenceNo || selectedOrder?.id}`);
+            }}
+            style={{
+              borderColor: '#ef4444',
+              color: '#b91c1c',
+              background: '#fff5f5',
+              fontWeight: 600,
+            }}
+          >
+            Download Order PDF
           </Button>,
           selectedOrder?.store_notification !== 'Sent' && (
             <Button

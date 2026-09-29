@@ -716,7 +716,7 @@ const CategoriesPage = () => {
         footer={null}
         centered
         width={isMobile ? "90%" : 520}
-        destroyOnClose
+        destroyOnHidden
         styles={{
           body: { paddingTop: 24 }
         }}

@@ -10,6 +10,7 @@ import {
   MobileOutlined,
 } from '@ant-design/icons';
 import simpleData from '../../../../data/simpleData';
+import OfflineWarningBanner from '../../components/common/OfflineWarningBanner';
 
 export default function EMenuLayout() {
   const params = useParams();
@@ -69,6 +70,7 @@ export default function EMenuLayout() {
 
   return (
     <div className="min-h-screen bg-[#050811] text-slate-100 font-sans flex flex-col items-center justify-start antialiased selection:bg-blue-600 selection:text-white">
+      <OfflineWarningBanner />
       {/* ======================================================== */}
       {/* TOP DESKTOP DEVICE TOOLBAR (Hidden on mobile < 640px)    */}
       {/* ======================================================== */}

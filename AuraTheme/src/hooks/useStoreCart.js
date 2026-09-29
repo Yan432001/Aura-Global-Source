@@ -159,6 +159,49 @@ export function useStoreCart(storeSlug, storeName = '') {
   }, []);
 
   /**
+   * Recreate / restore cart completely from a previous order
+   */
+  const restoreCartFromOrder = useCallback(
+    (orderItems = [], targetOrderType = 'dine_in', targetSlug = storeSlug, targetName = storeName) => {
+      const formattedItems = orderItems.map((it, idx) => {
+        const qty = Math.max(1, parseInt(it.quantity, 10) || 1);
+        const unitPrice = Number(it.price || 0);
+        const selectedOptions = it.selectedOptions || {};
+        const optionsKey = Object.entries(selectedOptions)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, v]) => `${k}:${v}`)
+          .join('|');
+        const itemKey = `${it.productId || it.id || idx}_${optionsKey || 'default'}`;
+        const optionsText = Object.entries(selectedOptions)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(', ');
+
+        return {
+          itemKey,
+          id: it.productId || it.id || idx,
+          code: it.code || `PRD-${idx}`,
+          name: it.name,
+          image: it.image || 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=500&h=500&fit=crop',
+          price: unitPrice,
+          basePrice: unitPrice,
+          quantity: qty,
+          subtotal: Number((unitPrice * qty).toFixed(2)),
+          selectedOptions,
+          optionsText
+        };
+      });
+
+      setCartState({
+        storeSlug: targetSlug || storeSlug,
+        storeName: targetName || storeName,
+        items: formattedItems,
+        orderType: targetOrderType || 'dine_in'
+      });
+    },
+    [storeSlug, storeName]
+  );
+
+  /**
    * Switch to a new store and clear the cart
    */
   const clearAndSwitchStore = useCallback((newStoreSlug, newStoreName) => {
@@ -210,6 +253,7 @@ export function useStoreCart(storeSlug, storeName = '') {
     removeItem,
     clearCart,
     clearAndSwitchStore,
+    restoreCartFromOrder,
     isDifferentStore,
     currentCartStoreSlug,
     currentCartStoreName

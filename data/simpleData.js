@@ -169,6 +169,11 @@ const simpleData = {
       in_stock: 50,
       badge: "Best Seller",
       popular: true,
+      variants: [
+        { id: "v-sm", name: "Small", size: "Small (12oz)", priceAdjustment: 0, priceDelta: 0, default: true },
+        { id: "v-md", name: "Medium", size: "Medium (16oz)", priceAdjustment: 0.75, priceDelta: 0.75 },
+        { id: "v-lg", name: "Large", size: "Large (20oz)", priceAdjustment: 1.50, priceDelta: 1.50 }
+      ],
       options: [
         {
           id: "size",
@@ -214,6 +219,11 @@ const simpleData = {
       in_stock: 35,
       badge: "Popular",
       popular: true,
+      variants: [
+        { id: "v-sm", name: "Small", size: "Small (12oz)", priceAdjustment: 0, priceDelta: 0, default: true },
+        { id: "v-md", name: "Medium", size: "Medium (16oz)", priceAdjustment: 0.75, priceDelta: 0.75 },
+        { id: "v-lg", name: "Large", size: "Large (20oz)", priceAdjustment: 1.50, priceDelta: 1.50 }
+      ],
       options: [
         {
           id: "size",

@@ -17,6 +17,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import ThemeSettings from '../../contexts/ThemeSettings';
 import { getModuleByKey } from '../../data/erpModules';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import OfflineWarningBanner from '../../components/common/OfflineWarningBanner';
 
 const { Header } = Layout;
 const { Text, Title } = Typography;
@@ -25,6 +26,9 @@ const pageTitles = {
   '/admins/dashboard': 'Command Center',
   '/admins/products': 'Inventory Control',
   '/admins/users': 'Access Control',
+  '/admins/orders': 'Orders Management',
+  '/admins/qrcode': 'Store QR Code Generator',
+  '/admins/qr-generator': 'Store QR Code Generator',
 };
 
 const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
@@ -63,15 +67,17 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
   };
 
   return (
-    <Header
-      style={{
-        background: adminTheme.topPanel,
-        padding: isMobile ? '12px 12px' : '16px 24px',
-        height: 'auto',
-        lineHeight: 'normal',
-        borderBottom: `1px solid ${adminTheme.border}`,
-      }}
-    >
+    <>
+      <OfflineWarningBanner />
+      <Header
+        style={{
+          background: adminTheme.topPanel,
+          padding: isMobile ? '12px 12px' : '16px 24px',
+          height: 'auto',
+          lineHeight: 'normal',
+          borderBottom: `1px solid ${adminTheme.border}`,
+        }}
+      >
       <Flex justify="space-between" align="center" gap={16} wrap="wrap">
         <Flex align="center" gap={14}>
           {showModuleMenu && (
@@ -156,6 +162,7 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
         </Flex>
       </Flex>
     </Header>
+    </>
   );
 };
 

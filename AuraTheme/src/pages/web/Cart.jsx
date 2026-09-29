@@ -33,14 +33,21 @@ import {
   ShoppingOutlined,
   SendOutlined,
   PrinterOutlined,
+  DisconnectOutlined,
+  FilePdfOutlined,
 } from '@ant-design/icons';
 import { formatCurrency, publicTheme } from '../../utils/webTheme';
+import { useNetworkStatus } from '../../contexts/NetworkStatusContext';
+import OfflineWarningBanner from '../../components/common/OfflineWarningBanner';
+import { exportSingleOrderPdf } from '../../utils/orderPdfExporter';
+import OftenOrderedTogetherWidget from '../../components/web/cart/OftenOrderedTogetherWidget';
 
 const { Title, Paragraph, Text } = Typography;
 
 const Cart = () => {
   const navigate = useNavigate();
   const { cart, updateQuantity, removeFromCart, clearCart, cartTotal, cartItemCount } = useCart();
+  const { isOnline, isChecking, retryConnection } = useNetworkStatus();
 
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,6 +68,10 @@ const Cart = () => {
   const grandTotal = Number((cartTotal + shippingFee + taxFee).toFixed(2));
 
   const handleOpenCheckout = () => {
+    if (!isOnline) {
+      message.error('You are currently offline. Please restore your internet connection to proceed with checkout.');
+      return;
+    }
     if (cart.length === 0) {
       message.warning('Your cart is empty. Add products to continue!');
       return;
@@ -69,6 +80,10 @@ const Cart = () => {
   };
 
   const handlePlaceOrder = () => {
+    if (!isOnline) {
+      message.error('Cannot submit order: You are currently offline. Please restore internet connection.');
+      return;
+    }
     if (!customerName.trim() || !customerPhone.trim()) {
       message.error('Please enter your name and phone number.');
       return;
@@ -158,6 +173,26 @@ const Cart = () => {
                 }}
               >
                 Continue Shopping
+              </Button>,
+              <Button
+                key="pdf"
+                size="large"
+                icon={<FilePdfOutlined />}
+                onClick={() => {
+                  exportSingleOrderPdf(completedOrder);
+                  message.success(`Downloaded PDF Summary for ${completedOrder.orderId}!`);
+                }}
+                style={{
+                  borderRadius: 14,
+                  height: 46,
+                  fontWeight: 700,
+                  borderColor: '#ef4444',
+                  color: '#b91c1c',
+                  background: '#fff5f5',
+                  padding: '0 20px',
+                }}
+              >
+                Download PDF Summary
               </Button>,
               <Button
                 key="telegram"
@@ -412,6 +447,14 @@ const Cart = () => {
                       <h4 style={{ margin: '0 0 2px 0', fontSize: 13.5, fontWeight: 800, color: '#0f172a', lineHeight: 1.3 }}>
                         {item.name}
                       </h4>
+                      {(item.selectedSize || item.selectedVariant) && (
+                        <div style={{ fontSize: 11.5, color: '#2563eb', fontWeight: 700, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ background: '#eff6ff', padding: '1px 6px', borderRadius: 6, border: '1px solid #bfdbfe' }}>
+                            Size: {item.selectedSize || item.selectedVariant?.name}
+                            {item.priceAdjustment > 0 && ` (+$${Number(item.priceAdjustment).toFixed(2)})`}
+                          </span>
+                        </div>
+                      )}
                       {item.seller && (
                         <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>
                           Store: <strong style={{ color: '#334155' }}>{item.seller}</strong>
@@ -428,7 +471,7 @@ const Cart = () => {
                       <Button
                         type="default"
                         size="small"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.cartItemId || item.id, item.quantity - 1)}
                         style={{ borderRadius: 6, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         icon={<MinusOutlined style={{ fontSize: 9 }} />}
                       />
@@ -438,7 +481,7 @@ const Cart = () => {
                       <Button
                         type="default"
                         size="small"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.cartItemId || item.id, item.quantity + 1)}
                         style={{ borderRadius: 6, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         icon={<PlusOutlined style={{ fontSize: 9 }} />}
                       />
@@ -454,7 +497,7 @@ const Cart = () => {
                       danger
                       size="small"
                       icon={<DeleteOutlined style={{ fontSize: 11 }} />}
-                      onClick={() => removeFromCart(item.id)}
+                      onClick={() => removeFromCart(item.cartItemId || item.id)}
                       style={{ fontSize: 11, padding: 0 }}
                     >
                       Remove
@@ -464,6 +507,9 @@ const Cart = () => {
               </Card>
             ))}
           </Space>
+
+          {/* Often Ordered Together Widget */}
+          <OftenOrderedTogetherWidget />
         </Col>
 
         {/* Order Summary Sidebar */}
@@ -511,22 +557,28 @@ const Cart = () => {
 
               {/* Action Buttons */}
               <Space direction="vertical" style={{ width: '100%', marginTop: 8 }} size={10}>
+                {!isOnline && (
+                  <OfflineWarningBanner variant="inline" style={{ borderRadius: 12, marginBottom: 4 }} />
+                )}
                 <Button
                   type="primary"
                   size="large"
                   block
+                  disabled={!isOnline}
                   onClick={handleOpenCheckout}
                   style={{
                     borderRadius: 14,
                     height: 50,
                     fontWeight: 800,
                     fontSize: 15,
-                    background: '#2563eb',
-                    borderColor: '#2563eb',
-                    boxShadow: '0 10px 25px rgba(37, 99, 235, 0.3)',
+                    background: isOnline ? '#2563eb' : '#94a3b8',
+                    borderColor: isOnline ? '#2563eb' : '#94a3b8',
+                    boxShadow: isOnline ? '0 10px 25px rgba(37, 99, 235, 0.3)' : 'none',
                   }}
                 >
-                  Proceed to Checkout (${grandTotal.toFixed(2)})
+                  {isOnline
+                    ? `Proceed to Checkout ($${grandTotal.toFixed(2)})`
+                    : 'Offline — Order Submissions Disabled'}
                 </Button>
 
                 <Button
@@ -818,6 +870,13 @@ const Cart = () => {
             />
           </div>
 
+          {/* Offline Guard Banner inside modal */}
+          {!isOnline && (
+            <div style={{ marginBottom: 16 }}>
+              <OfflineWarningBanner variant="inline" style={{ borderRadius: 12 }} />
+            </div>
+          )}
+
           {/* Total & Submit Button */}
           <div
             style={{
@@ -844,18 +903,19 @@ const Cart = () => {
               type="primary"
               size="large"
               loading={isSubmitting}
+              disabled={!isOnline || isSubmitting}
               onClick={handlePlaceOrder}
               style={{
                 borderRadius: 12,
                 height: 44,
                 fontWeight: 800,
                 fontSize: 14,
-                background: '#2563eb',
-                borderColor: '#2563eb',
+                background: isOnline ? '#2563eb' : '#64748b',
+                borderColor: isOnline ? '#2563eb' : '#64748b',
                 padding: '0 24px',
               }}
             >
-              Place Order Now
+              {isOnline ? 'Place Order Now' : 'Offline — Order Submissions Disabled'}
             </Button>
           </div>
         </div>

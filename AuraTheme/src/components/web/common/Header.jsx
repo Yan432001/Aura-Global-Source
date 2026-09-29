@@ -37,6 +37,7 @@ import { useWishlist } from '../../../contexts/WishlistContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { products, shops } from '../../../data/shopData';
 import { formatCurrency, publicTheme } from '../../../utils/webTheme';
+import OfflineWarningBanner from '../../common/OfflineWarningBanner';
 
 const { useBreakpoint } = Grid;
 const { Text, Title } = Typography;
@@ -602,6 +603,7 @@ const Header = ({ currentPage }) => {
 
   return (
     <>
+      <OfflineWarningBanner />
       {isPhone ? (
         /* Phone View: Clean Modern Single-Row Header (< 576px) */
         <div style={{ padding: '6px 8px 0' }}>

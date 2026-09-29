@@ -30,11 +30,15 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick }) => {
     activeModuleKey = 'reports';
   } else if (location.pathname.startsWith('/admins/settings')) {
     activeModuleKey = 'settings';
+  } else if (location.pathname.startsWith('/admins/qrcode') || location.pathname.startsWith('/admins/qr-generator')) {
+    activeModuleKey = 'cms';
   }
 
   // Fix: Better detection of active menu
   let activeMenuKey = null;
-  if (location.pathname === '/admins' || location.pathname === '/admins/') {
+  if (location.pathname.startsWith('/admins/qrcode') || location.pathname.startsWith('/admins/qr-generator')) {
+    activeMenuKey = 'cms-qrcode';
+  } else if (location.pathname === '/admins' || location.pathname === '/admins/') {
     activeMenuKey = searchParams.get('menu') || (activeModuleKey ? getDefaultMenuKey(activeModuleKey) : null);
   } else if (location.pathname === '/admins/dashboard') {
     activeMenuKey = searchParams.get('menu') || (activeModuleKey ? getDefaultMenuKey(activeModuleKey) : null);

@@ -16,6 +16,14 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 
+// Lightweight health check for network status detector & heartbeat
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', online: true, timestamp: Date.now() });
+});
+app.head('/api/health', (req, res) => {
+  res.status(200).end();
+});
+
 // Mount the API application from /API
 try {
   const apiApp = require('./API/index.js');

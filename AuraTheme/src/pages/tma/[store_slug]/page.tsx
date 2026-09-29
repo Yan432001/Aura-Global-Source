@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import jsQR from 'jsqr';
+import { message } from 'antd';
 import {
   ShopOutlined,
   ShoppingCartOutlined,
@@ -82,6 +83,7 @@ export default function StoreFront() {
     removeItem,
     clearCart,
     clearAndSwitchStore,
+    restoreCartFromOrder,
     isDifferentStore,
     currentCartStoreSlug,
     currentCartStoreName
@@ -89,6 +91,7 @@ export default function StoreFront() {
 
   // Options / Variant Customization Modal State
   const [customizingProduct, setCustomizingProduct] = useState<any>(null);
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
   const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
   const [customizeQty, setCustomizeQty] = useState<number>(1);
 
@@ -671,16 +674,51 @@ export default function StoreFront() {
     setViewMode('menu');
   };
 
+  // Extract or auto-generate item variants for different sizes (Small, Medium, Large)
+  const getProductVariants = useCallback((product: any) => {
+    if (!product) return [];
+    if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+      return product.variants;
+    }
+    // Check if options has a Size option
+    const sizeOpt = product.options?.find(
+      (o: any) => o.name?.toLowerCase() === 'size' || o.id === 'size'
+    );
+    if (sizeOpt && Array.isArray(sizeOpt.choices) && sizeOpt.choices.length > 0) {
+      return sizeOpt.choices.map((c: any, idx: number) => ({
+        id: `var-${idx}`,
+        name: c.label.includes('(') ? c.label.split('(')[0].trim() : c.label,
+        size: c.label,
+        priceAdjustment: Number(c.priceAdjustment ?? c.priceDelta ?? c.price_delta ?? 0),
+        default: !!c.default || idx === 0,
+      }));
+    }
+    // Default universal standard size variants
+    const base = Number(product.price || 4);
+    const midAdj = base >= 20 ? 15 : base >= 8 ? 2.5 : 0.75;
+    const lrgAdj = base >= 20 ? 30 : base >= 8 ? 5.0 : 1.5;
+    return [
+      { id: 'v-sm', name: 'Small', size: 'Small (Standard)', priceAdjustment: 0, default: true },
+      { id: 'v-md', name: 'Medium', size: 'Medium (+25%)', priceAdjustment: midAdj, default: false },
+      { id: 'v-lg', name: 'Large', size: 'Large (+50%)', priceAdjustment: lrgAdj, default: false },
+    ];
+  }, []);
+
   // Open Customization Modal for Product
   const openCustomizationModal = (product: any) => {
     triggerHaptic('light');
     setCustomizingProduct(product);
     setCustomizeQty(1);
 
-    // Initial default option choices
+    const variants = getProductVariants(product);
+    const defVariant = variants.find((v: any) => v.default) || variants[0];
+    setSelectedVariant(defVariant);
+
+    // Initial default option choices (excluding size if handled by variants)
     const initialOpts: { [key: string]: string } = {};
     if (product.options && Array.isArray(product.options)) {
       product.options.forEach((optGroup: any) => {
+        if (optGroup.name?.toLowerCase() === 'size' || optGroup.id === 'size') return;
         const defaultChoice = optGroup.choices?.find((c: any) => c.default) || optGroup.choices?.[0];
         if (defaultChoice) {
           initialOpts[optGroup.name] = defaultChoice.label;
@@ -690,19 +728,25 @@ export default function StoreFront() {
     setSelectedOptions(initialOpts);
   };
 
-  // Calculate live price delta in customization modal
+  // Calculate live price delta in customization modal (includes size variant price adjustment)
   const customizedPriceDelta = useMemo(() => {
-    if (!customizingProduct?.options) return 0;
     let delta = 0;
-    customizingProduct.options.forEach((optGroup: any) => {
-      const chosenLabel = selectedOptions[optGroup.name];
-      if (chosenLabel) {
-        const choice = optGroup.choices?.find((c: any) => c.label === chosenLabel);
-        if (choice?.priceDelta) delta += Number(choice.priceDelta);
-      }
-    });
+    if (selectedVariant) {
+      delta += Number(selectedVariant.priceAdjustment ?? selectedVariant.priceDelta ?? 0);
+    }
+    if (customizingProduct?.options) {
+      customizingProduct.options.forEach((optGroup: any) => {
+        if (optGroup.name?.toLowerCase() === 'size' || optGroup.id === 'size') return;
+        const chosenLabel = selectedOptions[optGroup.name];
+        if (chosenLabel) {
+          const choice = optGroup.choices?.find((c: any) => c.label === chosenLabel);
+          const adj = Number(choice?.priceAdjustment ?? choice?.priceDelta ?? choice?.price_delta ?? 0);
+          if (adj) delta += adj;
+        }
+      });
+    }
     return delta;
-  }, [customizingProduct, selectedOptions]);
+  }, [customizingProduct, selectedOptions, selectedVariant]);
 
   const modalUnitPrice = (Number(customizingProduct?.price || 0) + customizedPriceDelta).toFixed(2);
   const modalTotalPrice = (Number(modalUnitPrice) * customizeQty).toFixed(2);
@@ -710,14 +754,38 @@ export default function StoreFront() {
   const handleAddCustomizedToCart = () => {
     if (!customizingProduct) return;
     triggerHaptic('medium');
-    addItem(customizingProduct, selectedOptions, customizeQty, customizedPriceDelta);
+    const combinedOptions = {
+      ...(selectedVariant
+        ? {
+            'Size Variant': `${selectedVariant.name}${
+              Number(selectedVariant.priceAdjustment ?? selectedVariant.priceDelta ?? 0) > 0
+                ? ` (+$${Number(selectedVariant.priceAdjustment ?? selectedVariant.priceDelta ?? 0).toFixed(2)})`
+                : ''
+            }`,
+          }
+        : {}),
+      ...selectedOptions,
+    };
+    addItem(customizingProduct, combinedOptions, customizeQty, customizedPriceDelta);
     setCustomizingProduct(null);
   };
 
   const handleAddAndCheckout = () => {
     if (!customizingProduct) return;
     triggerHaptic('medium');
-    addItem(customizingProduct, selectedOptions, customizeQty, customizedPriceDelta);
+    const combinedOptions = {
+      ...(selectedVariant
+        ? {
+            'Size Variant': `${selectedVariant.name}${
+              Number(selectedVariant.priceAdjustment ?? selectedVariant.priceDelta ?? 0) > 0
+                ? ` (+$${Number(selectedVariant.priceAdjustment ?? selectedVariant.priceDelta ?? 0).toFixed(2)})`
+                : ''
+            }`,
+          }
+        : {}),
+      ...selectedOptions,
+    };
+    addItem(customizingProduct, combinedOptions, customizeQty, customizedPriceDelta);
     setCustomizingProduct(null);
     setViewMode('checkout');
   };
@@ -971,6 +1039,47 @@ export default function StoreFront() {
     } finally {
       setRetryingOrderId(null);
     }
+  };
+
+  // Reorder: Recreate previous cart from completed order and redirect to checkout
+  const handleReorder = (order: any) => {
+    triggerHaptic('medium');
+
+    const orderItems = order?.items || [];
+    if (!orderItems || orderItems.length === 0) {
+      message.warning('This order does not contain any items to reorder.');
+      return;
+    }
+
+    // 1. Restore customer and fulfillment details if available
+    if (order.customer?.name) setCustomerName(order.customer.name);
+    if (order.customer?.phone) setCustomerPhone(order.customer.phone);
+    if (order.customer?.address) setCustomerAddress(order.customer.address);
+    if (order.customer?.note) setCustomerNote(order.customer.note);
+    if (order.orderType) setOrderType(order.orderType);
+
+    // 2. Recreate the previous cart with all items, portion sizes, variants & options
+    restoreCartFromOrder(
+      orderItems,
+      order.orderType || 'dine_in',
+      order.storeSlug || activeSlug,
+      order.store_name || currentStore?.name
+    );
+
+    // 3. Optional store route synchronization if order was from a different store
+    if (order.storeSlug && order.storeSlug !== activeSlug) {
+      navigate(`/shop/${order.storeSlug}`);
+    }
+
+    // 4. Success feedback notification
+    const orderRef = order.referenceNo || `ORD-${order.id}`;
+    message.success({
+      content: `Recreated cart with ${orderItems.length} items from ${orderRef}!`,
+      duration: 2.5,
+    });
+
+    // 5. Automatically redirect the user to the checkout page
+    setViewMode('checkout');
   };
 
   return (
@@ -2327,6 +2436,19 @@ export default function StoreFront() {
                               )}
                               <span>{order.status || 'Pending'}</span>
                             </span>
+
+                            {/* Quick Reorder Button for Completed Orders */}
+                            {statusStr === 'completed' && (
+                              <button
+                                type="button"
+                                onClick={() => handleReorder(order)}
+                                className="mt-1 px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-sky-400 font-extrabold text-[10.5px] flex items-center gap-1 ml-auto active:scale-95 transition-all"
+                                title="Reorder this completed order"
+                              >
+                                <ReloadOutlined style={{ fontSize: 9.5 }} />
+                                <span>Reorder</span>
+                              </button>
+                            )}
                           </div>
                         </div>
 
@@ -2537,6 +2659,26 @@ export default function StoreFront() {
                                 </div>
                               ))}
                             </div>
+                          </div>
+                        )}
+
+                        {/* Completed Order: Reorder Action Bar */}
+                        {statusStr === 'completed' && (
+                          <div className="mt-2.5 pt-2.5 border-t border-slate-800/80 flex items-center justify-between gap-3 bg-slate-950/40 p-2 rounded-2xl">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                              <CheckCircleFilled className="text-emerald-400 text-xs" />
+                              <span className="font-semibold text-emerald-400 text-[11px]">Completed Order</span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleReorder(order)}
+                              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs flex items-center gap-1.5 shadow-lg shadow-blue-600/30 active:scale-95 transition-all"
+                            >
+                              <ReloadOutlined style={{ fontSize: 11 }} />
+                              <span>Reorder</span>
+                              <ArrowRightOutlined style={{ fontSize: 10 }} />
+                            </button>
                           </div>
                         )}
 
@@ -2771,45 +2913,110 @@ export default function StoreFront() {
                 </div>
               </div>
 
-              {/* Options Groups */}
-              {customizingProduct.options &&
-                customizingProduct.options.map((optGroup: any) => (
-                  <div key={optGroup.id || optGroup.name} className="space-y-2">
-                    <label className="text-xs font-black text-slate-200 block uppercase tracking-wider">
-                      {optGroup.name}
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {optGroup.choices?.map((choice: any) => {
-                        const isSelected = selectedOptions[optGroup.name] === choice.label;
+              {/* Item Variants - Size Selection with Associated Price Adjustments */}
+              {(() => {
+                const variants = getProductVariants(customizingProduct);
+                if (!variants || variants.length === 0) return null;
+                return (
+                  <div className="space-y-2.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">📏</span>
+                        <label className="text-xs font-black text-slate-100 uppercase tracking-wider">
+                          Select Size &amp; Variant
+                        </label>
+                      </div>
+                      <span className="text-[10px] uppercase font-black text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded-full border border-blue-800/60">
+                        Required
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      {variants.map((variant: any) => {
+                        const isSelected = selectedVariant?.id === variant.id || selectedVariant?.name === variant.name;
+                        const adj = Number(variant.priceAdjustment ?? variant.priceDelta ?? 0);
                         return (
                           <button
-                            key={choice.label}
+                            key={variant.id || variant.name}
                             type="button"
                             onClick={() => {
                               triggerHaptic('light');
-                              setSelectedOptions((prev) => ({
-                                ...prev,
-                                [optGroup.name]: choice.label
-                              }));
+                              setSelectedVariant(variant);
                             }}
-                            className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                            className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 active:scale-95 ${
                               isSelected
-                                ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/40'
-                                : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                                ? 'bg-gradient-to-b from-blue-600/30 to-blue-700/20 border-blue-400 text-white shadow-lg shadow-blue-500/20 ring-2 ring-blue-500/40'
+                                : 'bg-slate-900/90 text-slate-300 border-slate-800 hover:border-slate-700'
                             }`}
                           >
-                            <span>{choice.label}</span>
-                            {choice.price_delta && Number(choice.price_delta) > 0 && (
-                              <span className="ml-1 opacity-80 text-[11px]">
-                                (+${Number(choice.price_delta).toFixed(2)})
-                              </span>
-                            )}
+                            <span className="text-xs font-black leading-tight flex items-center gap-1">
+                              {isSelected && <span className="text-[11px] text-sky-400 font-bold">✓</span>}
+                              {variant.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              {variant.size || variant.name}
+                            </span>
+                            <span
+                              className={`text-[10.5px] font-bold px-1.5 py-0.5 rounded-md ${
+                                adj > 0
+                                  ? 'text-emerald-400 bg-emerald-950/70'
+                                  : adj < 0
+                                  ? 'text-amber-400 bg-amber-950/70'
+                                  : 'text-slate-400 bg-slate-800/60'
+                              }`}
+                            >
+                              {adj > 0 ? `+$${adj.toFixed(2)}` : adj < 0 ? `-$${Math.abs(adj).toFixed(2)}` : 'Base price'}
+                            </span>
                           </button>
                         );
                       })}
                     </div>
                   </div>
-                ))}
+                );
+              })()}
+
+              {/* Other Options Groups */}
+              {customizingProduct.options &&
+                customizingProduct.options
+                  .filter((optGroup: any) => optGroup.name?.toLowerCase() !== 'size' && optGroup.id !== 'size')
+                  .map((optGroup: any) => (
+                    <div key={optGroup.id || optGroup.name} className="space-y-2">
+                      <label className="text-xs font-black text-slate-200 block uppercase tracking-wider">
+                        {optGroup.name}
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {optGroup.choices?.map((choice: any) => {
+                          const isSelected = selectedOptions[optGroup.name] === choice.label;
+                          const delta = Number(choice.priceAdjustment ?? choice.priceDelta ?? choice.price_delta ?? 0);
+                          return (
+                            <button
+                              key={choice.label}
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setSelectedOptions((prev) => ({
+                                  ...prev,
+                                  [optGroup.name]: choice.label
+                                }));
+                              }}
+                              className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                                isSelected
+                                  ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-600/30 ring-1 ring-blue-400/40'
+                                  : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                              }`}
+                            >
+                              <span>{choice.label}</span>
+                              {delta > 0 && (
+                                <span className="ml-1 opacity-80 text-[11px] text-emerald-400">
+                                  (+${delta.toFixed(2)})
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
 
               {/* Quantity Stepper */}
               <div className="flex items-center justify-between pt-3 border-t border-slate-800/80">

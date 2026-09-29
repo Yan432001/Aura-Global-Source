@@ -20,6 +20,7 @@ import {
   TeamOutlined,
   ToolOutlined,
   WarningOutlined,
+  QrcodeOutlined,
 } from '@ant-design/icons';
 import {
   Area,
@@ -205,10 +206,17 @@ const AdminDashboard = () => {
           <Button
             type="primary"
             icon={<GlobalOutlined />}
-            onClick={() => navigate('/admins?module=cms&menu=cms-settings')}
+            onClick={() => navigate('/admins?module=data&section=dashboard')}
             style={{ fontWeight: 600, background: '#2563eb' }}
           >
-            Website CMS Panel
+            Website Data Panel
+          </Button>
+          <Button
+            icon={<QrcodeOutlined />}
+            onClick={() => navigate('/admins?module=data&section=qrcode')}
+            style={{ fontWeight: 600, borderColor: '#0284c7', color: '#0284c7' }}
+          >
+            Table QR Tool
           </Button>
           <Tag icon={<CheckCircleFilled />} style={{ margin: 0, borderRadius: 8, border: 'none', background: c.greenSoft, color: c.green, padding: '6px 12px', fontWeight: 700 }}>
             Active Users 248

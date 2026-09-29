@@ -1003,7 +1003,7 @@ export default function AdminCmsManager() {
         onCancel={() => setModalVisible(false)}
         onOk={handleModalSubmit}
         width={700}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical">
           {modalType === 'menu' && (
