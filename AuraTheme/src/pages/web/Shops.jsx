@@ -1,14 +1,37 @@
-import React, { useMemo, useState } from 'react';
-import { Avatar, Button, Card, Col, Grid, Row, Space, Tag, Typography } from 'antd';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
+  Badge,
+  Button,
+  Card,
+  Col,
+  Drawer,
+  Empty,
+  Grid,
+  Input,
+  Row,
+  Select,
+  Space,
+  Switch,
+  Tag,
+  Typography,
+  message,
+} from 'antd';
+import {
+  CloseOutlined,
+  FilterOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  SearchOutlined,
   SendOutlined,
   ShopOutlined,
   StarFilled,
 } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { products, shops } from '../../data/shopData';
-import { formatCompact, publicTheme } from '../../utils/webTheme';
+import { branches, products, shops } from '../../data/shopData';
+import { publicTheme } from '../../utils/webTheme';
 import TelegramMiniAppModal, { BOTFATHER_CONFIG } from '../../components/web/shared/TelegramMiniAppModal';
+import RetailShopCard from '../../components/web/shared/RetailShopCard';
+import ShopQuickViewModal from '../../components/web/shared/ShopQuickViewModal';
 
 const { useBreakpoint } = Grid;
 const { Paragraph, Text, Title } = Typography;
@@ -17,30 +40,223 @@ const Shops = () => {
   const screens = useBreakpoint();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const search = searchParams.get('q') || '';
+  const urlQuery = searchParams.get('q') || '';
+  const [messageApi, contextHolder] = message.useMessage();
+
+  // Search & Filter State
+  const [search, setSearch] = useState(urlQuery);
+  const [branch, setBranch] = useState('all');
+  const [minRating, setMinRating] = useState('all');
+  const [fastReplyOnly, setFastReplyOnly] = useState(false);
+
+  // Modals & Panels State
+  const [previewShop, setPreviewShop] = useState(null);
   const [telegramShop, setTelegramShop] = useState(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [gridMode, setGridMode] = useState(6); // 4 or 6 per row (matches image.png 6-per-row mode)
+  const [wishlistedShopIds, setWishlistedShopIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aura_favorite_shops');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  const filteredShops = useMemo(
-    () =>
-      shops.filter((shop) => {
-        const query = search.toLowerCase();
-        return (
-          shop.name.toLowerCase().includes(query) ||
-          shop.summary.toLowerCase().includes(query) ||
-          (shop.branch && shop.branch.toLowerCase().includes(query)) ||
-          shop.specialties.some((item) => item.toLowerCase().includes(query))
-        );
-      }),
-    [search]
-  );
+  useEffect(() => {
+    if (urlQuery !== undefined) {
+      setSearch(urlQuery);
+    }
+  }, [urlQuery]);
 
-  const handleOpenTelegram = (shop) => {
-    setTelegramShop(shop);
+  const toggleShopWishlist = (shop) => {
+    const isSaved = wishlistedShopIds.includes(shop.id);
+    const updated = isSaved
+      ? wishlistedShopIds.filter((id) => id !== shop.id)
+      : [...wishlistedShopIds, shop.id];
+
+    setWishlistedShopIds(updated);
+    try {
+      localStorage.setItem('aura_favorite_shops', JSON.stringify(updated));
+    } catch {}
+
+    if (isSaved) {
+      messageApi.info(`${shop.name} removed from favorites`);
+    } else {
+      messageApi.success(`${shop.name} added to favorites`);
+    }
   };
+
+  const handleShare = async (shop) => {
+    const shareUrl = `${window.location.origin}/shops/${shop.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shop.name,
+          text: shop.summary,
+          url: shareUrl,
+        });
+        return;
+      } catch {}
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      messageApi.success('Shop link copied to clipboard');
+    } catch {
+      messageApi.info('Link ready: ' + shareUrl);
+    }
+  };
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (search.trim()) count++;
+    if (branch !== 'all') count++;
+    if (minRating !== 'all') count++;
+    if (fastReplyOnly) count++;
+    return count;
+  }, [search, branch, minRating, fastReplyOnly]);
+
+  const clearAllFilters = () => {
+    setSearch('');
+    setBranch('all');
+    setMinRating('all');
+    setFastReplyOnly(false);
+    setSearchParams({});
+  };
+
+  // Filtered Shops List
+  const filteredShops = useMemo(() => {
+    const query = search.toLowerCase().trim();
+
+    return shops.filter((shop) => {
+      const matchesSearch =
+        !query ||
+        shop.name.toLowerCase().includes(query) ||
+        shop.summary.toLowerCase().includes(query) ||
+        (shop.branch && shop.branch.toLowerCase().includes(query)) ||
+        (shop.specialties && shop.specialties.some((s) => s.toLowerCase().includes(query)));
+
+      const matchesBranch = branch === 'all' || shop.branch === branch;
+      const matchesRating = minRating === 'all' || shop.rating >= Number(minRating);
+      const matchesReply = !fastReplyOnly || (shop.responseTime && shop.responseTime.includes('10'));
+
+      return matchesSearch && matchesBranch && matchesRating && matchesReply;
+    });
+  }, [search, branch, minRating, fastReplyOnly]);
+
+  // Responsive Grid Column Configuration (4 vs 6 per row)
+  const shopColumnProps = useMemo(() => {
+    if (gridMode === 6) {
+      return filtersOpen && screens.lg
+        ? { xs: 12, sm: 8, md: 6, lg: 6, xl: 4, xxl: 4 }
+        : { xs: 12, sm: 8, md: 6, lg: 4, xl: 4, xxl: 4 }; // 24 / 4 = 6 columns per row!
+    }
+    return filtersOpen && screens.lg
+      ? { xs: 12, sm: 12, md: 8, lg: 8, xl: 6, xxl: 6 }
+      : { xs: 12, sm: 12, md: 8, lg: 6, xl: 6, xxl: 6 }; // 24 / 6 = 4 columns per row!
+  }, [gridMode, filtersOpen, screens.lg]);
+
+  // Sidebar Filter Panel (desktop & mobile drawer)
+  const filterPanel = (
+    <Card
+      style={{
+        borderRadius: 24,
+        border: `1px solid ${publicTheme.border}`,
+        background: publicTheme.cardBackground,
+        boxShadow: publicTheme.lightShadow,
+      }}
+      styles={{ body: { padding: 18 } }}
+    >
+      <Space direction="vertical" size={16} style={{ width: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text strong style={{ color: publicTheme.text, fontSize: 16 }}>
+            Shop Filters
+          </Text>
+          {activeFiltersCount > 0 && (
+            <Button type="link" size="small" onClick={clearAllFilters} style={{ padding: 0 }}>
+              Reset
+            </Button>
+          )}
+        </div>
+
+        {/* Search */}
+        <div>
+          <Text strong style={{ display: 'block', marginBottom: 6, color: publicTheme.text }}>
+            Search Shops
+          </Text>
+          <Input
+            placeholder="Search by name, hub, specialty..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            prefix={<SearchOutlined style={{ color: publicTheme.subtext }} />}
+            allowClear
+            style={{ borderRadius: 14 }}
+          />
+        </div>
+
+        {/* Fulfillment Hub / Branch */}
+        <div>
+          <Text strong style={{ display: 'block', marginBottom: 6, color: publicTheme.text }}>
+            Fulfillment Hub
+          </Text>
+          <Select
+            value={branch}
+            onChange={setBranch}
+            style={{ width: '100%' }}
+            options={branches.map((b) => ({ label: b.name, value: b.id }))}
+          />
+        </div>
+
+        {/* Rating filter */}
+        <div>
+          <Text strong style={{ display: 'block', marginBottom: 6, color: publicTheme.text }}>
+            Minimum Rating
+          </Text>
+          <Select
+            value={minRating}
+            onChange={setMinRating}
+            style={{ width: '100%' }}
+            options={[
+              { label: 'All Ratings', value: 'all' },
+              { label: '★ 4.8 & Above', value: '4.8' },
+              { label: '★ 4.9 & Above', value: '4.9' },
+            ]}
+          />
+        </div>
+
+        {/* Quick response filter */}
+        <div
+          style={{
+            borderRadius: 18,
+            border: `1px solid ${publicTheme.softBorder}`,
+            background: publicTheme.cardMuted,
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <div>
+            <Text strong style={{ display: 'block', color: publicTheme.text }}>
+              Fast Dispatch
+            </Text>
+            <Text style={{ color: publicTheme.subtext, fontSize: 12 }}>
+              Replies &lt; 10 min
+            </Text>
+          </div>
+          <Switch checked={fastReplyOnly} onChange={setFastReplyOnly} />
+        </div>
+      </Space>
+    </Card>
+  );
 
   return (
     <div style={{ padding: 0 }}>
-      {/* Top Header Frosted Panel - matches image.png exactly */}
+      {contextHolder}
+
+      {/* Top Header Frosted Panel */}
       <Card
         className="frosted-panel stagger-rise"
         style={{
@@ -65,7 +281,7 @@ const Shops = () => {
                 fontSize: screens.xs ? 11 : 12,
               }}
             >
-              Shop by shop
+              Shop directory
             </Tag>
             <Tag
               style={{
@@ -91,7 +307,7 @@ const Shops = () => {
             style={{
               margin: 0,
               color: publicTheme.text,
-              fontSize: 'clamp(24px, 4vw, 52px)',
+              fontSize: 'clamp(24px, 4vw, 48px)',
               lineHeight: 1.1,
             }}
           >
@@ -102,188 +318,167 @@ const Shops = () => {
             style={{
               margin: 0,
               color: publicTheme.subtext,
-              fontSize: 16,
-              maxWidth: 760,
+              fontSize: screens.xs ? 13 : 16,
+              maxWidth: 860,
             }}
           >
-            This page is now a clean shop directory, so visitors are not flooded by products when they first arrive. Each shop has its own detail page with its own products, and is connected to Telegram Mini App E-Menu.
+            Explore verified vendor storefronts and hubs. Adapt the grid between 4 and 6 columns per row with open/close filter bar and direct Telegram E-Menu integration.
           </Paragraph>
-
-          {search && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-              <Tag
-                closable
-                onClose={() => setSearchParams({})}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 999,
-                  background: publicTheme.cardMuted,
-                  border: `1px solid ${publicTheme.softBorder}`,
-                  fontSize: 13,
-                  color: publicTheme.text,
-                }}
-              >
-                Filtered by: <strong>"{search}"</strong> ({filteredShops.length} shops found)
-              </Tag>
-            </div>
-          )}
         </Space>
       </Card>
 
-      {/* 3-Column Grid Layout - matches image.png exactly */}
-      <Row gutter={screens.xs ? [12, 12] : [18, 18]}>
-        {filteredShops.map((shop) => {
-          const shopProducts = products.filter((product) => product.shopId === shop.id);
-
-          return (
-            <Col xs={24} md={12} xl={8} key={shop.id}>
-              <Card
-                hoverable
-                style={{
-                  borderRadius: screens.xs ? 20 : 28,
-                  border: `1px solid ${publicTheme.border}`,
-                  background: publicTheme.cardBackground,
-                  boxShadow: publicTheme.lightShadow,
-                  height: '100%',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-                styles={{
-                  body: {
-                    padding: screens.xs ? 12 : 18,
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                  },
-                }}
-                cover={
-                  <div style={{ position: 'relative', height: screens.xs ? 140 : 220 }}>
-                    <img
-                      src={shop.heroImage}
-                      alt={shop.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background:
-                          'linear-gradient(180deg, rgba(31,45,56,0.08), rgba(31,45,56,0.48))',
-                      }}
-                    />
-                    <Avatar
-                      size={screens.xs ? 40 : 52}
-                      style={{
-                        position: 'absolute',
-                        left: screens.xs ? 12 : 18,
-                        bottom: screens.xs ? 12 : 18,
-                        background: publicTheme.ribbon,
-                        fontWeight: 800,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-                      }}
-                    >
-                      {shop.logoText}
-                    </Avatar>
-                  </div>
-                }
-              >
-                <Space direction="vertical" size={14} style={{ width: '100%' }}>
-                  <div>
-                    <FlexRow shop={shop} />
-                    <Paragraph
-                      style={{
-                        margin: '10px 0 0',
-                        color: publicTheme.subtext,
-                        fontSize: 14,
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {shop.summary}
-                    </Paragraph>
-                  </div>
-
-                  <Space wrap size={[8, 8]}>
-                    {shop.specialties.map((item) => (
-                      <Tag
-                        key={item}
-                        style={{
-                          borderRadius: 999,
-                          background: publicTheme.cardMuted,
-                          borderColor: publicTheme.softBorder,
-                          fontSize: 12,
-                        }}
-                      >
-                        {item}
-                      </Tag>
-                    ))}
-                  </Space>
-
-                  {/* 3 Metric Boxes - Products, Followers, Replies */}
-                  <Row gutter={[10, 10]}>
-                    <Col span={8}>
-                      <MetricBox label="Products" value={formatCompact(shopProducts.length)} />
-                    </Col>
-                    <Col span={8}>
-                      <MetricBox label="Followers" value={formatCompact(shop.followers)} />
-                    </Col>
-                    <Col span={8}>
-                      <MetricBox label="Replies" value={shop.responseTime} />
-                    </Col>
-                  </Row>
-
-                  {/* BotFather Connection Pill */}
-                  <div
-                    onClick={() => handleOpenTelegram(shop)}
+      {/* Control Toolbar - Exactly matching image.png */}
+      <div
+        style={{
+          borderRadius: screens.xs ? 18 : 24,
+          border: `1px solid ${publicTheme.border}`,
+          background: publicTheme.cardBackground,
+          boxShadow: publicTheme.lightShadow,
+          padding: screens.xs ? 12 : 16,
+          marginBottom: screens.xs ? 16 : 24,
+        }}
+      >
+        <Row gutter={[12, 12]} align="middle" justify="space-between">
+          <Col xs={12} sm={12} lg={10}>
+            <Text style={{ color: publicTheme.subtext, fontSize: screens.xs ? 12 : 14 }}>
+              Showing <Text strong style={{ color: publicTheme.text }}>{filteredShops.length}</Text> shops
+            </Text>
+          </Col>
+          <Col xs={12} sm={12} lg={14}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {/* Mobile / Tablet Filter Button */}
+              {!screens.lg && (
+                <Badge count={activeFiltersCount} size="small">
+                  <Button
+                    type={activeFiltersCount > 0 ? 'primary' : 'default'}
+                    icon={<FilterOutlined />}
+                    onClick={() => setMobileFilterOpen(true)}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '8px 12px',
                       borderRadius: 12,
-                      background: 'rgba(36, 129, 204, 0.08)',
-                      border: '1px solid rgba(36, 129, 204, 0.2)',
-                      fontSize: 11,
-                      color: '#2481cc',
-                      cursor: 'pointer',
+                      fontWeight: 700,
+                      height: 36,
+                      fontSize: screens.xs ? 12 : 13,
                     }}
                   >
-                    <span>
-                      <SendOutlined style={{ marginRight: 6 }} />
-                      <strong>@{BOTFATHER_CONFIG.botUsername}</strong> • E-Menu
-                    </span>
-                    <span style={{ fontWeight: 700, textDecoration: 'underline' }}>
-                      Open to Telegram ↗
-                    </span>
-                  </div>
+                    Filters
+                  </Button>
+                </Badge>
+              )}
 
-                  {/* Bottom Action Button: Visit shop */}
-                  <div style={{ marginTop: 2 }}>
+              {/* Desktop Filters Toggle and Grid Mode Selectors */}
+              {screens.lg && (
+                <>
+                  <Button
+                    icon={filtersOpen ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+                    onClick={() => setFiltersOpen((current) => !current)}
+                    style={{ borderRadius: 14, fontWeight: 700 }}
+                  >
+                    {filtersOpen ? 'Close filter bar' : 'Open filter bar'}
+                  </Button>
+                  <Space.Compact>
                     <Button
-                      type="primary"
-                      icon={<ShopOutlined />}
-                      onClick={() => navigate(`/shops/${shop.id}`)}
-                      style={{
-                        height: 44,
-                        borderRadius: 16,
-                        background: publicTheme.ribbon,
-                        border: 'none',
-                        fontWeight: 700,
-                        paddingInline: 20,
-                      }}
+                      type={gridMode === 4 ? 'primary' : 'default'}
+                      onClick={() => setGridMode(4)}
+                      style={{ fontWeight: 700 }}
                     >
-                      Visit shop
+                      4 per row
                     </Button>
-                  </div>
-                </Space>
-              </Card>
-            </Col>
-          );
-        })}
+                    <Button
+                      type={gridMode === 6 ? 'primary' : 'default'}
+                      onClick={() => setGridMode(6)}
+                      style={{ fontWeight: 700 }}
+                    >
+                      6 per row
+                    </Button>
+                  </Space.Compact>
+                </>
+              )}
+            </div>
+          </Col>
+        </Row>
+      </div>
+
+      {/* Grid Layout with Optional Sidebar */}
+      <Row gutter={screens.xs ? [12, 12] : [20, 20]} align="top">
+        {filtersOpen && screens.lg && (
+          <Col xs={0} lg={6}>
+            {filterPanel}
+          </Col>
+        )}
+
+        <Col xs={24} lg={filtersOpen ? 18 : 24}>
+          {filteredShops.length === 0 ? (
+            <Card
+              style={{
+                borderRadius: 24,
+                border: `1px solid ${publicTheme.border}`,
+                textAlign: 'center',
+                padding: '40px 20px',
+              }}
+            >
+              <Empty
+                description={
+                  <Space direction="vertical" size={4}>
+                    <Text strong style={{ fontSize: 16 }}>No shops match your filters</Text>
+                    <Text type="secondary">Try resetting your search query or branch filters</Text>
+                  </Space>
+                }
+              >
+                <Button type="primary" onClick={clearAllFilters} style={{ borderRadius: 12, marginTop: 8 }}>
+                  Clear all filters
+                </Button>
+              </Empty>
+            </Card>
+          ) : (
+            <Row gutter={screens.xs ? [10, 10] : screens.sm ? [12, 12] : [16, 16]}>
+              {filteredShops.map((shop) => {
+                const shopProducts = products.filter((p) => p.shopId === shop.id);
+                const isWishlisted = wishlistedShopIds.includes(shop.id);
+
+                return (
+                  <Col {...shopColumnProps} key={shop.id}>
+                    <RetailShopCard
+                      shop={shop}
+                      shopProducts={shopProducts}
+                      gridMode={gridMode}
+                      onPreview={(s) => setPreviewShop(s)}
+                      onWishlist={toggleShopWishlist}
+                      isWishlisted={isWishlisted}
+                      onLike={(s) => messageApi.success(`You liked ${s.name}`)}
+                      onShare={handleShare}
+                      onOpenTelegram={(s) => setTelegramShop(s)}
+                    />
+                  </Col>
+                );
+              })}
+            </Row>
+          )}
+        </Col>
       </Row>
 
-      {/* New Concept: Telegram Mini App BotFather Gateway Modal */}
+      {/* Mobile / Tablet Filter Drawer */}
+      <Drawer
+        title="Shop Filters"
+        placement="left"
+        closable={false}
+        open={mobileFilterOpen}
+        onClose={() => setMobileFilterOpen(false)}
+        width={340}
+        extra={<Button type="text" icon={<CloseOutlined />} onClick={() => setMobileFilterOpen(false)} />}
+      >
+        {filterPanel}
+      </Drawer>
+
+      {/* Shop Quick View Modal */}
+      <ShopQuickViewModal
+        shop={previewShop}
+        open={Boolean(previewShop)}
+        onClose={() => setPreviewShop(null)}
+        onOpenTelegram={(s) => setTelegramShop(s)}
+        shopProducts={previewShop ? products.filter((p) => p.shopId === previewShop.id) : []}
+      />
+
+      {/* Telegram Mini App Modal */}
       <TelegramMiniAppModal
         open={Boolean(telegramShop)}
         onClose={() => setTelegramShop(null)}
@@ -293,42 +488,5 @@ const Shops = () => {
     </div>
   );
 };
-
-const FlexRow = ({ shop }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-    <div>
-      <Title level={4} style={{ margin: 0, color: publicTheme.text }}>
-        {shop.name}
-      </Title>
-      <Text style={{ color: publicTheme.subtext, fontSize: 13 }}>
-        {shop.established} • {shop.branch}
-      </Text>
-    </div>
-    <Space size={4}>
-      <StarFilled style={{ color: publicTheme.warning }} />
-      <Text strong style={{ color: publicTheme.text }}>
-        {shop.rating}
-      </Text>
-    </Space>
-  </div>
-);
-
-const MetricBox = ({ label, value }) => (
-  <div
-    style={{
-      borderRadius: 18,
-      background: publicTheme.cardMuted,
-      border: `1px solid ${publicTheme.softBorder}`,
-      padding: 12,
-      textAlign: 'center',
-      height: '100%',
-    }}
-  >
-    <Text style={{ display: 'block', color: publicTheme.subtext, fontSize: 11 }}>{label}</Text>
-    <Text strong style={{ color: publicTheme.text }}>
-      {value}
-    </Text>
-  </div>
-);
 
 export default Shops;

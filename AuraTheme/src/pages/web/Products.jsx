@@ -395,6 +395,7 @@ const Products = () => {
       <Drawer
         title="Product filters"
         placement="left"
+        closable={false}
         open={mobileFilterOpen}
         onClose={() => setMobileFilterOpen(false)}
         width={340}

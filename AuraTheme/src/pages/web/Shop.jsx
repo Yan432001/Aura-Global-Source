@@ -453,6 +453,7 @@ const Shop = () => {
           </div>
         }
         placement="right"
+        closable={false}
         onClose={() => setFilterDrawerVisible(false)}
         open={filterDrawerVisible}
         width={screens.xs ? 320 : 360}

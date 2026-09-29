@@ -110,6 +110,8 @@ export default function TelegramMiniAppModal({
     <Modal
       open={open}
       onCancel={onClose}
+      closable={false}
+      closeIcon={null}
       footer={null}
       width={560}
       centered
@@ -177,9 +179,19 @@ export default function TelegramMiniAppModal({
 
         <Button
           type="text"
-          icon={<CloseOutlined />}
+          shape="circle"
+          icon={<CloseOutlined style={{ fontSize: 14, color: '#ffffff' }} />}
           onClick={onClose}
-          style={{ color: '#ffffff', fontSize: 16 }}
+          style={{
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(255,255,255,0.18)',
+            border: 'none',
+          }}
+          title="Close modal"
         />
       </div>
 
