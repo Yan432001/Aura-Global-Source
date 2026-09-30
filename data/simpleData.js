@@ -1,29 +1,29 @@
 const stores = [
   {
     id: 1,
-    name: "Aura Specialty Coffee",
-    company: "Aura Specialty Coffee Bar Group",
+    name: "SBC Store",
+    company: "SBC Fast Food & Cafe Group",
     slug: "sbc-store",
-    tagline: "Artisan Roasts, Handcrafted Espresso & Pour-Overs",
-    description: "Flagship specialty coffee bar serving single-origin roasts, signature iced creations, and fresh cafe bites.",
-    address: "No. 128 Preah Norodom Blvd, BKK1, Phnom Penh",
+    tagline: "Delicious Fast Food, Juicy Burgers, Crispy Chicken & Shakes",
+    description: "Get your favorite fast food delivered to your door. Featuring golden crispy chicken zinger burgers, extra cheesy pizza, hot dogs and milkshakes.",
+    address: "221B Baker Street, London • BKK1 Hub",
     phone: "+855 12 888 777",
     email: "sbc@auraglobal.com",
     branch: "bangkok-hub",
     rating: 4.9,
     reviewsCount: 230,
     followers: 14200,
-    banner: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
-    cover: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
-    logo: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=300&q=80",
-    theme_color: "#0284c7",
+    banner: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=1200&q=80",
+    cover: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=1200&q=80",
+    logo: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=300&q=80",
+    theme_color: "#f25c19",
     currency_code: "USD",
     currency_symbol: "$",
     is_active: 1,
     telegram_group_id: "-1002345678901",
-    telegram_group_name: "☕ Aura Specialty Coffee Bar Group",
+    telegram_group_name: "🍔 SBC Fast Food Kitchen Group",
     openStatus: "open",
-    openingHours: "07:00 - 21:00"
+    openingHours: "08:00 - 23:00"
   },
   {
     id: 2,
@@ -105,7 +105,72 @@ const stores = [
   }
 ];
 
+const fastFoodOptions = [
+  {
+    id: "portion",
+    name: "Portion Size",
+    choices: [
+      { label: "Regular", priceDelta: 0, default: true },
+      { label: "Large Combo (+Fries & Drink)", priceDelta: 2.50, default: false }
+    ]
+  },
+  {
+    id: "spicy",
+    name: "Spicy Level",
+    choices: [
+      { label: "Mild / Original", priceDelta: 0, default: true },
+      { label: "Spicy Peri-Peri", priceDelta: 0, default: false },
+      { label: "Extra Hot 🔥", priceDelta: 0.25, default: false }
+    ]
+  }
+];
+
 const categories = [
+  {
+    id: 21,
+    name: "Burger",
+    code: "CAT-BURGER",
+    description: "Juicy handcrafted burgers and crispy chicken zinger",
+    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80",
+    icon: "🍔",
+    status: 1
+  },
+  {
+    id: 22,
+    name: "Pizza",
+    code: "CAT-PIZZA",
+    description: "Loaded cheesy pizzas and fresh baked crusts",
+    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=400&q=80",
+    icon: "🍕",
+    status: 1
+  },
+  {
+    id: 23,
+    name: "Chicken",
+    code: "CAT-CHICKEN",
+    description: "Crispy & juicy fried chicken drumsticks and tenders",
+    image: "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=400&q=80",
+    icon: "🍗",
+    status: 1
+  },
+  {
+    id: 24,
+    name: "Snacks",
+    code: "CAT-SNACKS",
+    description: "Crispy golden french fries and classic hot dogs",
+    image: "https://images.unsplash.com/photo-1576107232684-1279f3908594?auto=format&fit=crop&w=400&q=80",
+    icon: "🍟",
+    status: 1
+  },
+  {
+    id: 25,
+    name: "Drinks",
+    code: "CAT-DRINKS",
+    description: "Creamy milkshakes, iced soda, and chilled refreshments",
+    image: "https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=400&q=80",
+    icon: "🥤",
+    status: 1
+  },
   {
     id: 1,
     name: "Espresso & Coffee",
@@ -229,7 +294,111 @@ const bakeryOptions = [
 ];
 
 const products = [
-  // Store 1: Aura Specialty Coffee (biller_id: 1)
+  // Store 1: SBC Store (Fast Food & Cafe) (biller_id: 1)
+  {
+    id: 101,
+    biller_id: 1,
+    category_id: 21,
+    code: "PRD-FF-01",
+    name: "Zinger Burger",
+    price: 5.49,
+    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80",
+    unit: "Item",
+    details: "Crispy chicken with spicy mayo",
+    rating: 4.9,
+    reviews: 248,
+    popular: true,
+    is_best_seller: true,
+    badge: "Popular",
+    inStock: true,
+    options: fastFoodOptions
+  },
+  {
+    id: 102,
+    biller_id: 1,
+    category_id: 22,
+    code: "PRD-FF-02",
+    name: "Cheese Pizza",
+    price: 6.99,
+    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80",
+    unit: "Item",
+    details: "Loaded with extra cheese",
+    rating: 4.9,
+    reviews: 312,
+    popular: true,
+    is_best_seller: true,
+    badge: "Hot Deals",
+    inStock: true,
+    options: fastFoodOptions
+  },
+  {
+    id: 103,
+    biller_id: 1,
+    category_id: 23,
+    code: "PRD-FF-03",
+    name: "Fried Chicken",
+    price: 7.49,
+    image: "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80",
+    unit: "Bucket",
+    details: "Crispy & juicy chicken",
+    rating: 4.8,
+    reviews: 195,
+    popular: true,
+    badge: "Top Rated",
+    inStock: true,
+    options: fastFoodOptions
+  },
+  {
+    id: 104,
+    biller_id: 1,
+    category_id: 24,
+    code: "PRD-FF-04",
+    name: "Hot Dog",
+    price: 3.49,
+    image: "https://images.unsplash.com/photo-1619740455993-9e612b1af08a?auto=format&fit=crop&w=600&q=80",
+    unit: "Item",
+    details: "Classic hot dog with sauce",
+    rating: 4.7,
+    reviews: 160,
+    popular: true,
+    badge: "Special",
+    inStock: true,
+    options: fastFoodOptions
+  },
+  {
+    id: 105,
+    biller_id: 1,
+    category_id: 24,
+    code: "PRD-FF-05",
+    name: "French Fries",
+    price: 2.49,
+    image: "https://images.unsplash.com/photo-1576107232684-1279f3908594?auto=format&fit=crop&w=600&q=80",
+    unit: "Portion",
+    details: "Crispy golden fries",
+    rating: 4.9,
+    reviews: 420,
+    popular: true,
+    badge: "Crunchy",
+    inStock: true,
+    options: fastFoodOptions
+  },
+  {
+    id: 106,
+    biller_id: 1,
+    category_id: 25,
+    code: "PRD-FF-06",
+    name: "Milkshake",
+    price: 3.99,
+    image: "https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=600&q=80",
+    unit: "Glass",
+    details: "Creamy & tasty milkshake",
+    rating: 4.9,
+    reviews: 280,
+    popular: true,
+    badge: "Chilled",
+    inStock: true,
+    options: standardCoffeeOptions
+  },
   {
     id: 1,
     biller_id: 1,

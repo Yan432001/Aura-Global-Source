@@ -292,7 +292,7 @@ export default function TelegramMiniAppModal({
                 size="large"
                 onClick={handleLaunchTelegram}
                 style={{
-                  height: 48,
+                  height: 44,
                   borderRadius: 14,
                   background: '#2481cc',
                   border: 'none',
@@ -309,10 +309,34 @@ export default function TelegramMiniAppModal({
               </Button>
 
               <Button
+                size="large"
+                onClick={() => {
+                  onClose?.();
+                  navigate(`/shop/${targetShop?.slug || 'sbc-store'}`);
+                }}
+                style={{
+                  height: 42,
+                  borderRadius: 14,
+                  background: '#FF5722',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: 800,
+                  fontSize: 13,
+                  boxShadow: '0 6px 18px rgba(255, 87, 34, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <span>🍔 Open E-Menu Page ({targetShop?.name || 'SBC Store'})</span>
+              </Button>
+
+              <Button
                 icon={<CopyOutlined />}
                 onClick={handleCopyLink}
                 style={{
-                  height: 40,
+                  height: 38,
                   borderRadius: 12,
                   border: '1px solid #cbd5e1',
                   fontWeight: 600,

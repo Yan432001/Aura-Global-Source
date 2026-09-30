@@ -6,7 +6,7 @@
     "dev": "node server.js",
     "build": "vite build AuraTheme",
     "start": "node server.js",
-    "lint": "eslint AuraTheme"
+    "lint": "eslint -c AuraTheme/eslint.config.js AuraTheme"
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
