@@ -22,7 +22,7 @@ const stores = [
     theme_color: "#1e3a8a",
     is_active: 1,
     is_open: true,
-    telegram_group_id: "-1002345678901",
+    telegram_group_id: process.env.TELEGRAM_GROUP_CHAT_ID || null,
     telegram_group_name: "Aura Coffee Orders (Barista Team)",
     operating_hours: "6:30 AM - 8:30 PM",
     rating: 4.9
@@ -45,7 +45,7 @@ const stores = [
     theme_color: "#b45309",
     is_active: 1,
     is_open: true,
-    telegram_group_id: "-1002345678902",
+    telegram_group_id: process.env.TELEGRAM_GROUP_CHAT_ID || null,
     telegram_group_name: "Aura Bakery Kitchen (Orders)",
     operating_hours: "7:00 AM - 7:00 PM",
     rating: 4.8
@@ -68,7 +68,7 @@ const stores = [
     theme_color: "#047857",
     is_active: 1,
     is_open: true,
-    telegram_group_id: "-1002345678903",
+    telegram_group_id: process.env.TELEGRAM_GROUP_CHAT_ID || null,
     telegram_group_name: "Aura Lounge Orders (Tea Masters)",
     operating_hours: "8:00 AM - 9:00 PM",
     rating: 4.9
