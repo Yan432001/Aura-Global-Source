@@ -3,16 +3,30 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
+const fs = require('fs');
+
 const app = express();
 const PORT = 3000;
+const distDir = path.resolve(__dirname, 'AuraTheme/dist');
+const hasDist = fs.existsSync(distDir);
 
 // Enable CORS and JSON body parser
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static frontend assets
-app.use(express.static(path.join(__dirname, 'public')));
+// Default: Serve AuraTheme production UI bundle
+if (hasDist) {
+  console.log('[Server] Default UI: Serving AuraTheme from AuraTheme/dist');
+  app.use(express.static(distDir));
+} else {
+  console.log('[Server] Notice: AuraTheme/dist not found, serving public fallback');
+  app.use(express.static(path.join(__dirname, 'public')));
+}
+
+// Preserve access to public folder assets
+app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use('/assets', express.static(path.join(distDir, 'assets')));
 
 // Root health check endpoint
 app.get('/api/health', (req, res) => {
@@ -95,10 +109,13 @@ try {
   console.log('[Telegram Bot] Running in local simulation mode:', err.message);
 }
 
-// Fallback for SPA routing (/shop/:slug, /tma/:slug, etc.)
+// Fallback for SPA routing (/shop/:slug, /tma/:slug, /shops, etc.)
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ status: false, error: 'Endpoint not found' });
+  }
+  if (hasDist) {
+    return res.sendFile(path.join(distDir, 'index.html'));
   }
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

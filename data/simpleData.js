@@ -402,8 +402,15 @@ const products = [
   }
 ];
 
-module.exports = {
+const simpleData = {
   stores,
   categories,
   products
 };
+
+module.exports = simpleData;
+module.exports.default = simpleData;
+module.exports.stores = stores;
+module.exports.categories = categories;
+module.exports.products = products;
+

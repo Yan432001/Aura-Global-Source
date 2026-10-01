@@ -242,56 +242,220 @@
 
         <!-- Right: Mobile Device Mockup running the Mini App -->
         <div class="lg:col-span-7 flex justify-center">
-          <div class="w-full max-w-[380px] bg-slate-900 rounded-[44px] p-3 shadow-2xl border-4 border-slate-700">
-            <!-- Notch / Speaker -->
-            <div class="relative bg-slate-900 rounded-[36px] overflow-hidden border border-slate-800 flex flex-col h-[700px] bg-slate-50">
-              <!-- TMA Header bar -->
-              <div class="bg-slate-800 text-white px-4 py-3 flex items-center justify-between text-xs select-none">
-                <div class="flex items-center gap-2">
-                  <span class="text-slate-400">Cancel</span>
-                </div>
+          <div class="w-full max-w-[400px] bg-slate-900 rounded-[48px] p-3.5 shadow-2xl border-4 border-slate-700">
+            <!-- Notch / Phone Shell -->
+            <div class="relative bg-[#FAF6F0] rounded-[40px] overflow-hidden border border-slate-800 flex flex-col h-[750px] shadow-inner text-slate-900">
+              
+              <!-- Telegram Top Bar -->
+              <div class="bg-slate-900 text-white px-4 py-3 flex items-center justify-between text-xs select-none shrink-0 z-30">
+                <button type="button" onclick="switchTab('emenu')" class="text-slate-400 hover:text-white transition">Cancel</button>
                 <div class="font-bold text-center">
-                  <div id="tma-bar-title" class="truncate max-w-[180px]">Aura Specialty Coffee</div>
-                  <div class="text-[9px] text-emerald-400">Telegram Mini App</div>
+                  <div id="tma-bar-title" class="truncate max-w-[190px] font-bold text-white text-xs">Aura Specialty Coffee</div>
+                  <div class="text-[9px] text-amber-400 font-medium">Telegram Mini App • @aura_emenu_order_bot</div>
                 </div>
-                <div class="text-slate-400">•••</div>
+                <button type="button" onclick="syncTmaUser()" class="text-slate-400 hover:text-white">•••</button>
               </div>
 
-              <!-- TMA Inner App View -->
-              <div id="tma-content" class="flex-1 overflow-y-auto p-3 space-y-3 text-xs">
-                <!-- User greeting -->
-                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between">
+              <!-- Deliver To / Branch Selector Bar -->
+              <div class="bg-white/90 backdrop-blur-md px-3.5 py-2 flex items-center justify-between border-b border-orange-100 shrink-0 z-20">
+                <div onclick="openTmaBranchModal()" class="flex items-center gap-2 cursor-pointer group">
+                  <div class="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-xs shrink-0">
+                    📍
+                  </div>
                   <div>
-                    <p class="text-[10px] text-amber-800 font-semibold uppercase">Logged in via Telegram</p>
-                    <p id="tma-user-greeting" class="font-bold text-slate-800 text-xs">Hello, Sophea Kim 👋</p>
+                    <span class="text-[10px] font-medium text-slate-400 block leading-tight">Deliver to</span>
+                    <div class="flex items-center gap-1">
+                      <span id="tma-location-label" class="font-extrabold text-[11px] text-slate-800 truncate max-w-[170px]">
+                        Table #04 (SBC Store)
+                      </span>
+                      <span class="text-[10px] text-slate-400">▼</span>
+                    </div>
                   </div>
-                  <span class="w-6 h-6 rounded-full bg-amber-500 text-white font-bold text-[10px] flex items-center justify-center">✈️</span>
                 </div>
 
-                <!-- Fast Order Buttons -->
-                <div class="space-y-2">
-                  <div class="flex justify-between items-center text-[11px] font-bold text-slate-700">
-                    <span>Popular at this branch:</span>
-                  </div>
-                  <div id="tma-products-list" class="space-y-2">
-                    <!-- TMA quick items loaded here -->
-                  </div>
+                <div class="flex items-center gap-1.5">
+                  <button onclick="toggleTmaSearch()" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center text-xs transition">
+                    🔍
+                  </button>
+                  <button onclick="openTmaBranchModal()" class="px-2 py-1 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-[10px] shadow-xs transition">
+                    Stores
+                  </button>
                 </div>
               </div>
 
-              <!-- TMA Bottom Fixed Action Bar -->
-              <div class="p-3 bg-white border-t border-slate-200">
-                <button onclick="toggleCartDrawer()" class="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl flex items-center justify-between text-xs shadow-md transition">
-                  <span class="flex items-center gap-2">
-                    <span>🛍️ View Basket</span>
-                    <span id="tma-cart-count" class="bg-white/20 px-1.5 py-0.5 rounded text-[10px]">0</span>
-                  </span>
-                  <span id="tma-cart-total">$0.00</span>
+              <!-- In-TMA Search Input (Collapsible) -->
+              <div id="tma-search-bar" class="hidden px-3.5 py-2 bg-white border-b border-orange-100">
+                <input type="text" id="tma-search-input" oninput="onTmaSearch(this.value)" placeholder="Search coffee, burgers, croissants..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-500">
+              </div>
+
+              <!-- TMA Inner Scrollable Body -->
+              <div id="tma-screen-container" class="flex-1 overflow-y-auto p-3.5 space-y-3.5 text-xs">
+                
+                <!-- VIEW 1: HOME / CATALOG -->
+                <div id="tma-view-home" class="space-y-3.5">
+                  <!-- Flash Promo 20% Discount Banner -->
+                  <div class="rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-amber-600 text-white p-3.5 shadow-md flex items-center justify-between">
+                    <div class="space-y-0.5 max-w-[210px]">
+                      <span class="px-2 py-0.5 rounded-full bg-white/20 text-[9px] font-black uppercase tracking-wider">Flash Offer 20%</span>
+                      <h4 class="font-black text-xs leading-tight">Code: FIRST20</h4>
+                      <p class="text-[10px] text-orange-100">Enjoy 20% discount on entire order</p>
+                    </div>
+                    <button id="tma-claim-btn" onclick="claimTmaCoupon()" class="px-3 py-1.5 rounded-xl bg-white text-orange-600 font-extrabold text-[11px] hover:bg-orange-50 shadow-sm transition active:scale-95">
+                      Claim Now
+                    </button>
+                  </div>
+
+                  <!-- Quick Table Presets (QR Emulation) -->
+                  <div class="bg-white p-2.5 rounded-2xl border border-orange-100 shadow-2xs space-y-1.5">
+                    <div class="flex items-center justify-between text-[10px] font-bold text-slate-500">
+                      <span>⚡ Table / Dine-in Presets:</span>
+                      <span class="text-orange-600 font-semibold">QR Ready</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5">
+                      <button onclick="setTmaTable('Table #04 (SBC Store)')" class="px-2 py-1.5 rounded-xl bg-orange-50/70 hover:bg-orange-100 text-slate-800 text-[10.5px] font-bold text-left transition flex items-center justify-between">
+                        <span>Table #04</span>
+                        <span class="text-[9px] text-orange-600 font-medium">SBC</span>
+                      </button>
+                      <button onclick="setTmaTable('Table #08 (Bakery)')" class="px-2 py-1.5 rounded-xl bg-orange-50/70 hover:bg-orange-100 text-slate-800 text-[10.5px] font-bold text-left transition flex items-center justify-between">
+                        <span>Table #08</span>
+                        <span class="text-[9px] text-orange-600 font-medium">Bakery</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Fast Food / Specialty Categories Slider -->
+                  <div class="space-y-1.5">
+                    <div class="flex justify-between items-center text-[11px] font-extrabold text-slate-800">
+                      <span>Categories</span>
+                      <span id="tma-cat-count-badge" class="text-[10px] text-slate-400 font-medium">All items</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
+                      <button onclick="setTmaFastCategory('all')" id="tma-cat-all" class="tma-cat-btn px-2.5 py-1.5 rounded-xl bg-orange-500 text-white font-bold whitespace-nowrap shadow-xs">
+                        🌟 All
+                      </button>
+                      <button onclick="setTmaFastCategory('burger')" id="tma-cat-burger" class="tma-cat-btn px-2.5 py-1.5 rounded-xl bg-white text-slate-700 font-medium border border-orange-100 whitespace-nowrap hover:bg-orange-50">
+                        🍔 Burgers
+                      </button>
+                      <button onclick="setTmaFastCategory('pizza')" id="tma-cat-pizza" class="tma-cat-btn px-2.5 py-1.5 rounded-xl bg-white text-slate-700 font-medium border border-orange-100 whitespace-nowrap hover:bg-orange-50">
+                        🍕 Pizza
+                      </button>
+                      <button onclick="setTmaFastCategory('chicken')" id="tma-cat-chicken" class="tma-cat-btn px-2.5 py-1.5 rounded-xl bg-white text-slate-700 font-medium border border-orange-100 whitespace-nowrap hover:bg-orange-50">
+                        🍗 Chicken
+                      </button>
+                      <button onclick="setTmaFastCategory('snacks')" id="tma-cat-snacks" class="tma-cat-btn px-2.5 py-1.5 rounded-xl bg-white text-slate-700 font-medium border border-orange-100 whitespace-nowrap hover:bg-orange-50">
+                        🍟 Bakery
+                      </button>
+                      <button onclick="setTmaFastCategory('drinks')" id="tma-cat-drinks" class="tma-cat-btn px-2.5 py-1.5 rounded-xl bg-white text-slate-700 font-medium border border-orange-100 whitespace-nowrap hover:bg-orange-50">
+                        ☕ Coffee
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- TMA Products Grid -->
+                  <div class="space-y-2">
+                    <div class="flex justify-between items-center text-[11px] font-bold text-slate-700">
+                      <span>Menu Items:</span>
+                      <span id="tma-items-count" class="text-[10px] text-slate-400">Loading...</span>
+                    </div>
+                    <div id="tma-products-list" class="grid grid-cols-2 gap-2.5">
+                      <!-- Rendered via JS -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- VIEW 2: IN-APP BASKET / CHECKOUT -->
+                <div id="tma-view-cart" class="hidden space-y-3.5">
+                  <div class="flex items-center justify-between pb-2 border-b border-orange-200">
+                    <h4 class="font-extrabold text-sm text-slate-900">Your Basket</h4>
+                    <span id="tma-cart-item-count" class="text-[11px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">0 items</span>
+                  </div>
+
+                  <!-- In-App Cart Items Container -->
+                  <div id="tma-cart-items-container" class="space-y-2">
+                    <!-- Rendered via JS -->
+                  </div>
+
+                  <!-- In-App Dining Options -->
+                  <div class="bg-white p-3 rounded-2xl border border-orange-100 space-y-2.5">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Dining Option</label>
+                    <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+                      <button onclick="setTmaOrderType('dine_in')" id="tma-opt-dine_in" class="py-1 px-2 rounded-xl bg-orange-500 text-white font-bold text-center">Dine-In</button>
+                      <button onclick="setTmaOrderType('takeaway')" id="tma-opt-takeaway" class="py-1 px-2 rounded-xl bg-slate-100 text-slate-700 font-medium text-center">Takeaway</button>
+                      <button onclick="setTmaOrderType('delivery')" id="tma-opt-delivery" class="py-1 px-2 rounded-xl bg-slate-100 text-slate-700 font-medium text-center">Delivery</button>
+                    </div>
+                    <div>
+                      <input type="text" id="tma-checkout-location" value="Table #04" placeholder="Table # or Delivery Address" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-500">
+                    </div>
+                  </div>
+
+                  <!-- In-App Cost Summary -->
+                  <div class="bg-white p-3 rounded-2xl border border-orange-100 space-y-1.5 font-medium text-[11px]">
+                    <div class="flex justify-between text-slate-600"><span>Subtotal:</span><span id="tma-summary-subtotal">$0.00</span></div>
+                    <div class="flex justify-between text-slate-600"><span>Discount (FIRST20):</span><span id="tma-summary-discount" class="text-emerald-600">-$0.00</span></div>
+                    <div class="flex justify-between text-slate-600"><span>Delivery Fee:</span><span id="tma-summary-delivery">$0.00</span></div>
+                    <div class="flex justify-between text-xs font-black text-slate-900 pt-1 border-t border-orange-100">
+                      <span>Total:</span>
+                      <span id="tma-summary-total" class="text-orange-600 font-mono">$0.00</span>
+                    </div>
+                  </div>
+
+                  <!-- Place Order Button -->
+                  <button onclick="submitTmaOrder()" id="tma-checkout-submit-btn" class="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-2xl text-xs shadow-md transition active:scale-98">
+                    Send Order to Kitchen ✈️
+                  </button>
+                </div>
+
+                <!-- VIEW 3: IN-APP LIVE ORDERS TIMELINE -->
+                <div id="tma-view-orders" class="hidden space-y-3.5">
+                  <div class="flex items-center justify-between pb-2 border-b border-orange-200">
+                    <h4 class="font-extrabold text-sm text-slate-900">Your Orders &amp; Kitchen Alerts</h4>
+                    <button onclick="loadOrders()" class="text-[10px] text-orange-600 font-bold hover:underline">Refresh</button>
+                  </div>
+                  <div id="tma-orders-list-container" class="space-y-3">
+                    <!-- Rendered via JS -->
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- TMA Bottom Fixed Tab Navigation (Home, Menu, Basket, Orders) -->
+              <div class="bg-white border-t border-orange-100 px-3 py-2 flex items-center justify-around text-xs shrink-0 select-none shadow-md z-30">
+                <button type="button" onclick="switchTmaView('home')" id="tma-nav-home" class="flex flex-col items-center gap-0.5 text-orange-600 font-black cursor-pointer">
+                  <span class="text-sm">🏠</span>
+                  <span class="text-[9px]">Home</span>
+                </button>
+                <button type="button" onclick="switchTmaView('cart')" id="tma-nav-cart" class="flex flex-col items-center gap-0.5 text-slate-500 font-medium hover:text-orange-600 cursor-pointer relative">
+                  <span class="text-sm">🛍️</span>
+                  <span class="text-[9px]">Basket</span>
+                  <span id="tma-nav-cart-badge" class="absolute -top-1 right-1 bg-orange-500 text-white text-[8px] font-bold px-1 rounded-full">0</span>
+                </button>
+                <button type="button" onclick="switchTmaView('orders')" id="tma-nav-orders" class="flex flex-col items-center gap-0.5 text-slate-500 font-medium hover:text-orange-600 cursor-pointer">
+                  <span class="text-sm">📋</span>
+                  <span class="text-[9px]">Orders</span>
+                </button>
+                <button type="button" onclick="switchTab('orders')" class="flex flex-col items-center gap-0.5 text-slate-500 font-medium hover:text-orange-600 cursor-pointer">
+                  <span class="text-sm">👨‍🍳</span>
+                  <span class="text-[9px]">Kitchen</span>
                 </button>
               </div>
+
             </div>
           </div>
         </div>
+
+        <!-- TMA Branch Switcher Modal Inside Phone Simulator -->
+        <div id="tma-branch-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div class="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl text-xs">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h4 class="font-bold text-slate-900 text-sm">Select Aura Boutique / Branch</h4>
+              <button onclick="closeTmaBranchModal()" class="w-6 h-6 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center font-bold">✕</button>
+            </div>
+            <div id="tma-branches-list" class="space-y-2">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+
 
       </div>
     </section>

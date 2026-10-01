@@ -693,31 +693,404 @@ async function retryTelegramNotification(orderId) {
 
 // ==================== TMA SIMULATOR ====================
 
+let tmaFastCategory = 'all';
+let tmaSearchQuery = '';
+let tmaHasCoupon = false;
+let tmaCurrentView = 'home';
+let tmaOrderType = 'dine_in';
+let tmaTableLocation = 'Table #04 (SBC Store)';
+
+function switchTmaView(viewName) {
+  tmaCurrentView = viewName;
+  ['home', 'cart', 'orders'].forEach((v) => {
+    const el = document.getElementById(`tma-view-${v}`);
+    if (el) el.classList.toggle('hidden', v !== viewName);
+
+    const navBtn = document.getElementById(`tma-nav-${v}`);
+    if (navBtn) {
+      if (v === viewName) {
+        navBtn.className = 'flex flex-col items-center gap-0.5 text-orange-600 font-black cursor-pointer';
+      } else {
+        navBtn.className = 'flex flex-col items-center gap-0.5 text-slate-500 font-medium hover:text-orange-600 cursor-pointer';
+      }
+    }
+  });
+
+  if (viewName === 'cart') renderTmaCart();
+  if (viewName === 'orders') renderTmaOrders();
+}
+
+function setTmaFastCategory(cat) {
+  tmaFastCategory = cat;
+  ['all', 'burger', 'pizza', 'chicken', 'snacks', 'drinks'].forEach((c) => {
+    const btn = document.getElementById(`tma-cat-${c}`);
+    if (btn) {
+      if (c === cat) {
+        btn.className = 'tma-cat-btn px-2.5 py-1.5 rounded-xl bg-orange-500 text-white font-bold whitespace-nowrap shadow-xs';
+      } else {
+        btn.className = 'tma-cat-btn px-2.5 py-1.5 rounded-xl bg-white text-slate-700 font-medium border border-orange-100 whitespace-nowrap hover:bg-orange-50';
+      }
+    }
+  });
+  renderTmaSimulator();
+}
+
+function toggleTmaSearch() {
+  const bar = document.getElementById('tma-search-bar');
+  if (bar) {
+    bar.classList.toggle('hidden');
+    if (!bar.classList.contains('hidden')) {
+      document.getElementById('tma-search-input')?.focus();
+    }
+  }
+}
+
+function onTmaSearch(query) {
+  tmaSearchQuery = (query || '').toLowerCase().trim();
+  renderTmaSimulator();
+}
+
+function claimTmaCoupon() {
+  tmaHasCoupon = true;
+  const btn = document.getElementById('tma-claim-btn');
+  if (btn) {
+    btn.innerText = 'Claimed ✓';
+    btn.classList.add('bg-emerald-100', 'text-emerald-700');
+  }
+  renderTmaCart();
+  alert('🎉 Coupon FIRST20 applied! 20% discount deducted from your basket.');
+}
+
+function setTmaTable(table) {
+  tmaTableLocation = table;
+  const locLabel = document.getElementById('tma-location-label');
+  if (locLabel) locLabel.innerText = table;
+  const locInput = document.getElementById('tma-checkout-location');
+  if (locInput) locInput.value = table;
+}
+
+function setTmaOrderType(type) {
+  tmaOrderType = type;
+  ['dine_in', 'takeaway', 'delivery'].forEach((t) => {
+    const btn = document.getElementById(`tma-opt-${t}`);
+    if (btn) {
+      if (t === type) {
+        btn.className = 'py-1 px-2 rounded-xl bg-orange-500 text-white font-bold text-center';
+      } else {
+        btn.className = 'py-1 px-2 rounded-xl bg-slate-100 text-slate-700 font-medium text-center';
+      }
+    }
+  });
+  renderTmaCart();
+}
+
+function openTmaBranchModal() {
+  const modal = document.getElementById('tma-branch-modal');
+  const container = document.getElementById('tma-branches-list');
+  if (!modal || !container) return;
+
+  container.innerHTML = stores.map((s) => `
+    <div onclick="selectTmaBranch('${s.slug}')" class="p-2.5 rounded-2xl border ${s.slug === currentStore?.slug ? 'bg-orange-50 border-orange-500 font-bold' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'} cursor-pointer flex items-center justify-between gap-3 transition">
+      <div class="flex items-center gap-2.5">
+        <img src="${s.logo}" alt="" class="w-9 h-9 rounded-xl object-cover bg-white">
+        <div>
+          <h5 class="font-extrabold text-xs text-slate-900">${s.name}</h5>
+          <span class="text-[10px] text-slate-400 block">${s.tagline || s.address}</span>
+        </div>
+      </div>
+      ${s.slug === currentStore?.slug ? '<span class="text-xs font-black text-orange-600">Active ✓</span>' : '<span class="text-xs text-slate-400">→</span>'}
+    </div>
+  `).join('');
+
+  modal.classList.remove('hidden');
+}
+
+function closeTmaBranchModal() {
+  document.getElementById('tma-branch-modal')?.classList.add('hidden');
+}
+
+async function selectTmaBranch(slug) {
+  closeTmaBranchModal();
+  await selectStore(slug);
+  setTmaTable(`Table #01 (${currentStore.name})`);
+}
+
 function renderTmaSimulator() {
   const container = document.getElementById('tma-products-list');
   if (!container) return;
 
-  container.innerHTML = currentProducts.slice(0, 4).map((prod) => `
-    <div class="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between gap-2 shadow-xs">
-      <div class="flex items-center gap-2 overflow-hidden">
-        <img src="${prod.image}" alt="${prod.name}" class="w-10 h-10 rounded-lg object-cover flex-shrink-0">
-        <div class="overflow-hidden">
-          <p class="font-bold text-slate-900 truncate text-[11px]">${prod.name}</p>
-          <p class="text-[10px] text-amber-600 font-bold">$${Number(prod.price).toFixed(2)}</p>
-        </div>
+  let filtered = currentProducts;
+
+  // Filter by Fast Food / Drink category
+  if (tmaFastCategory !== 'all') {
+    filtered = filtered.filter((p) => {
+      const name = (p.name || '').toLowerCase();
+      const details = (p.details || '').toLowerCase();
+      const catId = Number(p.category_id);
+
+      if (tmaFastCategory === 'burger') {
+        return catId === 21 || name.includes('burger') || name.includes('zinger');
+      }
+      if (tmaFastCategory === 'pizza') {
+        return catId === 22 || name.includes('pizza');
+      }
+      if (tmaFastCategory === 'chicken') {
+        return catId === 23 || name.includes('chicken');
+      }
+      if (tmaFastCategory === 'snacks') {
+        return catId === 24 || name.includes('fries') || name.includes('croissant') || name.includes('sourdough') || name.includes('pastry');
+      }
+      if (tmaFastCategory === 'drinks') {
+        return catId === 25 || catId === 1 || catId === 2 || name.includes('coffee') || name.includes('latte') || name.includes('tea') || name.includes('brew');
+      }
+      return true;
+    });
+  }
+
+  // Filter by Search Query
+  if (tmaSearchQuery) {
+    filtered = filtered.filter((p) =>
+      p.name.toLowerCase().includes(tmaSearchQuery) ||
+      (p.details && p.details.toLowerCase().includes(tmaSearchQuery))
+    );
+  }
+
+  const countEl = document.getElementById('tma-items-count');
+  if (countEl) countEl.innerText = `${filtered.length} available`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="col-span-2 py-8 text-center text-slate-400 text-xs">
+        No items matching category or search.
       </div>
-      <button onclick="openProductModal(${prod.id})" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-[10px] flex-shrink-0">
-        + Add
-      </button>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map((prod) => `
+    <div class="bg-white p-2 rounded-2xl border border-orange-100/90 shadow-2xs flex flex-col justify-between space-y-2 hover:shadow-xs transition">
+      <div class="relative h-24 rounded-xl overflow-hidden bg-slate-100">
+        <img src="${prod.image}" alt="${prod.name}" class="w-full h-full object-cover">
+        <span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-lg text-[9px] font-black bg-slate-900/80 text-white font-mono">
+          $${Number(prod.price).toFixed(2)}
+        </span>
+      </div>
+      <div>
+        <h5 class="font-extrabold text-slate-900 text-[11px] leading-tight line-clamp-1">${prod.name}</h5>
+        <p class="text-[9.5px] text-slate-400 line-clamp-1 mt-0.5">${prod.details || ''}</p>
+      </div>
+      <div class="pt-1 border-t border-orange-50 flex items-center justify-between">
+        <button onclick="openProductModal(${prod.id})" class="text-[9.5px] text-slate-500 font-semibold hover:text-orange-600">
+          Options
+        </button>
+        <button onclick="addTmaQuickItem(${prod.id})" class="px-2.5 py-1 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg text-[10px] shadow-xs active:scale-95 transition">
+          + Add
+        </button>
+      </div>
     </div>
   `).join('');
+
+  updateTmaBadges();
+}
+
+function addTmaQuickItem(prodId) {
+  const prod = currentProducts.find((p) => p.id === prodId);
+  if (!prod) return;
+
+  const existingIndex = cart.findIndex((it) => it.id === prod.id && (!it.selectedOptions || Object.keys(it.selectedOptions).length === 0));
+  if (existingIndex !== -1) {
+    cart[existingIndex].quantity += 1;
+    cart[existingIndex].subtotal = Number((cart[existingIndex].quantity * cart[existingIndex].price).toFixed(2));
+  } else {
+    cart.push({
+      id: prod.id,
+      code: prod.code,
+      name: prod.name,
+      image: prod.image,
+      price: Number(Number(prod.price).toFixed(2)),
+      quantity: 1,
+      subtotal: Number(Number(prod.price).toFixed(2)),
+      selectedOptions: {}
+    });
+  }
+
+  updateCartUI();
+  updateTmaBadges();
+  renderTmaCart();
+}
+
+function updateTmaBadges() {
+  const count = cart.reduce((sum, it) => sum + it.quantity, 0);
+  const badge = document.getElementById('tma-nav-cart-badge');
+  if (badge) badge.innerText = count;
+  const countBadge = document.getElementById('tma-cart-item-count');
+  if (countBadge) countBadge.innerText = `${count} items`;
+}
+
+function renderTmaCart() {
+  const container = document.getElementById('tma-cart-items-container');
+  if (!container) return;
+
+  updateTmaBadges();
+
+  if (cart.length === 0) {
+    container.innerHTML = `
+      <div class="p-6 bg-white rounded-2xl border border-orange-100 text-center text-slate-400 space-y-1">
+        <span class="text-2xl block">🧺</span>
+        <p class="font-bold text-xs">Your basket is empty</p>
+        <p class="text-[10px]">Tap "+ Add" on items above to start your order!</p>
+      </div>
+    `;
+    document.getElementById('tma-checkout-submit-btn')?.setAttribute('disabled', 'true');
+  } else {
+    document.getElementById('tma-checkout-submit-btn')?.removeAttribute('disabled');
+    container.innerHTML = cart.map((item, idx) => `
+      <div class="p-2.5 bg-white border border-orange-100 rounded-2xl flex items-center justify-between gap-2 shadow-2xs">
+        <div class="flex items-center gap-2 overflow-hidden">
+          <img src="${item.image}" alt="" class="w-9 h-9 rounded-xl object-cover shrink-0">
+          <div class="overflow-hidden">
+            <h5 class="font-bold text-slate-900 text-xs truncate">${item.name}</h5>
+            <span class="text-[10px] text-orange-600 font-mono font-bold">$${item.subtotal.toFixed(2)}</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button onclick="changeCartQty(${idx}, -1); renderTmaCart();" class="w-6 h-6 rounded-lg bg-[#FAF6F0] font-bold text-slate-700 flex items-center justify-center">-</button>
+          <span class="w-5 text-center font-bold text-xs">${item.quantity}</span>
+          <button onclick="changeCartQty(${idx}, 1); renderTmaCart();" class="w-6 h-6 rounded-lg bg-orange-500 font-bold text-white flex items-center justify-center">+</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Cost calculation
+  const subtotal = cart.reduce((sum, it) => sum + it.subtotal, 0);
+  const discount = tmaHasCoupon ? Number((subtotal * 0.2).toFixed(2)) : 0.00;
+  const deliveryFee = tmaOrderType === 'delivery' ? 1.50 : 0.00;
+  const total = Math.max(0, subtotal - discount + deliveryFee);
+
+  document.getElementById('tma-summary-subtotal').innerText = `$${subtotal.toFixed(2)}`;
+  document.getElementById('tma-summary-discount').innerText = `-$${discount.toFixed(2)}`;
+  document.getElementById('tma-summary-delivery').innerText = `$${deliveryFee.toFixed(2)}`;
+  document.getElementById('tma-summary-total').innerText = `$${total.toFixed(2)}`;
+}
+
+async function submitTmaOrder() {
+  if (cart.length === 0) return;
+
+  const btn = document.getElementById('tma-checkout-submit-btn');
+  btn.disabled = true;
+  btn.innerText = 'Dispatching to Kitchen...';
+
+  try {
+    const location = document.getElementById('tma-checkout-location')?.value || tmaTableLocation;
+    const customerName = document.getElementById('tma-full-name')?.value || 'Sophea Kim';
+    const customerTg = document.getElementById('tma-username')?.value || '@sophea_coffee';
+    const tgId = Number(document.getElementById('tma-user-id')?.value || 7812938);
+
+    const subtotal = cart.reduce((sum, it) => sum + it.subtotal, 0);
+    const discount = tmaHasCoupon ? Number((subtotal * 0.2).toFixed(2)) : 0;
+    const deliveryFee = tmaOrderType === 'delivery' ? 1.50 : 0;
+    const grandTotal = Math.max(0, subtotal - discount + deliveryFee);
+
+    const payload = {
+      storeSlug: currentStore.slug,
+      orderType: tmaOrderType,
+      items: cart,
+      subtotal,
+      discount,
+      deliveryFee,
+      grandTotal,
+      couponCode: tmaHasCoupon ? 'FIRST20' : '',
+      idempotencyKey: `idemp-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      customer: {
+        name: customerName,
+        username: customerTg,
+        telegramId: tgId,
+        address: location,
+        note: `Order submitted via Telegram Mini App (${tmaOrderType.toUpperCase()})`
+      }
+    };
+
+    const res = await fetch(`/api/tma/shop/${currentStore.slug}/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+    if (result.status && result.data) {
+      cart = [];
+      updateCartUI();
+      renderTmaCart();
+      await loadOrders();
+      switchTmaView('orders');
+      alert(`🎉 Order ${result.data.referenceNo} placed successfully! Real-time Telegram notification sent to staff.`);
+    } else {
+      alert(`Order error: ${result.message || result.error || 'Failed to place order'}`);
+    }
+  } catch (err) {
+    alert(`Order error: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Send Order to Kitchen ✈️';
+  }
+}
+
+function renderTmaOrders() {
+  const container = document.getElementById('tma-orders-list-container');
+  if (!container) return;
+
+  if (liveOrders.length === 0) {
+    container.innerHTML = `
+      <div class="p-6 bg-white rounded-2xl border border-orange-100 text-center text-slate-400 space-y-1">
+        <span class="text-2xl block">📋</span>
+        <p class="font-bold text-xs">No active orders</p>
+        <p class="text-[10px]">Your completed or in-progress orders will appear here.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = liveOrders.slice(0, 5).map((order) => {
+    const statusMap = {
+      Pending: 'bg-amber-100 text-amber-800',
+      Confirmed: 'bg-blue-100 text-blue-800',
+      Preparing: 'bg-purple-100 text-purple-800',
+      Ready: 'bg-emerald-100 text-emerald-800',
+      Completed: 'bg-slate-100 text-slate-800'
+    };
+
+    return `
+      <div class="bg-white p-3 rounded-2xl border border-orange-100 space-y-2 shadow-2xs">
+        <div class="flex items-center justify-between pb-1.5 border-b border-orange-50">
+          <div>
+            <span class="font-mono font-black text-xs text-slate-900">${order.referenceNo}</span>
+            <span class="text-[10px] text-slate-400 block">${order.store_name}</span>
+          </div>
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-black ${statusMap[order.status] || 'bg-slate-100'}">
+            ${order.status}
+          </span>
+        </div>
+        <div class="text-[10.5px] text-slate-600 space-y-0.5">
+          ${(order.items || []).map((it) => `
+            <div class="flex justify-between">
+              <span>${it.quantity}x ${it.name}</span>
+              <span class="font-mono">$${Number(it.subtotal).toFixed(2)}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="flex items-center justify-between pt-1 border-t border-orange-50 text-[11px] font-bold">
+          <span class="text-slate-500">Total:</span>
+          <span class="text-orange-600 font-mono font-black">$${Number(order.grandTotal).toFixed(2)}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function syncTmaUser() {
   const name = document.getElementById('tma-full-name').value;
   const username = document.getElementById('tma-username').value;
-  const greeting = document.getElementById('tma-user-greeting');
-  if (greeting) greeting.innerText = `Hello, ${name} 👋`;
 
   document.getElementById('order-customer-name').value = name;
   document.getElementById('order-customer-tg').value = username;
