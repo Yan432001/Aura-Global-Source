@@ -3,50 +3,108 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { message } from 'antd';
 import {
-  ShoppingCartOutlined,
-  ReloadOutlined,
-  SearchOutlined,
+  DownOutlined,
+  CloseOutlined,
+  PlusOutlined,
+  MinusOutlined,
   CheckOutlined,
-  SendOutlined,
-  EnvironmentOutlined,
-  PhoneOutlined,
-  StarFilled,
-  ThunderboltFilled,
-  CoffeeOutlined,
-  FireOutlined,
-  TagOutlined,
-  ClockCircleOutlined,
-  CloseOutlined
+  ShopOutlined,
+  EnvironmentOutlined
 } from '@ant-design/icons';
+import { useTelegram } from '../hooks/useTelegram';
+import simpleData from '../../../data/simpleData';
+
+// Theme configuration matched to each shop brand
+const SHOP_THEMES = {
+  'sbc-store': {
+    name: 'Aura Specialty Coffee',
+    bg: '#0C0704',
+    cardBg: '#18100A',
+    cardBorder: 'border-white/10',
+    accent: '#EA580C', // Vibrant Orange matched to image.png
+    accentHover: '#C2410C',
+    accentBtn: 'bg-[#EA580C] hover:bg-[#C2410C] text-white',
+    pillActive: 'bg-[#EA580C] text-white border-2 border-white shadow-md',
+    pillInactive: 'bg-[#1E130C] text-stone-300 border border-white/5',
+    priceText: 'text-amber-400',
+    badgeText: 'text-amber-400'
+  },
+  'aura-lounge': {
+    name: 'Aura Botanical Lounge & Matcha',
+    bg: '#04170E',
+    cardBg: '#092518',
+    cardBorder: 'border-emerald-900/40',
+    accent: '#10B981', // Botanical Matcha Jade
+    accentHover: '#059669',
+    accentBtn: 'bg-[#10B981] hover:bg-[#059669] text-slate-950 font-black',
+    pillActive: 'bg-[#10B981] text-slate-950 border-2 border-white shadow-md font-black',
+    pillInactive: 'bg-[#0E3524] text-emerald-200 border border-emerald-800/30',
+    priceText: 'text-emerald-400',
+    badgeText: 'text-emerald-300'
+  },
+  'aura-bistro': {
+    name: 'Aura French Bistro',
+    bg: '#080C14',
+    cardBg: '#101726',
+    cardBorder: 'border-amber-500/20',
+    accent: '#F59E0B', // Luxury Gold
+    accentHover: '#D97706',
+    accentBtn: 'bg-[#F59E0B] hover:bg-[#D97706] text-slate-950 font-black',
+    pillActive: 'bg-[#F59E0B] text-slate-950 border-2 border-white shadow-md font-black',
+    pillInactive: 'bg-[#182238] text-amber-200 border border-amber-500/10',
+    priceText: 'text-amber-400',
+    badgeText: 'text-amber-300'
+  },
+  'aura-bakery': {
+    name: 'Aura Artisan Bakery',
+    bg: '#18040E',
+    cardBg: '#2A091A',
+    cardBorder: 'border-rose-900/30',
+    accent: '#F43F5E', // French Rose & Berry
+    accentHover: '#E11D48',
+    accentBtn: 'bg-[#F43F5E] hover:bg-[#E11D48] text-white font-black',
+    pillActive: 'bg-[#F43F5E] text-white border-2 border-white shadow-md',
+    pillInactive: 'bg-[#3A0F25] text-rose-200 border border-rose-800/20',
+    priceText: 'text-rose-400',
+    badgeText: 'text-rose-300'
+  }
+};
 
 export default function EMenuPage() {
   const params = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { tg, triggerHaptic } = useTelegram();
 
-  // Extract active store slug from URL or fallback
+  // Extract active store slug
   const currentSlug = useMemo(() => {
     if (params.storeSlug) return params.storeSlug;
     const parts = location.pathname.split('/');
     if (parts[1] === 'shop' && parts[2] && parts[2] !== 'not-found') {
       return parts[2];
     }
-    return 'aura-bakery';
+    return 'sbc-store';
   }, [params.storeSlug, location.pathname]);
 
-  // Tab Navigation: 'menu' | 'tma' | 'kitchen' | 'story' | 'diagnostics'
-  const [activeTab, setActiveTab] = useState('menu');
+  const activeTheme = useMemo(() => {
+    return SHOP_THEMES[currentSlug] || SHOP_THEMES['sbc-store'];
+  }, [currentSlug]);
+
+  // Ensure Telegram WebApp BackButton is hidden
+  useEffect(() => {
+    try {
+      tg?.BackButton?.hide?.();
+    } catch (_) {}
+  }, [tg]);
 
   // Stores & Catalog State
-  const [stores, setStores] = useState([]);
   const [currentStore, setCurrentStore] = useState(null);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Cart Drawer State
+  // Cart State
   const [cart, setCart] = useState(() => {
     try {
       const saved = localStorage.getItem('aura_emenu_cart_v2');
@@ -56,63 +114,33 @@ export default function EMenuPage() {
     }
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [diningMode, setDiningMode] = useState('dine_in'); // 'dine_in' | 'takeaway' | 'delivery'
-  const [customerLocation, setCustomerLocation] = useState('Table #06 (Main Hall)');
-  const [customerName, setCustomerName] = useState('Sophie Laurent');
-  const [customerPhone, setCustomerPhone] = useState('+855 12 345 679');
-  const [customerTg, setCustomerTg] = useState('@sophie_bakery');
+
+  // Table & Dining Context (defaults to "Table #06 • delivery" as shown in screenshot)
+  const [diningMode, setDiningMode] = useState('delivery');
+  const [customerLocation, setCustomerLocation] = useState('Table #06');
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [customerName, setCustomerName] = useState('Telegram Customer');
+  const [customerPhone, setCustomerPhone] = useState('+855 12 345 678');
   const [customerNote, setCustomerNote] = useState('');
   const [hasClaimedCoupon, setHasClaimedCoupon] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
-  // Customization Modal State
+  // Customization Modal (`Opt`)
   const [customizingProduct, setCustomizingProduct] = useState(null);
   const [selectedSize, setSelectedSize] = useState('Regular');
-  const [selectedMilk, setSelectedMilk] = useState('Whole Milk');
-  const [selectedIce, setSelectedIce] = useState('Normal Ice (100%)');
+  const [selectedMilk, setSelectedMilk] = useState('Standard');
+  const [selectedIce, setSelectedIce] = useState('Normal Ice');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [customizeQty, setCustomizeQty] = useState(1);
-
-  // Kitchen Stream State
-  const [liveOrders, setLiveOrders] = useState([]);
-  const [loadingOrders, setLoadingOrders] = useState(false);
-
-  // CMS Brand Story & Inquiries State
-  const [inquiryName, setInquiryName] = useState('');
-  const [inquiryEmail, setInquiryEmail] = useState('');
-  const [inquiryMsg, setInquiryMsg] = useState('');
-  const [inquirySent, setInquirySent] = useState(false);
-
-  // API Diagnostics State
-  const [diagnosticLogs, setDiagnosticLogs] = useState([]);
-  const [testingEndpoint, setTestingEndpoint] = useState(false);
-
-  // Simulated TMA User State
-  const [tmaUserId, setTmaUserId] = useState('9841203');
-  const [tmaCategory, setTmaCategory] = useState('all');
 
   // Persist cart
   useEffect(() => {
     try {
       localStorage.setItem('aura_emenu_cart_v2', JSON.stringify(cart));
-    } catch (e) {
-      console.warn(e);
-    }
+    } catch (_) {}
   }, [cart]);
 
-  // 1. Fetch Stores List
-  const fetchStores = useCallback(async () => {
-    try {
-      const res = await axios.get('/api/tma/stores');
-      if (res.data?.status && Array.isArray(res.data.data)) {
-        setStores(res.data.data);
-      }
-    } catch (err) {
-      console.warn('Error loading stores:', err);
-    }
-  }, []);
-
-  // 2. Fetch Store Details & Products
+  // Fetch Store Details & Products
   const fetchStoreData = useCallback(async (slug) => {
     setLoading(true);
     try {
@@ -121,79 +149,82 @@ export default function EMenuPage() {
         setCurrentStore(res.data.store);
         setCategories(res.data.categories || []);
         setProducts(res.data.products || []);
+      } else {
+        // Fallback to local catalog
+        const foundStore = (simpleData.stores || []).find((s) => s.slug === slug) || simpleData.stores[0];
+        const storeProducts = (simpleData.products || []).filter((p) => Number(p.biller_id) === Number(foundStore?.id || 1));
+        const catIds = new Set(storeProducts.map((p) => p.category_id));
+        const storeCats = (simpleData.categories || []).filter((c) => catIds.has(c.id));
+
+        setCurrentStore(foundStore);
+        setCategories(storeCats);
+        setProducts(storeProducts);
       }
     } catch (err) {
-      console.warn('Error loading store data:', err);
+      console.warn(`Fallback to local catalog for ${slug}:`, err);
+      const foundStore = (simpleData.stores || []).find((s) => s.slug === slug) || simpleData.stores[0];
+      const storeProducts = (simpleData.products || []).filter((p) => Number(p.biller_id) === Number(foundStore?.id || 1));
+      const catIds = new Set(storeProducts.map((p) => p.category_id));
+      const storeCats = (simpleData.categories || []).filter((c) => catIds.has(c.id));
+
+      setCurrentStore(foundStore);
+      setCategories(storeCats);
+      setProducts(storeProducts);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // 3. Fetch Live Orders
-  const fetchLiveOrders = useCallback(async () => {
-    setLoadingOrders(true);
-    try {
-      const res = await axios.get('/api/tma/orders');
-      if (res.data?.status) {
-        setLiveOrders(res.data.orders || res.data.data || []);
-      }
-    } catch (err) {
-      console.warn('Error loading orders:', err);
-    } finally {
-      setLoadingOrders(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchStores();
     fetchStoreData(currentSlug);
-    fetchLiveOrders();
-  }, [fetchStores, fetchStoreData, fetchLiveOrders, currentSlug]);
+  }, [currentSlug, fetchStoreData]);
 
-  // Polling for live orders
+  // Handle Direct Product Deep Link (?item=1 or startapp=item_1)
   useEffect(() => {
-    const timer = setInterval(() => {
-      fetchLiveOrders();
-    }, 12000);
-    return () => clearInterval(timer);
-  }, [fetchLiveOrders]);
+    const paramsQuery = new URLSearchParams(location.search);
+    const targetItemId = paramsQuery.get('item');
+    if (targetItemId && products.length > 0) {
+      const found = products.find((p) => String(p.id) === String(targetItemId));
+      if (found) {
+        setCustomizingProduct(found);
+        setSelectedSize('Regular');
+        setSelectedMilk('Fresh Cow Milk');
+        setSelectedIce('Normal Ice');
+        setCustomizeQty(1);
 
-  // Branch Switcher
-  const handleSwitchStore = (slug) => {
-    navigate(`/shop/${slug}`);
-    setSelectedCategory(null);
-    setSearchQuery('');
-  };
+        // Smooth scroll to product
+        setTimeout(() => {
+          const el = document.getElementById(`product-${targetItemId}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      }
+    }
+  }, [location.search, products]);
 
-  // Filter Products
+  // Filter products by selected category
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchCat = !selectedCategory || p.category_id === selectedCategory;
-      const matchQuery =
-        !searchQuery.trim() ||
-        p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.details?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchCat && matchQuery;
-    });
-  }, [products, selectedCategory, searchQuery]);
+    if (selectedCategory === null) return products;
+    return products.filter((p) => p.category_id === selectedCategory);
+  }, [products, selectedCategory]);
 
   // Open Customization Modal
   const openCustomizer = (product) => {
+    triggerHaptic?.('light');
     setCustomizingProduct(product);
     setSelectedSize('Regular');
-    setSelectedMilk('Whole Milk');
-    setSelectedIce('Normal Ice (100%)');
+    setSelectedMilk('Fresh Cow Milk');
+    setSelectedIce('Normal Ice');
     setSpecialInstructions('');
     setCustomizeQty(1);
   };
 
-  // Add Direct to Cart
+  // Quick Direct Add to Cart
   const handleDirectAddToCart = (product) => {
-    const existingIdx = cart.findIndex(
-      (item) => item.id === product.id && Object.keys(item.options || {}).length === 0
-    );
-
-    if (existingIdx !== -1) {
+    triggerHaptic?.('medium');
+    const existingIdx = cart.findIndex((item) => item.id === product.id && (!item.options || Object.keys(item.options).length === 0));
+    if (existingIdx >= 0) {
       const updated = [...cart];
       updated[existingIdx].quantity += 1;
       updated[existingIdx].subtotal = Number(
@@ -215,14 +246,15 @@ export default function EMenuPage() {
         }
       ]);
     }
-    message.success({ content: `Added ${product.name} to basket!`, duration: 1.5 });
+    message.success({ content: `Added ${product.name}!`, duration: 1 });
   };
 
   // Add Customized to Cart
   const handleAddCustomizedToCart = () => {
     if (!customizingProduct) return;
+    triggerHaptic?.('success');
     let priceAdj = 0;
-    if (selectedSize === 'Large (+ $1.00)') priceAdj += 1.0;
+    if (selectedSize.includes('+$1') || selectedSize.includes('+$0.75')) priceAdj += 0.75;
     if (selectedMilk.includes('+$0.60')) priceAdj += 0.6;
 
     const unitPrice = Number((Number(customizingProduct.price) + priceAdj).toFixed(2));
@@ -250,11 +282,12 @@ export default function EMenuPage() {
     ]);
 
     setCustomizingProduct(null);
-    message.success(`Added ${customizeQty}x ${customizingProduct.name} to basket!`);
+    message.success(`Added ${customizeQty}x ${customizingProduct.name}!`);
   };
 
-  // Cart Qty Modifiers
+  // Cart Quantity Modifiers
   const handleUpdateCartQty = (idx, delta) => {
+    triggerHaptic?.('light');
     const updated = [...cart];
     updated[idx].quantity += delta;
     if (updated[idx].quantity <= 0) {
@@ -283,10 +316,11 @@ export default function EMenuPage() {
   const cartGrandTotal = Math.max(0, cartSubtotal - cartDiscount + deliveryFee).toFixed(2);
   const totalItemCount = cart.reduce((sum, it) => sum + it.quantity, 0);
 
-  // Submit Order to Kitchen & Telegram Bot
+  // Submit Order to Kitchen & Telegram
   const handleConfirmOrder = async () => {
     if (cart.length === 0 || isSubmittingOrder) return;
     setIsSubmittingOrder(true);
+    triggerHaptic?.('heavy');
 
     const idempotencyKey = `ord_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 
@@ -299,12 +333,12 @@ export default function EMenuPage() {
       deliveryFee,
       grandTotal: parseFloat(cartGrandTotal),
       customer: {
-        name: customerName || 'Sophie Laurent',
-        username: customerTg || '@sophie_bakery',
-        phone: customerPhone || '+855 12 345 679',
-        address: customerLocation || 'Table #06',
-        note: customerNote || `E-Menu Order (${diningMode.toUpperCase()})`,
-        telegramId: Number(tmaUserId) || 9841203
+        name: customerName || 'Telegram Guest',
+        username: tg?.initDataUnsafe?.user?.username || '@telegram_user',
+        phone: customerPhone || '+855 12 345 678',
+        address: `${customerLocation} (${diningMode.toUpperCase()})`,
+        note: customerNote || `Telegram Mini App Order`,
+        telegramId: tg?.initDataUnsafe?.user?.id || 9841203
       },
       items: cart.map((it) => ({
         id: it.id,
@@ -323,9 +357,12 @@ export default function EMenuPage() {
       if (res.data?.status && res.data.data) {
         setCart([]);
         setIsCartOpen(false);
-        fetchLiveOrders();
         message.success(`Order placed! Ref: ${res.data.data.referenceNo}`);
-        setActiveTab('kitchen');
+        tg?.showPopup?.({
+          title: 'Order Confirmed! 🎉',
+          message: `Your order #${res.data.data.referenceNo} has been sent to the kitchen for ${currentStore?.name}.`,
+          buttons: [{ type: 'ok' }]
+        });
       } else {
         message.error(`Order failed: ${res.data?.message || 'Server error'}`);
       }
@@ -336,1045 +373,598 @@ export default function EMenuPage() {
     }
   };
 
-  // Status Stepper in Kitchen Stream
-  const handleUpdateOrderStatus = async (orderId, newStatus) => {
-    try {
-      const res = await axios.post(`/api/tma/orders/${orderId}/status`, { status: newStatus });
-      if (res.data?.status) {
-        message.success(`Status updated: ${newStatus}`);
-        fetchLiveOrders();
-      }
-    } catch (err) {
-      message.error(err.response?.data?.error || 'Failed to update order');
-    }
-  };
-
-  // Run API Diagnostics Test
-  const runApiTest = async (name, url, method = 'GET') => {
-    setTestingEndpoint(true);
-    const start = performance.now();
-    try {
-      const res = await axios({ method, url });
-      const duration = Math.round(performance.now() - start);
-      setDiagnosticLogs((prev) => [
-        {
-          id: Date.now(),
-          name,
-          url,
-          status: res.status,
-          duration,
-          success: true,
-          data: res.data
-        },
-        ...prev
-      ]);
-      message.success(`${name}: 200 OK (${duration}ms)`);
-    } catch (err) {
-      const duration = Math.round(performance.now() - start);
-      setDiagnosticLogs((prev) => [
-        {
-          id: Date.now(),
-          name,
-          url,
-          status: err.response?.status || 500,
-          duration,
-          success: false,
-          error: err.message
-        },
-        ...prev
-      ]);
-      message.error(`${name}: Failed`);
-    } finally {
-      setTestingEndpoint(false);
-    }
-  };
-
-  // Submit Inquiry
-  const handleSendInquiry = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post('/api/cms/inquiries', {
-        name: inquiryName,
-        email: inquiryEmail,
-        message: inquiryMsg
-      });
-      setInquirySent(true);
-      message.success('Inquiry submitted to Aura Hospitality management!');
-      setInquiryName('');
-      setInquiryEmail('');
-      setInquiryMsg('');
-      setTimeout(() => setInquirySent(false), 5000);
-    } catch (err) {
-      message.error('Failed to submit inquiry');
-    }
-  };
+  const storeOptions = [
+    { slug: 'sbc-store', name: 'Aura Specialty Coffee', emoji: '☕' },
+    { slug: 'aura-lounge', name: 'Botanical Lounge & Matcha', emoji: '🍵' },
+    { slug: 'aura-bistro', name: 'Aura French Bistro', emoji: '🍽️' },
+    { slug: 'aura-bakery', name: 'Aura Artisan Bakery', emoji: '🥐' }
+  ];
 
   return (
-    <div className="w-full min-h-screen bg-[#FAF7F2] text-stone-900 pb-24 font-sans selection:bg-amber-600 selection:text-white">
-      
+    <div
+      style={{ backgroundColor: activeTheme.bg }}
+      className="w-full max-w-[480px] min-h-screen text-white font-sans flex flex-col relative pb-28 shadow-2xl selection:bg-orange-500 selection:text-white"
+    >
       {/* ======================================================== */}
-      {/* 1. STORE HERO BANNER (Cinematic & High-End)              */}
+      {/* 1. TOP HEADER (EXACTLY MATCHING IMAGE.PNG)              */}
       {/* ======================================================== */}
-      <section className="relative w-full bg-stone-950 text-white overflow-hidden shadow-xl">
-        {/* Ambient Hero Background with subtle dark overlay */}
+      <header
+        style={{ backgroundColor: activeTheme.bg }}
+        className="px-4 py-3 flex items-center justify-between sticky top-0 z-30 border-b border-white/5 backdrop-blur-md"
+      >
+        {/* Left: Avatar + Title + "Table #06 • delivery" */}
         <div
-          className="absolute inset-0 bg-cover bg-center transition-all duration-700 opacity-40 scale-105"
-          style={{
-            backgroundImage: `url(${
-              currentStore?.banner ||
-              'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1400&q=80'
-            })`
+          onClick={() => setIsLocationModalOpen(true)}
+          className="flex items-center gap-3 cursor-pointer select-none active:opacity-80 transition"
+        >
+          <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-white/10 shrink-0 bg-stone-900 shadow-md">
+            <img
+              src={
+                currentStore?.logo ||
+                'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=150&q=80'
+              }
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div>
+            <h1 className="font-extrabold text-sm sm:text-base text-white tracking-tight leading-tight flex items-center gap-1">
+              <span>{currentStore?.name || activeTheme.name}</span>
+            </h1>
+            <p className={`text-xs font-semibold ${activeTheme.badgeText} flex items-center gap-1.5 pt-0.5`}>
+              <span>{customerLocation} • {diningMode}</span>
+              <DownOutlined style={{ fontSize: 9 }} />
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Orange Bag Pill Badge: 🛍️ 0 */}
+        <button
+          type="button"
+          onClick={() => setIsCartOpen(true)}
+          className="px-3.5 py-1.5 rounded-full bg-[#EA580C] hover:bg-[#C2410C] text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/30 active:scale-95 transition cursor-pointer"
+        >
+          <span className="text-sm">🛍️</span>
+          <span className="font-mono">{totalItemCount}</span>
+        </button>
+      </header>
+
+      {/* ======================================================== */}
+      {/* 2. CATEGORY HORIZONTAL SCROLL BAR (MATCHING IMAGE.PNG)  */}
+      {/* ======================================================== */}
+      <div
+        style={{ backgroundColor: activeTheme.bg }}
+        className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-none sticky top-[57px] z-20 border-b border-white/5 backdrop-blur-md"
+      >
+        {/* All Items Pill */}
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic?.('light');
+            setSelectedCategory(null);
           }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/70 to-transparent" />
+          className={`px-4 py-1.5 rounded-2xl text-xs font-bold transition whitespace-nowrap cursor-pointer active:scale-95 shrink-0 ${
+            selectedCategory === null
+              ? activeTheme.pillActive
+              : activeTheme.pillInactive
+          }`}
+        >
+          All ({products.length})
+        </button>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8 sm:pt-14 sm:pb-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            
-            {/* Left: Store Branding, Avatar & Tagline */}
-            <div className="flex items-start sm:items-center gap-4 sm:gap-6">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl overflow-hidden ring-4 ring-white/20 shadow-2xl bg-stone-800 shrink-0">
-                <img
-                  src={
-                    currentStore?.logo ||
-                    'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=300&q=80'
-                  }
-                  alt={currentStore?.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Open Now</span>
-                  </span>
-                  <span className="text-xs text-stone-300 font-medium">
-                    {currentStore?.operating_hours || '7:00 AM - 7:00 PM'}
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-xs text-amber-300 font-bold bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-400/30">
-                    <StarFilled className="text-amber-400" />
-                    <span>{currentStore?.rating || '4.9'}</span>
-                    <span className="text-stone-300 text-[10px] font-normal">(480+ Reviews)</span>
-                  </span>
-                </div>
-
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
-                  {currentStore?.name || 'Aura Artisan Bakery'}
-                </h1>
-
-                <p className="text-xs sm:text-sm text-stone-200 max-w-2xl font-light leading-relaxed">
-                  {currentStore?.description ||
-                    'Artisanal bakery crafting slow-fermented sourdough, flaky French butter croissants, and seasonal pastries.'}
-                </p>
-
-                <div className="flex flex-wrap items-center gap-4 text-xs text-stone-300 pt-1">
-                  <span className="flex items-center gap-1.5">
-                    <EnvironmentOutlined className="text-amber-400" />
-                    <span>{currentStore?.address || 'Street 240, Daun Penh, Phnom Penh'}</span>
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <PhoneOutlined className="text-amber-400" />
-                    <span>{currentStore?.phone || '+855 12 345 679'}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-amber-300 font-semibold bg-white/10 px-2.5 py-0.5 rounded-lg backdrop-blur-xs">
-                    <SendOutlined />
-                    <span>Telegram Order Dispatch Active</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Quick Action Basket Summary Button */}
-            <div className="shrink-0 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setIsCartOpen(true)}
-                className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-[#FF5722] to-amber-500 hover:from-[#E64A19] hover:to-amber-600 text-white font-extrabold text-xs flex items-center justify-center gap-3 shadow-lg shadow-orange-500/25 active:scale-95 transition-all cursor-pointer border border-white/20"
-              >
-                <ShoppingCartOutlined style={{ fontSize: 18 }} />
-                <span>View Basket</span>
-                <span className="bg-black/25 px-2 py-0.5 rounded-lg text-[11px] font-mono">
-                  {totalItemCount} items
-                </span>
-                <span className="bg-white/20 px-2.5 py-0.5 rounded-lg text-[12px] font-mono font-black">
-                  ${cartGrandTotal}
-                </span>
-              </button>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Suite Tab Switcher Toolbar */}
-        <div className="bg-stone-900/90 border-t border-stone-800/80 backdrop-blur-md">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto py-2.5 scrollbar-none">
-              {[
-                { id: 'menu', label: '🛍️ Store Catalog', count: products.length },
-                { id: 'tma', label: '📱 Telegram Mini App', count: null },
-                { id: 'kitchen', label: '👨‍🍳 Kitchen Station', count: liveOrders.length },
-                { id: 'story', label: '✨ Heritage & Story', count: null },
-                { id: 'diagnostics', label: '⚡ API Diagnostics', count: null }
-              ].map((tab) => {
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
-                      isActive
-                        ? 'bg-[#FF5722] text-white shadow-md shadow-orange-500/30'
-                        : 'text-stone-300 hover:text-white hover:bg-stone-800/80'
-                    }`}
-                  >
-                    <span>{tab.label}</span>
-                    {tab.count !== null && (
-                      <span
-                        className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                          isActive ? 'bg-white text-[#FF5722]' : 'bg-stone-800 text-stone-300'
-                        }`}
-                      >
-                        {tab.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
+        {/* Category Pills */}
+        {categories.map((cat) => {
+          const isSelected = selectedCategory === cat.id;
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => {
+                triggerHaptic?.('light');
+                setSelectedCategory(cat.id);
+              }}
+              className={`px-4 py-1.5 rounded-2xl text-xs font-bold transition whitespace-nowrap cursor-pointer active:scale-95 shrink-0 ${
+                isSelected
+                  ? activeTheme.pillActive
+                  : activeTheme.pillInactive
+              }`}
+            >
+              {cat.name}
+            </button>
+          );
+        })}
+      </div>
 
       {/* ======================================================== */}
-      {/* 2. MAIN CONTAINER BY ACTIVE TAB                           */}
+      {/* 3. 2-COLUMN PRODUCT GRID (EXACTLY MATCHING IMAGE.PNG)    */}
       {/* ======================================================== */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-
-        {/* -------------------------------------------------------- */}
-        {/* TAB 1: STORE CATALOG (STORE MENU)                        */}
-        {/* -------------------------------------------------------- */}
-        {activeTab === 'menu' && (
-          <div className="space-y-6">
-            
-            {/* Category Filter Pills & Search Bar */}
-            <div className="bg-white p-4 rounded-3xl border border-stone-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-              
-              {/* Category Pills */}
-              <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategory(null)}
-                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                    selectedCategory === null
-                      ? 'bg-[#FF5722] text-white shadow-sm'
-                      : 'bg-stone-100 text-stone-700 hover:bg-stone-200/70'
-                  }`}
-                >
-                  All Items ({products.length})
-                </button>
-                {categories.map((cat) => {
-                  const isSelected = selectedCategory === cat.id;
-                  const count = products.filter((p) => p.category_id === cat.id).length;
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setSelectedCategory(cat.id)}
-                      className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#FF5722] text-white shadow-sm'
-                          : 'bg-stone-100 text-stone-700 hover:bg-stone-200/70'
-                      }`}
-                    >
-                      <span>{cat.name}</span>
-                      <span className="ml-1.5 opacity-60 text-[10px]">({count})</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Instant Search Bar */}
-              <div className="relative w-full md:w-72 shrink-0">
-                <SearchOutlined className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search pastries, sourdough, espresso..."
-                  className="w-full bg-stone-50 border border-stone-200 rounded-2xl pl-9 pr-3.5 py-2 text-xs text-stone-900 focus:outline-none focus:border-[#FF5722] focus:bg-white transition-all"
-                />
-              </div>
-
-            </div>
-
-            {/* Products Grid */}
-            {loading ? (
-              <div className="py-24 text-center text-stone-400 space-y-3">
-                <div className="animate-spin text-3xl text-[#FF5722]">☕</div>
-                <p className="text-sm font-semibold">Loading artisan catalog...</p>
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="py-20 text-center bg-white rounded-3xl border border-stone-200 p-8 space-y-2 text-stone-400">
-                <p className="text-sm font-bold text-stone-700">No items match your criteria</p>
-                <p className="text-xs">Try selecting another category or clearing your search query.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredProducts.map((prod) => (
-                  <div
-                    key={prod.id}
-                    className="bg-white rounded-3xl border border-stone-200/80 overflow-hidden shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group"
-                  >
-                    <div>
-                      {/* Product Image with Price Badge */}
-                      <div className="relative h-48 w-full bg-stone-100 overflow-hidden">
-                        <img
-                          src={prod.image}
-                          alt={prod.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute top-3 right-3 px-3 py-1 rounded-xl bg-stone-950/85 backdrop-blur-md text-amber-300 font-mono font-black text-xs shadow-md">
-                          ${Number(prod.price).toFixed(2)}
-                        </div>
-                        <div className="absolute bottom-2.5 left-3 px-2.5 py-0.5 rounded-lg bg-black/50 backdrop-blur-xs text-white text-[10px] font-bold">
-                          {prod.category_name || currentStore?.name?.split(' ')[1] || 'Artisan'}
-                        </div>
-                      </div>
-
-                      {/* Product Details */}
-                      <div className="p-5 space-y-2">
-                        <h3 className="font-extrabold text-stone-900 text-sm sm:text-base leading-snug group-hover:text-[#FF5722] transition-colors">
-                          {prod.name}
-                        </h3>
-                        <p className="text-stone-500 text-xs line-clamp-2 leading-relaxed">
-                          {prod.details || 'Handmade fresh daily using authentic artisanal ingredients.'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="px-5 pb-5 pt-2 border-t border-stone-100 flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openCustomizer(prod)}
-                        className="px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold transition-all cursor-pointer"
-                      >
-                        Customize
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDirectAddToCart(prod)}
-                        className="px-4 py-2 rounded-xl bg-[#FF5722] hover:bg-[#E64A19] text-white text-xs font-black shadow-xs active:scale-95 transition-all cursor-pointer"
-                      >
-                        + Add to Basket
-                      </button>
-                    </div>
-
-                  </div>
-                ))}
-              </div>
-            )}
-
+      <main className="px-3 py-3 flex-1">
+        {loading ? (
+          <div className="py-24 text-center space-y-3">
+            <div className="animate-spin text-3xl">☕</div>
+            <p className="text-xs text-stone-400 font-semibold">Loading menu...</p>
           </div>
-        )}
-
-        {/* -------------------------------------------------------- */}
-        {/* TAB 2: TELEGRAM MINI APP (TMA) SIMULATOR                 */}
-        {/* -------------------------------------------------------- */}
-        {activeTab === 'tma' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            {/* Left Column: Telegram Integration Details */}
-            <div className="lg:col-span-5 space-y-6">
-              <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-4">
-                <div className="flex items-center gap-2 text-[#FF5722] font-black text-xs uppercase tracking-wider">
-                  <ThunderboltFilled />
-                  <span>Real-time Telegram Mini App Simulator</span>
-                </div>
-
-                <h3 className="text-xl font-extrabold text-stone-900 leading-tight">
-                  Seamless Ordering Inside Telegram
-                </h3>
-
-                <p className="text-xs text-stone-600 leading-relaxed">
-                  Guests open the menu directly from their Telegram chat by clicking <code>/start</code> or following deep links like <code>https://t.me/aura_emenu_order_bot/menu?startapp=shop_{currentSlug}</code>. Orders dispatched here broadcast directly to the kitchen channel.
-                </p>
-
-                {/* Simulated Credentials Box */}
-                <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200/80 space-y-3">
-                  <span className="text-[11px] font-black text-stone-800 uppercase tracking-wider block">
-                    Simulated Telegram Customer Context
-                  </span>
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <label className="text-[10px] font-bold text-stone-500 uppercase">Telegram ID</label>
-                      <input
-                        type="text"
-                        value={tmaUserId}
-                        onChange={(e) => setTmaUserId(e.target.value)}
-                        className="w-full mt-1 px-3 py-1.5 bg-white border border-stone-200 rounded-xl font-mono text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-stone-500 uppercase">Telegram Handle</label>
-                      <input
-                        type="text"
-                        value={customerTg}
-                        onChange={(e) => setCustomerTg(e.target.value)}
-                        className="w-full mt-1 px-3 py-1.5 bg-white border border-stone-200 rounded-xl font-mono text-xs"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-[10px] font-bold text-stone-500 uppercase">Full Customer Name</label>
-                      <input
-                        type="text"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        className="w-full mt-1 px-3 py-1.5 bg-white border border-stone-200 rounded-xl text-xs"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bot Commands */}
-                <div className="space-y-2 text-xs">
-                  <span className="font-bold text-stone-800">Supported Bot Commands:</span>
-                  <div className="space-y-1.5 font-mono text-[11px]">
-                    <div className="flex justify-between bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">
-                      <span className="text-[#FF5722] font-bold">/start [store]</span>
-                      <span className="text-stone-500">Launches store TMA</span>
-                    </div>
-                    <div className="flex justify-between bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">
-                      <span className="text-[#FF5722] font-bold">/shops</span>
-                      <span className="text-stone-500">List all branches</span>
-                    </div>
-                    <div className="flex justify-between bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">
-                      <span className="text-[#FF5722] font-bold">/orders</span>
-                      <span className="text-stone-500">Live order status</span>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* Right Column: Realistic Smartphone Simulator */}
-            <div className="lg:col-span-7 flex justify-center">
-              <div className="w-full max-w-[390px] bg-stone-900 rounded-[50px] p-3.5 shadow-2xl border-4 border-stone-700">
-                <div className="relative bg-[#FAF7F2] rounded-[42px] overflow-hidden flex flex-col h-[740px] text-stone-900">
-                  
-                  {/* TMA Header */}
-                  <div className="bg-stone-900 text-white px-5 py-3 flex items-center justify-between text-xs select-none shrink-0 z-30">
-                    <span className="text-stone-400">Close</span>
-                    <div className="text-center">
-                      <div className="font-black text-xs truncate max-w-[180px]">
-                        {currentStore?.name || 'Aura Artisan Bakery'}
-                      </div>
-                      <div className="text-[9px] text-amber-400">
-                        Telegram Mini App • @aura_emenu_order_bot
-                      </div>
-                    </div>
-                    <span className="text-stone-400">•••</span>
-                  </div>
-
-                  {/* Delivery / Table Bar */}
-                  <div className="bg-white px-4 py-2 flex items-center justify-between border-b border-stone-200 text-xs shrink-0">
-                    <div>
-                      <span className="text-[9px] font-bold text-stone-400 block uppercase">Fulfillment</span>
-                      <span className="font-bold text-stone-800 text-[11px]">
-                        {customerLocation}
-                      </span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-lg bg-orange-100 text-[#FF5722] text-[10px] font-bold">
-                      {currentSlug}
-                    </span>
-                  </div>
-
-                  {/* Phone Inner Scrollable Content */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
-                    
-                    {/* Voucher Banner */}
-                    <div className="rounded-2xl bg-gradient-to-r from-amber-500 to-[#FF5722] text-white p-3.5 shadow-sm flex items-center justify-between">
-                      <div>
-                        <span className="px-2 py-0.5 rounded-full bg-white/20 text-[9px] font-black uppercase">
-                          VIP 20% DISCOUNT
-                        </span>
-                        <h4 className="font-black text-xs mt-0.5">Code: FIRST20</h4>
-                        <p className="text-[10px] text-amber-100">Enjoy 20% off all handcrafted items</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setHasClaimedCoupon(true);
-                          message.success('20% coupon applied!');
-                        }}
-                        className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition ${
-                          hasClaimedCoupon
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-white text-orange-600 hover:bg-orange-50'
-                        }`}
-                      >
-                        {hasClaimedCoupon ? 'Claimed ✓' : 'Claim'}
-                      </button>
-                    </div>
-
-                    {/* Products Grid in Phone */}
-                    <div className="space-y-2">
-                      <span className="font-extrabold text-stone-800 text-xs block">
-                        Featured Items ({products.length})
-                      </span>
-                      <div className="grid grid-cols-2 gap-2.5">
-                        {products.map((p) => (
-                          <div
-                            key={p.id}
-                            className="bg-white p-2.5 rounded-2xl border border-stone-200 shadow-2xs flex flex-col justify-between space-y-2"
-                          >
-                            <div className="relative h-24 rounded-xl overflow-hidden bg-stone-100">
-                              <img src={p.image} alt="" className="w-full h-full object-cover" />
-                              <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-lg text-[9px] font-black bg-stone-950/80 text-white font-mono">
-                                ${Number(p.price).toFixed(2)}
-                              </span>
-                            </div>
-                            <div>
-                              <h5 className="font-bold text-stone-900 text-[11px] truncate">
-                                {p.name}
-                              </h5>
-                              <p className="text-[10px] text-stone-400 line-clamp-1">
-                                {p.details || ''}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleDirectAddToCart(p)}
-                              className="w-full py-1 bg-[#FF5722] hover:bg-[#E64A19] text-white font-bold rounded-lg text-[10px] active:scale-95 transition cursor-pointer"
-                            >
-                              + Add
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                  </div>
-
-                  {/* Phone Bottom Cart Bar */}
-                  <div className="p-3.5 bg-white border-t border-stone-200 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setIsCartOpen(true)}
-                      className="w-full py-2.5 px-4 bg-[#FF5722] hover:bg-[#E64A19] text-white font-extrabold rounded-2xl flex items-center justify-between text-xs shadow-md transition cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span>🛍️ View Basket</span>
-                        <span className="bg-white/20 px-1.5 py-0.5 rounded-lg text-[10px]">
-                          {totalItemCount}
-                        </span>
-                      </span>
-                      <span className="font-mono">${cartGrandTotal}</span>
-                    </button>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-
+        ) : filteredProducts.length === 0 ? (
+          <div className="py-20 text-center text-stone-400 text-xs space-y-2">
+            <p className="font-bold text-stone-300">No items found</p>
+            <p>Select another category above.</p>
           </div>
-        )}
-
-        {/* -------------------------------------------------------- */}
-        {/* TAB 3: KITCHEN STATION & ORDERS STREAM                   */}
-        {/* -------------------------------------------------------- */}
-        {activeTab === 'kitchen' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-stone-200 shadow-xs">
-              <div>
-                <h3 className="text-xl font-extrabold text-stone-900">
-                  👨‍🍳 Kitchen Station &amp; Real-time Orders Feed
-                </h3>
-                <p className="text-xs text-stone-500 mt-1">
-                  Track orders through lifecycle (Pending → Confirmed → Preparing → Ready → Completed) &amp; Telegram dispatch status.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={fetchLiveOrders}
-                className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold transition flex items-center gap-2 cursor-pointer self-start sm:self-auto"
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {filteredProducts.map((prod) => (
+              <div
+                key={prod.id}
+                id={`product-${prod.id}`}
+                style={{ backgroundColor: activeTheme.cardBg }}
+                className={`rounded-2xl border ${activeTheme.cardBorder} p-2.5 flex flex-col justify-between space-y-2.5 transition shadow-xs`}
               >
-                <ReloadOutlined spin={loadingOrders} />
-                <span>Refresh Stream</span>
-              </button>
-            </div>
+                {/* Product Image with Price Badge */}
+                <div className="relative h-28 w-full rounded-xl overflow-hidden bg-black/40">
+                  <img
+                    src={prod.image}
+                    alt={prod.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  {/* Floating Price Tag Badge (Bottom Right) */}
+                  <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-md bg-black/90 backdrop-blur-xs font-mono font-black text-amber-400 text-[11px] shadow">
+                    ${Number(prod.price).toFixed(2)}
+                  </div>
+                </div>
 
-            {liveOrders.length === 0 ? (
-              <div className="p-20 text-center bg-white rounded-3xl border border-stone-200 text-stone-400 text-xs space-y-2">
-                <span className="text-3xl block">📋</span>
-                <p className="font-bold text-stone-700">No active kitchen orders</p>
-                <p>Orders submitted from the Store Menu or Telegram app appear here immediately.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {liveOrders.map((ord) => {
-                  const statusColors = {
-                    Pending: 'bg-amber-100 text-amber-800 border-amber-300',
-                    Confirmed: 'bg-blue-100 text-blue-800 border-blue-300',
-                    Preparing: 'bg-purple-100 text-purple-800 border-purple-300',
-                    Ready: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-                    Completed: 'bg-stone-100 text-stone-800 border-stone-300'
-                  };
-
-                  const nextStatusMap = {
-                    Pending: 'Confirmed',
-                    Confirmed: 'Preparing',
-                    Preparing: 'Ready',
-                    Ready: 'Completed'
-                  };
-                  const nextStatus = nextStatusMap[ord.status];
-
-                  return (
-                    <div
-                      key={ord.id || ord.referenceNo}
-                      className="bg-white p-5 rounded-3xl border border-stone-200 shadow-xs space-y-4 text-xs flex flex-col justify-between"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between pb-3 border-b border-stone-100">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-black text-stone-900 text-sm">
-                              {ord.referenceNo}
-                            </span>
-                            <span
-                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
-                                statusColors[ord.status] || 'bg-stone-100 text-stone-700'
-                              }`}
-                            >
-                              {ord.status}
-                            </span>
-                          </div>
-                          <span className="text-xs text-stone-400">
-                            {ord.created_at ? new Date(ord.created_at).toLocaleTimeString() : 'Just now'}
-                          </span>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold uppercase text-stone-400">Customer &amp; Table</span>
-                          <p className="font-bold text-stone-800">{ord.customer?.name || 'Guest'}</p>
-                          <p className="text-stone-500 font-mono text-[11px]">{ord.customer?.username || '@guest'}</p>
-                          <p className="text-stone-600 font-medium">📍 {ord.customer?.address || 'Dine-In'}</p>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold uppercase text-stone-400">Order Items</span>
-                          <div className="space-y-1 bg-stone-50 p-2.5 rounded-2xl border border-stone-100">
-                            {(ord.items || []).map((it, idx) => (
-                              <div key={idx} className="flex justify-between text-xs py-0.5">
-                                <span>{it.quantity}x {it.name}</span>
-                                <span className="font-mono font-bold">
-                                  ${Number(it.subtotal || it.price * it.quantity).toFixed(2)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
-                        <span className="font-black text-stone-900 text-sm font-mono">
-                          Total: ${Number(ord.grandTotal || ord.totalAmount || 0).toFixed(2)}
-                        </span>
-                        {nextStatus ? (
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateOrderStatus(ord.id, nextStatus)}
-                            className="px-3.5 py-1.5 bg-stone-900 hover:bg-stone-800 text-white font-bold rounded-xl text-xs active:scale-95 transition cursor-pointer"
-                          >
-                            Mark as {nextStatus} →
-                          </button>
-                        ) : (
-                          <span className="text-emerald-600 font-bold text-xs">✓ Order Completed</span>
-                        )}
-                      </div>
-
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* -------------------------------------------------------- */}
-        {/* TAB 4: HERITAGE & BRAND STORY                            */}
-        {/* -------------------------------------------------------- */}
-        {activeTab === 'story' && (
-          <div className="space-y-8">
-            <div className="relative rounded-3xl overflow-hidden bg-stone-950 text-white p-8 sm:p-12 shadow-xl min-h-[300px] flex items-center">
-              <div className="relative z-10 max-w-2xl space-y-3">
-                <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  ✨ ARTISAN HERITAGE
-                </span>
-                <h2 className="text-2xl sm:text-4xl font-extrabold leading-tight">
-                  Slow Fermentation, French Butter &amp; Highland Roasts
-                </h2>
-                <p className="text-xs sm:text-sm text-stone-300 leading-relaxed">
-                  Every loaf of sourdough undergoes a 72-hour cold fermentation process. Our viennoiserie is rolled with pure Normandy butter, delivering crisp golden layers with an airy honeycomb crumb.
-                </p>
-              </div>
-            </div>
-
-            {/* Concierge Inquiry Form */}
-            <div className="bg-white p-8 rounded-3xl border border-stone-200 shadow-xs max-w-xl mx-auto space-y-4">
-              <h3 className="text-lg font-extrabold text-stone-900 text-center">
-                Private Orders &amp; Event Catering
-              </h3>
-              <p className="text-xs text-stone-500 text-center">
-                Inquire about custom sourdough bread baskets, pastry catering, or specialty coffee popups.
-              </p>
-              <form onSubmit={handleSendInquiry} className="space-y-3 text-xs">
-                <input
-                  type="text"
-                  required
-                  value={inquiryName}
-                  onChange={(e) => setInquiryName(e.target.value)}
-                  placeholder="Your Full Name"
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-stone-900 focus:outline-none focus:border-[#FF5722]"
-                />
-                <input
-                  type="email"
-                  required
-                  value={inquiryEmail}
-                  onChange={(e) => setInquiryEmail(e.target.value)}
-                  placeholder="Email Address"
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-stone-900 focus:outline-none focus:border-[#FF5722]"
-                />
-                <textarea
-                  required
-                  rows={3}
-                  value={inquiryMsg}
-                  onChange={(e) => setInquiryMsg(e.target.value)}
-                  placeholder="Tell us about your event, date, or bakery requirements..."
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2 text-stone-900 focus:outline-none focus:border-[#FF5722]"
-                />
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-[#FF5722] hover:bg-[#E64A19] text-white font-extrabold rounded-xl text-xs shadow-md transition cursor-pointer"
-                >
-                  Submit Inquiry
-                </button>
-                {inquirySent && (
-                  <p className="text-center font-bold text-emerald-600 text-xs">
-                    ✓ Your inquiry was received. We will respond shortly!
+                {/* Title & 1-Line Description */}
+                <div className="space-y-0.5">
+                  <h3 className="font-bold text-white text-xs leading-snug line-clamp-1">
+                    {prod.name}
+                  </h3>
+                  <p className="text-[11px] text-stone-400 line-clamp-1 leading-normal">
+                    {prod.details || 'Handcrafted fresh daily.'}
                   </p>
-                )}
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* -------------------------------------------------------- */}
-        {/* TAB 5: API DIAGNOSTICS                                   */}
-        {/* -------------------------------------------------------- */}
-        {activeTab === 'diagnostics' && (
-          <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-4 text-xs">
-            <div>
-              <h3 className="text-xl font-extrabold text-stone-900">
-                ⚡ API Diagnostics &amp; Health Harness
-              </h3>
-              <p className="text-stone-500">Live endpoint inspection and latency testing.</p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {[
-                { name: 'System Health', url: '/api/health' },
-                { name: 'Stores List', url: '/api/tma/stores' },
-                { name: `Active Store (${currentSlug})`, url: `/api/tma/shop/${currentSlug}` },
-                { name: 'Kitchen Orders', url: '/api/tma/orders' },
-                { name: 'CMS All Content', url: '/api/cms/all' }
-              ].map((item) => (
-                <button
-                  key={item.name}
-                  type="button"
-                  disabled={testingEndpoint}
-                  onClick={() => runApiTest(item.name, item.url)}
-                  className="px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold border border-stone-200 transition cursor-pointer"
-                >
-                  Test {item.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="space-y-2 pt-2">
-              <span className="font-bold text-stone-500 uppercase tracking-wider text-[10px]">
-                Diagnostics Results:
-              </span>
-              {diagnosticLogs.length === 0 ? (
-                <p className="text-stone-400 italic">Click an endpoint above to run real-time checks.</p>
-              ) : (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {diagnosticLogs.map((log) => (
-                    <div key={log.id} className="bg-stone-950 text-white rounded-2xl p-4 font-mono space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-amber-400 font-bold">{log.name}</span>
-                        <span className="text-stone-400">{log.duration}ms • {log.status}</span>
-                      </div>
-                      <div className="text-[11px] text-stone-400">{log.url}</div>
-                      <pre className="max-h-32 overflow-y-auto text-emerald-400 text-[10px] p-2 bg-black/40 rounded-xl">
-                        {JSON.stringify(log.data || log.error, null, 2)}
-                      </pre>
-                    </div>
-                  ))}
                 </div>
-              )}
-            </div>
+
+                {/* Card Bottom Buttons: "Opt" + "+ Add" */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => openCustomizer(prod)}
+                    className="py-1.5 px-2 rounded-xl bg-[#2A1D15] hover:bg-[#38271D] text-stone-200 text-xs font-bold text-center active:scale-95 transition cursor-pointer"
+                  >
+                    Opt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDirectAddToCart(prod)}
+                    className={`py-1.5 px-2 rounded-xl text-xs font-black text-center shadow-md active:scale-95 transition cursor-pointer ${activeTheme.accentBtn}`}
+                  >
+                    + Add
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-
       </main>
 
       {/* ======================================================== */}
-      {/* 3. PRODUCT CUSTOMIZER MODAL                               */}
+      {/* 4. STICKY BOTTOM BAR (EXACTLY MATCHING IMAGE.PNG)        */}
       {/* ======================================================== */}
-      {customizingProduct && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh] text-xs">
-            
-            <div className="relative h-44 w-full bg-stone-100 shrink-0">
-              <img src={customizingProduct.image} alt="" className="w-full h-full object-cover" />
+      <div className="fixed bottom-0 left-0 right-0 z-40 p-3 pointer-events-none flex justify-center">
+        <div className="w-full max-w-[480px] pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic?.('medium');
+              setIsCartOpen(true);
+            }}
+            style={{ backgroundColor: activeTheme.accent }}
+            className="w-full py-3.5 px-5 rounded-2xl text-white font-extrabold text-sm flex items-center justify-between shadow-2xl active:scale-98 transition shadow-orange-600/40 cursor-pointer"
+          >
+            <span>View Basket ({totalItemCount})</span>
+            <span className="font-mono text-base font-black">${cartGrandTotal}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* 5. LOCATION & BRANCH PICKER MODAL                        */}
+      {/* ======================================================== */}
+      {isLocationModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-xs p-3">
+          <div
+            style={{ backgroundColor: activeTheme.cardBg }}
+            className="w-full max-w-[460px] rounded-3xl p-5 space-y-4 border border-white/10 shadow-2xl"
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <h3 className="font-bold text-sm text-white">Dining Location &amp; Branch</h3>
               <button
                 type="button"
-                onClick={() => setCustomizingProduct(null)}
-                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 text-stone-800 flex items-center justify-center font-bold shadow-md cursor-pointer"
+                onClick={() => setIsLocationModalOpen(false)}
+                className="p-1 text-stone-400 hover:text-white"
               >
-                ✕
+                <CloseOutlined />
               </button>
             </div>
 
-            <div className="p-5 overflow-y-auto space-y-4 flex-1">
-              <div>
-                <h3 className="font-extrabold text-stone-900 text-base">{customizingProduct.name}</h3>
-                <p className="text-stone-500 mt-0.5">{customizingProduct.details}</p>
-                <span className="font-black text-sm text-[#FF5722] mt-1 block font-mono">
-                  Base Price: ${Number(customizingProduct.price).toFixed(2)}
+            {/* Dining Mode */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-stone-400 uppercase">Dining Option</span>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                {[
+                  { id: 'dine_in', label: '🍽️ Dine-in' },
+                  { id: 'takeaway', label: '🛍️ Takeaway' },
+                  { id: 'delivery', label: '🛵 Delivery' }
+                ].map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => setDiningMode(mode.id)}
+                    className={`py-2 px-2 rounded-xl font-bold transition text-center ${
+                      diningMode === mode.id
+                        ? activeTheme.accentBtn
+                        : 'bg-white/5 text-stone-300 border border-white/5'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Table Number */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-stone-400 uppercase">Table Number</span>
+              <select
+                value={customerLocation}
+                onChange={(e) => setCustomerLocation(e.target.value)}
+                className="w-full p-2.5 rounded-xl bg-black/60 border border-white/10 text-xs font-bold text-amber-300 outline-none"
+              >
+                {[
+                  'Table #01',
+                  'Table #02',
+                  'Table #06',
+                  'Table #08',
+                  'Table #12 (Window)',
+                  'Terrace #03',
+                  'Bar Counter',
+                  'VIP Lounge'
+                ].map((t) => (
+                  <option key={t} value={t} className="bg-stone-900 text-white">
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Switch Store / Branch */}
+            <div className="space-y-1.5 pt-2 border-t border-white/10">
+              <span className="text-[11px] font-bold text-stone-400 uppercase">Switch Store / Branch</span>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {storeOptions.map((st) => (
+                  <button
+                    key={st.slug}
+                    type="button"
+                    onClick={() => {
+                      setIsLocationModalOpen(false);
+                      navigate(`/shop/${st.slug}`);
+                    }}
+                    className={`p-2.5 rounded-xl font-bold text-left transition flex items-center gap-2 ${
+                      currentSlug === st.slug
+                        ? 'bg-white/20 text-white border border-white/40 shadow-sm'
+                        : 'bg-white/5 text-stone-300 border border-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    <span>{st.emoji}</span>
+                    <span className="truncate">{st.name.replace('Aura ', '')}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Telegram Mini App Link */}
+            <div className="pt-2 border-t border-white/10 space-y-1.5">
+              <span className="text-[11px] font-bold text-stone-400 uppercase">Telegram Mini App Link</span>
+              <div
+                onClick={() => {
+                  const link = `https://t.me/aura_emenu_order_bot/menu?startapp=shop_${currentSlug}`;
+                  navigator.clipboard.writeText(link);
+                  message.success('Copied: ' + link);
+                }}
+                className="p-2.5 rounded-xl bg-black/60 border border-white/10 flex items-center justify-between text-xs cursor-pointer hover:border-amber-400/40 transition active:scale-98"
+              >
+                <code className="text-amber-400 font-mono text-[11px] truncate max-w-[320px]">
+                  https://t.me/aura_emenu_order_bot/menu?startapp=shop_{currentSlug}
+                </code>
+                <span className="text-[11px] font-bold text-stone-300 shrink-0 ml-2 bg-white/10 px-2 py-0.5 rounded-md">
+                  Copy Link
                 </span>
               </div>
-
-              {/* Size selection */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-stone-800 block">Serving Size</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {['Regular', 'Large (+ $1.00)'].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setSelectedSize(s)}
-                      className={`p-2 rounded-xl text-center font-bold transition cursor-pointer ${
-                        selectedSize === s
-                          ? 'bg-[#FF5722] text-white shadow-xs'
-                          : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Milk selection */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-stone-800 block">Milk Choice</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['Whole Milk', 'Oat (+$0.60)', 'Almond (+$0.60)'].map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setSelectedMilk(m)}
-                      className={`p-2 rounded-xl text-center font-bold transition cursor-pointer ${
-                        selectedMilk === m
-                          ? 'bg-[#FF5722] text-white shadow-xs'
-                          : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
-                      }`}
-                    >
-                      {m.split(' ')[0]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Quantity Stepper */}
-              <div className="flex items-center justify-between pt-2 border-t border-stone-100">
-                <span className="font-bold text-stone-800">Quantity</span>
-                <div className="flex items-center gap-2 bg-stone-100 px-3 py-1.5 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setCustomizeQty(Math.max(1, customizeQty - 1))}
-                    className="w-6 h-6 rounded-lg bg-white text-stone-800 font-bold flex items-center justify-center cursor-pointer"
-                  >
-                    -
-                  </button>
-                  <span className="w-6 text-center font-black">{customizeQty}</span>
-                  <button
-                    type="button"
-                    onClick={() => setCustomizeQty(customizeQty + 1)}
-                    className="w-6 h-6 rounded-lg bg-[#FF5722] text-white font-bold flex items-center justify-center cursor-pointer"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
             </div>
 
-            <div className="p-4 border-t border-stone-100 bg-white shrink-0">
-              <button
-                type="button"
-                onClick={handleAddCustomizedToCart}
-                className="w-full py-3 bg-[#FF5722] hover:bg-[#E64A19] text-white font-extrabold rounded-2xl text-xs shadow-md transition cursor-pointer"
-              >
-                Add Customized to Basket
-              </button>
-            </div>
-
+            <button
+              type="button"
+              onClick={() => setIsLocationModalOpen(false)}
+              className={`w-full py-2.5 rounded-xl text-xs font-bold ${activeTheme.accentBtn}`}
+            >
+              Done
+            </button>
           </div>
         </div>
       )}
 
       {/* ======================================================== */}
-      {/* 4. SLIDE-OUT CART DRAWER                                  */}
+      {/* 6. PRODUCT CUSTOMIZER MODAL ("Opt")                      */}
       {/* ======================================================== */}
-      {isCartOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-end">
-          <div className="w-full max-w-md bg-white h-full flex flex-col shadow-2xl text-xs">
-            
-            {/* Drawer Header */}
-            <div className="p-4 border-b border-stone-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🛍️</span>
-                <h3 className="font-extrabold text-stone-900 text-sm">Your Order Basket</h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-orange-100 text-[#FF5722]">
-                  {totalItemCount} items
-                </span>
-              </div>
+      {customizingProduct && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-xs p-3">
+          <div
+            style={{ backgroundColor: activeTheme.cardBg }}
+            className="w-full max-w-[460px] rounded-3xl p-5 space-y-4 border border-white/10 shadow-2xl max-h-[85vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <h3 className="font-extrabold text-sm text-white">Customize Item</h3>
               <button
                 type="button"
-                onClick={() => setIsCartOpen(false)}
-                className="w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:text-stone-900 flex items-center justify-center font-bold cursor-pointer"
+                onClick={() => setCustomizingProduct(null)}
+                className="p-1 text-stone-400 hover:text-white"
               >
-                ✕
+                <CloseOutlined />
               </button>
             </div>
 
-            {/* Cart Items List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <img
+                src={customizingProduct.image}
+                alt=""
+                className="w-14 h-14 rounded-2xl object-cover shrink-0"
+              />
+              <div>
+                <h4 className="font-extrabold text-sm text-white">{customizingProduct.name}</h4>
+                <span className={`font-mono text-xs ${activeTheme.priceText}`}>
+                  Base Price: ${Number(customizingProduct.price).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            {/* Portion / Size */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-stone-400 uppercase block">Portion / Size</label>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {['Regular (12oz)', 'Large (16oz) (+$0.75)'].map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => setSelectedSize(size)}
+                    className={`py-2 px-2.5 rounded-xl font-bold transition text-center ${
+                      selectedSize === size
+                        ? activeTheme.accentBtn
+                        : 'bg-white/5 text-stone-300 border border-white/5'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Milk / Base */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-stone-400 uppercase block">Artisan Milk</label>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {['Fresh Cow Milk', 'Oat Milk (+$0.60)', 'Almond Milk (+$0.60)', 'Skim Milk'].map((milk) => (
+                  <button
+                    key={milk}
+                    type="button"
+                    onClick={() => setSelectedMilk(milk)}
+                    className={`py-2 px-2.5 rounded-xl font-bold transition text-center ${
+                      selectedMilk === milk
+                        ? activeTheme.accentBtn
+                        : 'bg-white/5 text-stone-300 border border-white/5'
+                    }`}
+                  >
+                    {milk}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Ice & Temperature */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-stone-400 uppercase block">Ice &amp; Temp</label>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                {['Hot', 'Less Ice', 'Normal Ice'].map((ice) => (
+                  <button
+                    key={ice}
+                    type="button"
+                    onClick={() => setSelectedIce(ice)}
+                    className={`py-2 px-2 rounded-xl font-bold transition text-center ${
+                      selectedIce === ice
+                        ? activeTheme.accentBtn
+                        : 'bg-white/5 text-stone-300 border border-white/5'
+                    }`}
+                  >
+                    {ice}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Chef Notes */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-stone-400 uppercase block">Barista / Chef Notes</label>
+              <input
+                type="text"
+                value={specialInstructions}
+                onChange={(e) => setSpecialInstructions(e.target.value)}
+                placeholder="e.g. Extra hot, no sugar..."
+                className="w-full p-2.5 rounded-xl bg-black/60 border border-white/10 text-xs text-white placeholder-stone-500 outline-none"
+              />
+            </div>
+
+            {/* Quantity */}
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-xs font-bold text-stone-300">Quantity</span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCustomizeQty((q) => Math.max(1, q - 1))}
+                  className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center font-bold"
+                >
+                  <MinusOutlined style={{ fontSize: 10 }} />
+                </button>
+                <span className="font-mono font-bold text-sm">{customizeQty}</span>
+                <button
+                  type="button"
+                  onClick={() => setCustomizeQty((q) => q + 1)}
+                  className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center font-bold"
+                >
+                  <PlusOutlined style={{ fontSize: 10 }} />
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAddCustomizedToCart}
+              className={`w-full py-3 rounded-2xl text-xs font-black shadow-lg cursor-pointer ${activeTheme.accentBtn}`}
+            >
+              Add Customized Item to Basket
+            </button>
+
+            {/* Direct Telegram Item Link */}
+            <div className="pt-1 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  const itemLink = `https://t.me/aura_emenu_order_bot/menu?startapp=item_${customizingProduct.id}`;
+                  navigator.clipboard.writeText(itemLink);
+                  message.success('Copied Direct Item Link: ' + itemLink);
+                }}
+                className="text-[11px] text-stone-400 hover:text-amber-400 transition cursor-pointer"
+              >
+                🔗 Copy Direct Item Link: <span className="font-mono">item_{customizingProduct.id}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 7. BASKET & CHECKOUT DRAWER                              */}
+      {/* ======================================================== */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/85 backdrop-blur-xs p-3">
+          <div
+            style={{ backgroundColor: activeTheme.cardBg }}
+            className="w-full max-w-[460px] rounded-3xl p-5 space-y-4 border border-white/10 shadow-2xl max-h-[88vh] flex flex-col justify-between"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
+              <h3 className="font-extrabold text-sm text-white">Your Basket ({totalItemCount})</h3>
+              <button
+                type="button"
+                onClick={() => setIsCartOpen(false)}
+                className="p-1 text-stone-400 hover:text-white"
+              >
+                <CloseOutlined />
+              </button>
+            </div>
+
+            {/* Cart Items */}
+            <div className="space-y-3 flex-1 overflow-y-auto pr-1">
               {cart.length === 0 ? (
-                <div className="py-24 text-center text-stone-400 space-y-2">
-                  <span className="text-4xl block">🧺</span>
-                  <p className="font-bold text-stone-700">Your basket is empty</p>
-                  <p className="text-[11px]">Select artisan pastries or coffee from the menu.</p>
+                <div className="py-14 text-center space-y-2">
+                  <span className="text-3xl block">🛍️</span>
+                  <p className="font-bold text-xs text-stone-300">Your basket is currently empty</p>
+                  <p className="text-[11px] text-stone-500">Add some artisan items to place an order.</p>
                 </div>
               ) : (
                 <div className="space-y-2.5">
                   {cart.map((item, idx) => (
                     <div
                       key={idx}
-                      className="p-3 bg-stone-50 rounded-2xl border border-stone-200/80 flex items-center justify-between gap-3 shadow-2xs"
+                      className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between gap-3"
                     >
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <img src={item.image} alt="" className="w-11 h-11 rounded-xl object-cover shrink-0" />
-                        <div className="overflow-hidden">
-                          <h4 className="font-extrabold text-stone-900 truncate">{item.name}</h4>
-                          <span className="text-[10px] text-stone-500 block">
-                            ${Number(item.price).toFixed(2)} each
+                      <div className="flex items-center gap-2.5">
+                        <img src={item.image} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                        <div>
+                          <h4 className="font-bold text-xs text-white leading-tight">{item.name}</h4>
+                          <span className={`text-[11px] font-mono ${activeTheme.priceText}`}>
+                            ${item.price.toFixed(2)}
                           </span>
+                          {item.options && Object.keys(item.options).length > 0 && (
+                            <p className="text-[10px] text-stone-400">
+                              {Object.entries(item.options).map(([k, v]) => `${k}: ${v}`).join(' • ')}
+                            </p>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
+
+                      <div className="flex items-center gap-2 shrink-0">
                         <button
                           type="button"
                           onClick={() => handleUpdateCartQty(idx, -1)}
-                          className="w-6 h-6 rounded-lg bg-white font-bold text-stone-700 flex items-center justify-center cursor-pointer border border-stone-200"
+                          className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center font-bold text-xs"
                         >
                           -
                         </button>
-                        <span className="w-5 text-center font-black">{item.quantity}</span>
+                        <span className="font-mono font-bold text-xs w-4 text-center">{item.quantity}</span>
                         <button
                           type="button"
                           onClick={() => handleUpdateCartQty(idx, 1)}
-                          className="w-6 h-6 rounded-lg bg-[#FF5722] font-bold text-white flex items-center justify-center cursor-pointer"
+                          className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center font-bold text-xs"
                         >
                           +
                         </button>
                       </div>
                     </div>
                   ))}
-                </div>
-              )}
 
-              {/* Fulfillment Options */}
-              {cart.length > 0 && (
-                <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 space-y-3 mt-4">
-                  <label className="font-black text-stone-800 text-[10px] uppercase tracking-wider block">
-                    Dining Preference
-                  </label>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {[
-                      { id: 'dine_in', label: 'Dine-In' },
-                      { id: 'takeaway', label: 'Takeaway' },
-                      { id: 'delivery', label: 'Delivery' }
-                    ].map((mode) => (
-                      <button
-                        key={mode.id}
-                        type="button"
-                        onClick={() => setDiningMode(mode.id)}
-                        className={`py-1.5 px-2 rounded-xl font-bold text-center transition cursor-pointer ${
-                          diningMode === mode.id
-                            ? 'bg-[#FF5722] text-white shadow-xs'
-                            : 'bg-white text-stone-700 border border-stone-200'
-                        }`}
-                      >
-                        {mode.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-stone-500 block mb-1">
-                      {diningMode === 'dine_in' ? 'Table Number' : 'Delivery / Pickup Address'}
-                    </label>
-                    <input
-                      type="text"
-                      value={customerLocation}
-                      onChange={(e) => setCustomerLocation(e.target.value)}
-                      placeholder={diningMode === 'dine_in' ? 'e.g. Table #06' : 'Street address'}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-3 py-1.5 text-xs text-stone-900 focus:outline-none focus:border-[#FF5722]"
-                    />
+                  {/* VIP 20% Discount */}
+                  <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] font-black uppercase text-amber-400">Promo Code: FIRST20</span>
+                      <p className="text-xs font-bold text-white">20% VIP Order Discount</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHasClaimedCoupon(!hasClaimedCoupon);
+                        message.info(hasClaimedCoupon ? 'Coupon removed' : '20% discount applied!');
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition ${
+                        hasClaimedCoupon ? 'bg-emerald-500 text-slate-950 font-black' : 'bg-white/10 text-white'
+                      }`}
+                    >
+                      {hasClaimedCoupon ? 'Claimed ✓' : 'Apply'}
+                    </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Drawer Footer & Checkout */}
+            {/* Order Summary & Submit */}
             {cart.length > 0 && (
-              <div className="p-4 border-t border-stone-100 bg-white space-y-3 shrink-0">
-                <div className="space-y-1 text-stone-600 font-medium">
-                  <div className="flex justify-between">
+              <div className="pt-3 border-t border-white/10 space-y-3 shrink-0">
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between text-stone-400">
                     <span>Subtotal:</span>
-                    <span className="font-mono">${cartSubtotal.toFixed(2)}</span>
+                    <span className="font-mono text-white">${cartSubtotal.toFixed(2)}</span>
                   </div>
-                  {hasClaimedCoupon && (
-                    <div className="flex justify-between text-emerald-600 font-bold">
-                      <span>Discount (FIRST20 - 20%):</span>
+                  {cartDiscount > 0 && (
+                    <div className="flex justify-between text-emerald-400">
+                      <span>Discount (20%):</span>
                       <span className="font-mono">-${cartDiscount.toFixed(2)}</span>
                     </div>
                   )}
-                  {diningMode === 'delivery' && (
-                    <div className="flex justify-between">
-                      <span>Delivery Fee:</span>
-                      <span className="font-mono">$1.50</span>
+                  {deliveryFee > 0 && (
+                    <div className="flex justify-between text-stone-400">
+                      <span>Delivery ({customerLocation}):</span>
+                      <span className="font-mono text-white">${deliveryFee.toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm font-black text-stone-900 pt-1.5 border-t border-stone-100">
-                    <span>Total:</span>
-                    <span className="text-[#FF5722] font-mono text-base">${cartGrandTotal}</span>
+                  <div className="flex justify-between text-sm font-black pt-1.5 border-t border-white/10 text-white">
+                    <span>Total Amount:</span>
+                    <span className={`font-mono text-base ${activeTheme.priceText}`}>${cartGrandTotal}</span>
                   </div>
                 </div>
 
@@ -1382,14 +972,12 @@ export default function EMenuPage() {
                   type="button"
                   disabled={isSubmittingOrder}
                   onClick={handleConfirmOrder}
-                  className="w-full py-3.5 bg-[#FF5722] hover:bg-[#E64A19] text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-orange-500/25 transition active:scale-98 cursor-pointer flex items-center justify-between px-5"
+                  className={`w-full py-3.5 rounded-2xl text-xs font-black shadow-xl cursor-pointer ${activeTheme.accentBtn}`}
                 >
-                  <span>{isSubmittingOrder ? 'Dispatching...' : 'Send Order to Kitchen ✈️'}</span>
-                  <span>${cartGrandTotal}</span>
+                  {isSubmittingOrder ? 'Sending to Kitchen...' : `Place Order ($${cartGrandTotal})`}
                 </button>
               </div>
             )}
-
           </div>
         </div>
       )}

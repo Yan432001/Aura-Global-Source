@@ -115,7 +115,7 @@ export default function AdminQrCodeGenerator() {
     }
 
     if (destinationType === 'tma') {
-      return `${origin}/tma/${storeSlug}?${locationType}=${numParam}`;
+      return `https://t.me/aura_emenu_order_bot/menu?startapp=shop_${storeSlug}`;
     }
 
     // Default E-Menu

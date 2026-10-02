@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Avatar,
@@ -15,6 +15,7 @@ import {
   CheckCircleFilled,
   CloseOutlined,
   CopyOutlined,
+  DownloadOutlined,
   SendOutlined,
   StarFilled,
 } from '@ant-design/icons';
@@ -93,7 +94,7 @@ export default function TelegramMiniAppModal({
     return 'shop_sbc-store';
   }, [product, targetShop]);
 
-  const directBotLink = `https://t.me/${BOTFATHER_CONFIG.botUsername}?startapp=${startParam}`;
+  const directBotLink = `https://t.me/${BOTFATHER_CONFIG.botUsername}/menu?startapp=${startParam}`;
   const targetGroup = shopTelegramGroups[targetShop?.slug] || shopTelegramGroups[targetShop?.id] || 'Kitchen Dispatch Staff Group';
 
   const handleLaunchTelegram = () => {
@@ -104,6 +105,147 @@ export default function TelegramMiniAppModal({
   const handleCopyLink = () => {
     navigator.clipboard.writeText(directBotLink);
     message.success('Telegram direct bot link copied!');
+  };
+
+  const qrCodeContainerRef = useRef(null);
+
+  // Helper to draw rounded rectangle on canvas
+  const drawRoundedRect = (ctx, x, y, w, h, r, fill, stroke, strokeWidth = 1) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    if (fill) {
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = strokeWidth;
+      ctx.stroke();
+    }
+  };
+
+  /**
+   * Generates and downloads a clean, beautiful QR image with the Shop Name and Telegram branding
+   */
+  const handleDownloadQrCode = () => {
+    if (!qrCodeContainerRef.current) return;
+    const qrCanvas = qrCodeContainerRef.current.querySelector('canvas');
+    if (!qrCanvas) {
+      message.error('QR code canvas not ready yet');
+      return;
+    }
+
+    try {
+      // Clean, compact QR Card dimensions (560 x 660 px)
+      const W = 560;
+      const H = 660;
+      const card = document.createElement('canvas');
+      card.width = W;
+      card.height = H;
+      const ctx = card.getContext('2d');
+
+      // 1. Soft canvas background
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, W, H);
+
+      // 2. White card container with rounded corners and border
+      const pad = 18;
+      const cardX = pad;
+      const cardY = pad;
+      const cardW = W - pad * 2;
+      const cardH = H - pad * 2;
+      const radius = 26;
+
+      drawRoundedRect(ctx, cardX, cardY, cardW, cardH, radius, '#ffffff', '#e2e8f0', 2);
+
+      // 3. Shop / Product Title Header
+      const headerY = cardY + 28;
+      const shopName = product ? product.name : (targetShop?.name || 'Aura Specialty Store');
+      const subtitle = product
+        ? `${targetShop?.name || 'Aura'} • $${Number(product.price).toFixed(2)} • Telegram Mini App`
+        : `${targetShop?.branch ? targetShop.branch.toUpperCase() : 'SPECIALTY STORE'} • TELEGRAM MINI APP`;
+
+      // Brand tag badge
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Subtle blue pill tag
+      const tagText = product ? 'TELEGRAM PRODUCT' : 'TELEGRAM E-MENU';
+      drawRoundedRect(ctx, W / 2 - 80, headerY, 160, 24, 12, '#f0f9ff', '#bae6fd', 1);
+      ctx.fillStyle = '#0284c7';
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(tagText, W / 2, headerY + 12);
+
+      // Shop Name (Primary Heading)
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      const truncatedName = shopName.length > 30 ? shopName.slice(0, 29) + '...' : shopName;
+      ctx.fillText(truncatedName, W / 2, headerY + 54);
+
+      // Subtitle (Branch / Category)
+      ctx.fillStyle = '#64748b';
+      ctx.font = '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(subtitle, W / 2, headerY + 80);
+
+      // 4. Centered QR Code Box (Exact style from popup)
+      const qrBoxSize = 370;
+      const qrBoxX = (W - qrBoxSize) / 2;
+      const qrBoxY = headerY + 104;
+
+      drawRoundedRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 22, '#f8fafc', '#e2e8f0', 1.5);
+
+      // Draw the QR Code image cleanly centered
+      const qrSize = 320;
+      const qrX = qrBoxX + (qrBoxSize - qrSize) / 2;
+      const qrY = qrBoxY + (qrBoxSize - qrSize) / 2;
+
+      // Inner white plate for maximum contrast
+      drawRoundedRect(ctx, qrX - 8, qrY - 8, qrSize + 16, qrSize + 16, 16, '#ffffff', '#e2e8f0', 1);
+      ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+
+      // 5. Bottom Instructions (Matching modal popup)
+      const bottomY = qrBoxY + qrBoxSize + 24;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('Scan with Phone / Telegram', W / 2, bottomY);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '500 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`@${BOTFATHER_CONFIG.botUsername} • Instant Menu & Order`, W / 2, bottomY + 24);
+
+      // Trigger download
+      const pngUrl = card.toDataURL('image/png');
+      const link = document.createElement('a');
+      const safeTitle = (product ? product.name : (targetShop?.name || 'Shop')).replace(/[^a-zA-Z0-9]/g, '_');
+      link.download = `QR_${safeTitle}.png`;
+      link.href = pngUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      message.success('QR Code image downloaded!');
+    } catch (err) {
+      console.error('Error rendering QR image:', err);
+      const rawUrl = qrCanvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `QR_${targetShop?.slug || 'shop'}.png`;
+      link.href = rawUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      message.success('QR Code image downloaded!');
+    }
   };
 
   return (
@@ -358,22 +500,53 @@ export default function TelegramMiniAppModal({
             <div
               style={{
                 background: '#f8fafc',
-                padding: 14,
+                padding: '14px 14px 12px 14px',
                 borderRadius: 20,
                 border: '1px solid #e2e8f0',
                 display: 'inline-block',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.04)',
               }}
             >
-              <QRCode
-                value={directBotLink}
-                size={140}
-                bordered={false}
-                icon="https://telegram.org/img/t_logo.png"
-                iconSize={28}
-              />
+              <div ref={qrCodeContainerRef} style={{ display: 'flex', justifyContent: 'center' }}>
+                <QRCode
+                  value={directBotLink}
+                  size={140}
+                  bordered={false}
+                  icon="https://telegram.org/img/t_logo.png"
+                  iconSize={28}
+                />
+              </div>
+
               <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginTop: 8 }}>
                 Scan with Phone / Telegram
               </div>
+
+              {/* Download QR Image Button */}
+              <Button
+                type="primary"
+                size="small"
+                icon={<DownloadOutlined />}
+                onClick={handleDownloadQrCode}
+                style={{
+                  marginTop: 10,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  borderRadius: 10,
+                  background: 'linear-gradient(135deg, #1d74b8 0%, #2481cc 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  width: '100%',
+                  height: 34,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  boxShadow: '0 4px 12px rgba(36, 129, 204, 0.35)',
+                  cursor: 'pointer',
+                }}
+              >
+                Download QR Image
+              </Button>
             </div>
           </Col>
         </Row>

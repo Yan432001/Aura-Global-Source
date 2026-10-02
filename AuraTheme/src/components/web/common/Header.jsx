@@ -44,11 +44,12 @@ const { Text, Title } = Typography;
 
 // Universal website service topics
 const serviceItems = [
-  { id: 'srv-1', title: 'Preventive Maintenance & Calibration', description: 'Scheduled uptime checks, sensor calibration, and mechanical inspections.', tag: 'Maintenance', path: '/service' },
-  { id: 'srv-2', title: '24/7 Remote Diagnostics & SLA', description: 'Real-time telemetry monitoring, automated alert routing, and tier-1 engineering.', tag: 'Diagnostics', path: '/service' },
-  { id: 'srv-3', title: 'Emergency On-Site Field Dispatch', description: 'Certified technicians dispatched within 2 hours for fulfillment disruptions.', tag: 'Field Support', path: '/service' },
-  { id: 'srv-4', title: 'Automated Warehouse Commissioning', description: 'Turnkey setup and testing of conveyor scanners, barcode gates, and RFID stations.', tag: 'Commissioning', path: '/service' },
-  { id: 'srv-5', title: 'Operator Safety & Compliance Certifications', description: 'OSHA-aligned machinery operation courses, hazard assessments, and audits.', tag: 'Compliance', path: '/service' },
+  { id: 'srv-1', title: 'Telegram Mini App & E-Menu Deployment', description: 'Turnkey digital menu with table QR ordering and automated Telegram kitchen dispatch.', tag: 'E-Menu', path: '/service' },
+  { id: 'srv-2', title: 'Specialty Coffee Wholesale & Roastery', description: 'Direct-trade single-origin beans, custom espresso roasting, and barista training.', tag: 'Roastery', path: '/service' },
+  { id: 'srv-3', title: 'Artisan Bakery & Viennoiserie Supply', description: 'Daily fresh supply of 72-hour sourdough loaves and French butter croissants.', tag: 'Bakery', path: '/service' },
+  { id: 'srv-4', title: 'Kitchen Display System & POS Integration', description: 'Real-time order ticket routing, kitchen status stepper, and offline sync.', tag: 'POS / KDS', path: '/service' },
+  { id: 'srv-5', title: 'Private Catering & Mobile Espresso Bars', description: 'Pop-up coffee carts and bespoke pastry grazing tables for corporate events.', tag: 'Catering', path: '/service' },
+  { id: 'srv-6', title: 'Franchise & Partner Onboarding', description: 'End-to-end store setup, digital catalog digitization, and 24/7 technical SLA.', tag: 'Onboarding', path: '/service' },
 ];
 
 // Universal website learning tracks
@@ -65,7 +66,7 @@ const websitePages = [
   { id: 'pg-1', title: 'Home', path: '/', description: 'Aura Supply portal overview, featured shops and highlights' },
   { id: 'pg-2', title: 'Shops Directory', path: '/shops', description: 'Directory of all verified shops, warehouse systems, and packaging suppliers' },
   { id: 'pg-3', title: 'Products Catalog', path: '/products', description: 'Browse and filter all available equipment, spare parts, and supplies' },
-  { id: 'pg-4', title: 'Service & Support', path: '/service', description: 'Field maintenance, equipment commissioning, and emergency repair requests' },
+  { id: 'pg-4', title: 'Services & Solutions', path: '/service', description: 'Digital E-Menu setup, wholesale coffee/bakery supply, POS integration, and event catering' },
   { id: 'pg-5', title: 'Learning Academy', path: '/learn', description: 'Courses, onboarding tracks, and operational playbooks' },
   { id: 'pg-6', title: 'Operations Portal', path: '/admins/dashboard', description: 'Management dashboard for sales, inventory, and system settings' },
   { id: 'pg-7', title: 'Wishlist', path: '/wishlist', description: 'Your saved products and bookmarked equipment' },

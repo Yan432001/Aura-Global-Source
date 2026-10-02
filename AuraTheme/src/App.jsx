@@ -13,7 +13,7 @@ import Home from './pages/web/Home';
 import Shops from './pages/web/Shops';
 import ShopDetail from './pages/web/ShopDetail';
 import Products from './pages/web/Products';
-import Service from './pages/web/Community';
+import Service from './pages/web/Service';
 import Learn from './pages/web/Learn';
 import Profile from './pages/web/Profile';
 import Cart from './pages/web/Cart';

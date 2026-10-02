@@ -11,10 +11,6 @@ export default function TelegramEntry() {
 
   useEffect(() => {
     if (!startParam) {
-      if (location.pathname === '/menu') {
-        navigate('/shop/aura-bakery', { replace: true });
-        return;
-      }
       navigate('/shop/sbc-store', { replace: true });
       return;
     }
