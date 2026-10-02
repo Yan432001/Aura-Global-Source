@@ -38,6 +38,7 @@ import AdminQrCodeGeneratorPage from './pages/admins/AdminQrCodeGeneratorPage';
 // E-Menu Telegram Mini App Layout & Views
 import EMenuLayout from './pages/emenu/EMenuLayout';
 import EMenuPage from './views/EMenuPage';
+import WebEMenuPage from './views/WebEMenuPage';
 import TelegramEntry from './views/TelegramEntry';
 import StoreNotFound from './views/StoreNotFound';
 import StoreFront from './pages/tma/[store_slug]/page';
@@ -74,6 +75,10 @@ const AppContent = () => {
       {/* 1. Telegram Deep-Link Entry */}
       <Route path="/tg" element={<TelegramEntry />} />
       <Route path="/menu" element={<TelegramEntry />} />
+
+      {/* Dedicated Website E-Menu Routes (Design matched to Our Tasty Foods mockup) */}
+      <Route path="/shop/menu" element={<WebEMenuPage />} />
+      <Route path="/shop/menu/:storeSlug" element={<WebEMenuPage />} />
 
       {/* 2. Isolated Multi-Store E-Menu Routes (No Base Header/Footer) */}
       <Route path="/shop" element={<EMenuLayout />}>

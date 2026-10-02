@@ -58,7 +58,8 @@ export default function AdminQrCodeGenerator() {
   const [locationType, setLocationType] = useState('table'); // 'table' | 'counter' | 'room' | 'bar'
   const [locationNumber, setLocationNumber] = useState('1');
   const [zoneLabel, setZoneLabel] = useState('Ground Floor');
-  const [destinationType, setDestinationType] = useState('emenu'); // 'emenu' | 'tma' | 'custom'
+  const [destinationType, setDestinationType] = useState('tma'); // 'tma' | 'tma_item' | 'emenu' | 'custom'
+  const [targetItemId, setTargetItemId] = useState('1');
   const [customPath, setCustomPath] = useState('');
   const [includeWifi, setIncludeWifi] = useState(false);
   const [wifiSsid, setWifiSsid] = useState('Aura-Guest-WiFi');
@@ -118,9 +119,13 @@ export default function AdminQrCodeGenerator() {
       return `https://t.me/aura_emenu_order_bot/menu?startapp=shop_${storeSlug}`;
     }
 
+    if (destinationType === 'tma_item') {
+      return `https://t.me/aura_emenu_order_bot/menu?startapp=item_${targetItemId || 1}`;
+    }
+
     // Default E-Menu
     return `${origin}/shop/${storeSlug}?${locationType}=${numParam}`;
-  }, [activeStore, destinationType, customPath, locationType, locationNumber]);
+  }, [activeStore, destinationType, customPath, targetItemId, locationType, locationNumber]);
 
   // Copy target URL to clipboard
   const handleCopyUrl = () => {
@@ -451,13 +456,25 @@ export default function AdminQrCodeGenerator() {
                               onChange={(val) => setDestinationType(val)}
                               style={{ width: '100%' }}
                             >
+                              <Option value="tma">Telegram Mini App Store (shop_{activeStore?.slug})</Option>
+                              <Option value="tma_item">Telegram Direct Product Item (item_ID)</Option>
                               <Option value="emenu">Web E-Menu (/shop/...)</Option>
-                              <Option value="tma">Telegram Mini App (/tma/...)</Option>
                               <Option value="custom">Custom URL</Option>
                             </Select>
                           </Form.Item>
                         </Col>
                       </Row>
+
+                      {destinationType === 'tma_item' && (
+                        <Form.Item label={<Text strong>Target Product Item ID</Text>} required>
+                          <Input
+                            prefix={<span style={{ fontWeight: 700, color: '#2563eb' }}>item_</span>}
+                            placeholder="e.g. 1 (Spanish Iced Latte), 2 (Mondulkiri), 4 (Cold Brew)..."
+                            value={targetItemId}
+                            onChange={(e) => setTargetItemId(e.target.value.replace(/[^0-9]/g, ''))}
+                          />
+                        </Form.Item>
+                      )}
 
                       {destinationType === 'custom' && (
                         <Form.Item label="Custom URL Target" required>

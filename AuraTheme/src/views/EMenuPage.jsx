@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { message } from 'antd';
+import { message, notification } from 'antd';
 import {
   DownOutlined,
   CloseOutlined,
@@ -9,65 +9,82 @@ import {
   MinusOutlined,
   CheckOutlined,
   ShopOutlined,
-  EnvironmentOutlined
+  EnvironmentOutlined,
+  BellOutlined,
+  BellFilled,
+  StarFilled,
 } from '@ant-design/icons';
 import { useTelegram } from '../hooks/useTelegram';
 import simpleData from '../../../data/simpleData';
 
-// Theme configuration matched to each shop brand
+// Website Default Theme aligned with Aura publicTheme
+// Primary: #2F6FED, Secondary: #5B8DEF, Accent: #FF7A3D
 const SHOP_THEMES = {
   'sbc-store': {
     name: 'Aura Specialty Coffee',
-    bg: '#0C0704',
-    cardBg: '#18100A',
-    cardBorder: 'border-white/10',
-    accent: '#EA580C', // Vibrant Orange matched to image.png
-    accentHover: '#C2410C',
-    accentBtn: 'bg-[#EA580C] hover:bg-[#C2410C] text-white',
-    pillActive: 'bg-[#EA580C] text-white border-2 border-white shadow-md',
-    pillInactive: 'bg-[#1E130C] text-stone-300 border border-white/5',
-    priceText: 'text-amber-400',
-    badgeText: 'text-amber-400'
+    bg: '#ffffff',
+    cardBg: '#ffffff',
+    cardBorder: 'border-slate-200/80',
+    accent: '#2F6FED',
+    accentHover: '#255bc2',
+    accentBtn: 'bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-md shadow-[#2F6FED]/25 font-bold',
+    pillActive: 'bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] text-white shadow-md shadow-[#2F6FED]/25 font-bold border-none',
+    pillInactive: 'bg-slate-100/90 text-slate-600 border border-slate-200/80 hover:border-[#2F6FED]/40 hover:text-[#2F6FED] font-semibold',
+    priceText: 'text-[#2F6FED]',
+    badgeText: 'text-[#2F6FED]',
   },
   'aura-lounge': {
     name: 'Aura Botanical Lounge & Matcha',
-    bg: '#04170E',
-    cardBg: '#092518',
-    cardBorder: 'border-emerald-900/40',
-    accent: '#10B981', // Botanical Matcha Jade
-    accentHover: '#059669',
-    accentBtn: 'bg-[#10B981] hover:bg-[#059669] text-slate-950 font-black',
-    pillActive: 'bg-[#10B981] text-slate-950 border-2 border-white shadow-md font-black',
-    pillInactive: 'bg-[#0E3524] text-emerald-200 border border-emerald-800/30',
-    priceText: 'text-emerald-400',
-    badgeText: 'text-emerald-300'
+    bg: '#ffffff',
+    cardBg: '#ffffff',
+    cardBorder: 'border-slate-200/80',
+    accent: '#2F6FED',
+    accentHover: '#255bc2',
+    accentBtn: 'bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-md shadow-[#2F6FED]/25 font-bold',
+    pillActive: 'bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] text-white shadow-md shadow-[#2F6FED]/25 font-bold border-none',
+    pillInactive: 'bg-slate-100/90 text-slate-600 border border-slate-200/80 hover:border-[#2F6FED]/40 hover:text-[#2F6FED] font-semibold',
+    priceText: 'text-[#2F6FED]',
+    badgeText: 'text-[#2F6FED]',
   },
   'aura-bistro': {
     name: 'Aura French Bistro',
-    bg: '#080C14',
-    cardBg: '#101726',
-    cardBorder: 'border-amber-500/20',
-    accent: '#F59E0B', // Luxury Gold
-    accentHover: '#D97706',
-    accentBtn: 'bg-[#F59E0B] hover:bg-[#D97706] text-slate-950 font-black',
-    pillActive: 'bg-[#F59E0B] text-slate-950 border-2 border-white shadow-md font-black',
-    pillInactive: 'bg-[#182238] text-amber-200 border border-amber-500/10',
-    priceText: 'text-amber-400',
-    badgeText: 'text-amber-300'
+    bg: '#ffffff',
+    cardBg: '#ffffff',
+    cardBorder: 'border-slate-200/80',
+    accent: '#2F6FED',
+    accentHover: '#255bc2',
+    accentBtn: 'bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-md shadow-[#2F6FED]/25 font-bold',
+    pillActive: 'bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] text-white shadow-md shadow-[#2F6FED]/25 font-bold border-none',
+    pillInactive: 'bg-slate-100/90 text-slate-600 border border-slate-200/80 hover:border-[#2F6FED]/40 hover:text-[#2F6FED] font-semibold',
+    priceText: 'text-[#2F6FED]',
+    badgeText: 'text-[#2F6FED]',
   },
   'aura-bakery': {
     name: 'Aura Artisan Bakery',
-    bg: '#18040E',
-    cardBg: '#2A091A',
-    cardBorder: 'border-rose-900/30',
-    accent: '#F43F5E', // French Rose & Berry
-    accentHover: '#E11D48',
-    accentBtn: 'bg-[#F43F5E] hover:bg-[#E11D48] text-white font-black',
-    pillActive: 'bg-[#F43F5E] text-white border-2 border-white shadow-md',
-    pillInactive: 'bg-[#3A0F25] text-rose-200 border border-rose-800/20',
-    priceText: 'text-rose-400',
-    badgeText: 'text-rose-300'
-  }
+    bg: '#ffffff',
+    cardBg: '#ffffff',
+    cardBorder: 'border-slate-200/80',
+    accent: '#2F6FED',
+    accentHover: '#255bc2',
+    accentBtn: 'bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-md shadow-[#2F6FED]/25 font-bold',
+    pillActive: 'bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] text-white shadow-md shadow-[#2F6FED]/25 font-bold border-none',
+    pillInactive: 'bg-slate-100/90 text-slate-600 border border-slate-200/80 hover:border-[#2F6FED]/40 hover:text-[#2F6FED] font-semibold',
+    priceText: 'text-[#2F6FED]',
+    badgeText: 'text-[#2F6FED]',
+  },
+  'aura-tech': {
+    name: 'Aura Tech & Smart Living',
+    bg: '#ffffff',
+    cardBg: '#ffffff',
+    cardBorder: 'border-slate-200/80',
+    accent: '#2F6FED',
+    accentHover: '#255bc2',
+    accentBtn: 'bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-md shadow-[#2F6FED]/25 font-bold',
+    pillActive: 'bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] text-white shadow-md shadow-[#2F6FED]/25 font-bold border-none',
+    pillInactive: 'bg-slate-100/90 text-slate-600 border border-slate-200/80 hover:border-[#2F6FED]/40 hover:text-[#2F6FED] font-semibold',
+    priceText: 'text-[#2F6FED]',
+    badgeText: 'text-[#2F6FED]',
+  },
 };
 
 export default function EMenuPage() {
@@ -76,14 +93,33 @@ export default function EMenuPage() {
   const location = useLocation();
   const { tg, triggerHaptic } = useTelegram();
 
-  // Extract active store slug
+  // Extract active store slug with seller mapping
   const currentSlug = useMemo(() => {
-    if (params.storeSlug) return params.storeSlug;
-    const parts = location.pathname.split('/');
-    if (parts[1] === 'shop' && parts[2] && parts[2] !== 'not-found') {
-      return parts[2];
+    let raw = params.storeSlug;
+    if (!raw) {
+      const parts = location.pathname.split('/');
+      if (parts[1] === 'shop' && parts[2] && parts[2] !== 'not-found') {
+        raw = parts[2];
+      }
     }
-    return 'sbc-store';
+    const SELLER_SLUG_MAP = {
+      'seller-1': 'sbc-store',
+      'seller-2': 'aura-bakery',
+      'seller-3': 'aura-lounge',
+      'seller-4': 'aura-bistro',
+      'seller-5': 'aura-tech',
+      'seller-6': 'sbc-store',
+    };
+    if (raw && SELLER_SLUG_MAP[raw]) {
+      return SELLER_SLUG_MAP[raw];
+    }
+    if (raw) {
+      const found = (simpleData.stores || []).find(
+        (s) => s.slug === raw || String(s.id) === String(raw) || s.name?.toLowerCase() === raw?.toLowerCase()
+      );
+      if (found) return found.slug;
+    }
+    return raw || 'sbc-store';
   }, [params.storeSlug, location.pathname]);
 
   const activeTheme = useMemo(() => {
@@ -115,7 +151,7 @@ export default function EMenuPage() {
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Table & Dining Context (defaults to "Table #06 • delivery" as shown in screenshot)
+  // Table & Dining Context
   const [diningMode, setDiningMode] = useState('delivery');
   const [customerLocation, setCustomerLocation] = useState('Table #06');
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
@@ -132,6 +168,48 @@ export default function EMenuPage() {
   const [selectedIce, setSelectedIce] = useState('Normal Ice');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [customizeQty, setCustomizeQty] = useState(1);
+
+  // Active Order & 'Notify Me' status changes
+  const [activeOrder, setActiveOrder] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aura_emenu_active_order');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [notifyMeEnabled, setNotifyMeEnabled] = useState(true);
+
+  // Monitor order status changes: trigger push notification / in-app alert when status becomes 'ready'
+  useEffect(() => {
+    if (!activeOrder || activeOrder.status === 'Ready' || activeOrder.status === 'Completed') return;
+
+    // Transition order to Ready
+    const timer = setTimeout(() => {
+      const updated = { ...activeOrder, status: 'Ready' };
+      setActiveOrder(updated);
+      try {
+        localStorage.setItem('aura_emenu_active_order', JSON.stringify(updated));
+      } catch {}
+
+      if (notifyMeEnabled) {
+        triggerHaptic?.('success');
+        tg?.showPopup?.({
+          title: 'Order Ready for Pickup! 🔔',
+          message: `Your order #${activeOrder.referenceNo} is prepared and ready at ${currentStore?.name || 'the counter'}!`,
+          buttons: [{ type: 'ok' }],
+        });
+        notification.success({
+          message: 'Order Ready for Pickup! 🔔',
+          description: `Your order #${activeOrder.referenceNo} has been prepared by the kitchen team. Please collect your items at the counter!`,
+          duration: 10,
+          placement: 'top',
+        });
+      }
+    }, 12000);
+
+    return () => clearTimeout(timer);
+  }, [activeOrder, notifyMeEnabled, tg, triggerHaptic, currentStore]);
 
   // Persist cart
   useEffect(() => {
@@ -242,8 +320,8 @@ export default function EMenuPage() {
           price: Number(Number(product.price).toFixed(2)),
           quantity: 1,
           subtotal: Number(Number(product.price).toFixed(2)),
-          options: {}
-        }
+          options: {},
+        },
       ]);
     }
     message.success({ content: `Added ${product.name}!`, duration: 1 });
@@ -264,7 +342,7 @@ export default function EMenuPage() {
       Size: selectedSize,
       Milk: selectedMilk,
       Ice: selectedIce,
-      Note: specialInstructions.trim() || undefined
+      Note: specialInstructions.trim() || undefined,
     };
 
     setCart([
@@ -277,8 +355,8 @@ export default function EMenuPage() {
         price: unitPrice,
         quantity: customizeQty,
         subtotal,
-        options
-      }
+        options,
+      },
     ]);
 
     setCustomizingProduct(null);
@@ -338,7 +416,7 @@ export default function EMenuPage() {
         phone: customerPhone || '+855 12 345 678',
         address: `${customerLocation} (${diningMode.toUpperCase()})`,
         note: customerNote || `Telegram Mini App Order`,
-        telegramId: tg?.initDataUnsafe?.user?.id || 9841203
+        telegramId: tg?.initDataUnsafe?.user?.id || 9841203,
       },
       items: cart.map((it) => ({
         id: it.id,
@@ -348,20 +426,31 @@ export default function EMenuPage() {
         price: it.price,
         quantity: it.quantity,
         subtotal: it.subtotal,
-        options: it.options
-      }))
+        options: it.options,
+      })),
     };
 
     try {
       const res = await axios.post(`/api/tma/shop/${currentSlug}/orders`, payload);
       if (res.data?.status && res.data.data) {
+        const orderData = {
+          referenceNo: res.data.data.referenceNo,
+          storeName: currentStore?.name,
+          status: 'Preparing',
+          placedAt: Date.now(),
+        };
+        setActiveOrder(orderData);
+        try {
+          localStorage.setItem('aura_emenu_active_order', JSON.stringify(orderData));
+        } catch (_) {}
+
         setCart([]);
         setIsCartOpen(false);
         message.success(`Order placed! Ref: ${res.data.data.referenceNo}`);
         tg?.showPopup?.({
           title: 'Order Confirmed! 🎉',
-          message: `Your order #${res.data.data.referenceNo} has been sent to the kitchen for ${currentStore?.name}.`,
-          buttons: [{ type: 'ok' }]
+          message: `Your order #${res.data.data.referenceNo} has been sent to the kitchen for ${currentStore?.name}. You'll receive a 'Ready' notification when your order is prepared!`,
+          buttons: [{ type: 'ok' }],
         });
       } else {
         message.error(`Order failed: ${res.data?.message || 'Server error'}`);
@@ -377,65 +466,127 @@ export default function EMenuPage() {
     { slug: 'sbc-store', name: 'Aura Specialty Coffee', emoji: '☕' },
     { slug: 'aura-lounge', name: 'Botanical Lounge & Matcha', emoji: '🍵' },
     { slug: 'aura-bistro', name: 'Aura French Bistro', emoji: '🍽️' },
-    { slug: 'aura-bakery', name: 'Aura Artisan Bakery', emoji: '🥐' }
+    { slug: 'aura-bakery', name: 'Aura Artisan Bakery', emoji: '🥐' },
   ];
 
   return (
     <div
-      style={{ backgroundColor: activeTheme.bg }}
-      className="w-full max-w-[480px] min-h-screen text-white font-sans flex flex-col relative pb-28 shadow-2xl selection:bg-orange-500 selection:text-white"
+      style={{
+        background: '#ffffff',
+        boxShadow:
+          '0 20px 60px -15px rgba(47, 111, 237, 0.12), 0 0 1px 1px rgba(47, 111, 237, 0.08)',
+      }}
+      className="w-full max-w-[480px] min-h-screen text-slate-800 font-sans flex flex-col relative pb-32 border-x border-blue-100/60 selection:bg-[#2F6FED] selection:text-white"
     >
       {/* ======================================================== */}
-      {/* 1. TOP HEADER (EXACTLY MATCHING IMAGE.PNG)              */}
+      {/* 1. TOP HEADER (WEBSITE DEFAULT STYLE & ELEGANT SHADOW)   */}
       {/* ======================================================== */}
-      <header
-        style={{ backgroundColor: activeTheme.bg }}
-        className="px-4 py-3 flex items-center justify-between sticky top-0 z-30 border-b border-white/5 backdrop-blur-md"
-      >
+      <header className="px-4 py-3 flex items-center justify-between sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
         {/* Left: Avatar + Title + "Table #06 • delivery" */}
         <div
           onClick={() => setIsLocationModalOpen(true)}
           className="flex items-center gap-3 cursor-pointer select-none active:opacity-80 transition"
         >
-          <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-white/10 shrink-0 bg-stone-900 shadow-md">
+          <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-[#2F6FED]/25 shrink-0 bg-slate-100 shadow-sm">
             <img
               src={
                 currentStore?.logo ||
                 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=150&q=80'
               }
               alt=""
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src =
+                  'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=150&q=80';
+              }}
               className="w-full h-full object-cover"
             />
           </div>
           <div>
-            <h1 className="font-extrabold text-sm sm:text-base text-white tracking-tight leading-tight flex items-center gap-1">
+            <h1 className="font-extrabold text-sm sm:text-base text-slate-900 tracking-tight leading-tight flex items-center gap-1">
               <span>{currentStore?.name || activeTheme.name}</span>
             </h1>
-            <p className={`text-xs font-semibold ${activeTheme.badgeText} flex items-center gap-1.5 pt-0.5`}>
-              <span>{customerLocation} • {diningMode}</span>
+            <p className="text-xs font-bold text-[#2F6FED] flex items-center gap-1.5 pt-0.5">
+              <span>
+                {customerLocation} • {diningMode}
+              </span>
               <DownOutlined style={{ fontSize: 9 }} />
             </p>
           </div>
         </div>
 
-        {/* Right: Orange Bag Pill Badge: 🛍️ 0 */}
+        {/* Right: Signature Aura Blue Bag Pill Badge: 🛍️ 0 */}
         <button
           type="button"
           onClick={() => setIsCartOpen(true)}
-          className="px-3.5 py-1.5 rounded-full bg-[#EA580C] hover:bg-[#C2410C] text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/30 active:scale-95 transition cursor-pointer"
+          className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-[#2F6FED]/25 active:scale-95 transition cursor-pointer hover:opacity-95"
         >
           <span className="text-sm">🛍️</span>
           <span className="font-mono">{totalItemCount}</span>
         </button>
       </header>
 
+      {/* Active Order Status Notification Bar & 'Notify Me' feature */}
+      {activeOrder && (
+        <div className="mx-3 mt-2 mb-1 p-3 rounded-2xl bg-gradient-to-r from-blue-50/90 to-indigo-50/90 border border-blue-200/90 flex items-center justify-between gap-2 shadow-sm">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                activeOrder.status === 'Ready'
+                  ? 'bg-emerald-500 text-white animate-bounce'
+                  : 'bg-blue-100 text-[#2F6FED]'
+              }`}
+            >
+              {activeOrder.status === 'Ready' ? '🎉' : '⏳'}
+            </div>
+            <div className="overflow-hidden">
+              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5 truncate">
+                <span>Ref #{activeOrder.referenceNo}</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                    activeOrder.status === 'Ready'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-[#2F6FED] text-white'
+                  }`}
+                >
+                  {activeOrder.status}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 m-0 truncate">
+                {activeOrder.status === 'Ready'
+                  ? '🔔 Order Ready! Collect at counter'
+                  : 'Kitchen preparing your order...'}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic?.('light');
+              setNotifyMeEnabled(!notifyMeEnabled);
+              message.info(
+                !notifyMeEnabled
+                  ? '🔔 Notify Me enabled for order status changes!'
+                  : 'Order notifications paused'
+              );
+            }}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0 transition active:scale-95 cursor-pointer ${
+              notifyMeEnabled
+                ? 'bg-white border border-blue-300 text-[#2F6FED] shadow-xs'
+                : 'bg-slate-100 border border-slate-200 text-slate-500'
+            }`}
+            title="Toggle status push notification"
+          >
+            {notifyMeEnabled ? <BellFilled className="text-[#2F6FED]" /> : <BellOutlined />}
+            <span className="text-[11px]">{notifyMeEnabled ? 'Notify On' : 'Notify Off'}</span>
+          </button>
+        </div>
+      )}
+
       {/* ======================================================== */}
-      {/* 2. CATEGORY HORIZONTAL SCROLL BAR (MATCHING IMAGE.PNG)  */}
+      {/* 2. CATEGORY HORIZONTAL SCROLL BAR (AURA BLUE PILLS)     */}
       {/* ======================================================== */}
-      <div
-        style={{ backgroundColor: activeTheme.bg }}
-        className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-none sticky top-[57px] z-20 border-b border-white/5 backdrop-blur-md"
-      >
+      <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-none sticky top-[57px] z-20 bg-white/95 backdrop-blur-md border-b border-slate-200/80">
         {/* All Items Pill */}
         <button
           type="button"
@@ -476,17 +627,17 @@ export default function EMenuPage() {
       </div>
 
       {/* ======================================================== */}
-      {/* 3. 2-COLUMN PRODUCT GRID (EXACTLY MATCHING IMAGE.PNG)    */}
+      {/* 3. 2-COLUMN PRODUCT GRID (LIGHT WHITE CARDS + BLUE TAGS) */}
       {/* ======================================================== */}
-      <main className="px-3 py-3 flex-1">
+      <main className="px-3 py-3 flex-1 bg-slate-50/50">
         {loading ? (
           <div className="py-24 text-center space-y-3">
             <div className="animate-spin text-3xl">☕</div>
-            <p className="text-xs text-stone-400 font-semibold">Loading menu...</p>
+            <p className="text-xs text-slate-500 font-semibold">Loading menu...</p>
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="py-20 text-center text-stone-400 text-xs space-y-2">
-            <p className="font-bold text-stone-300">No items found</p>
+          <div className="py-20 text-center text-slate-500 text-xs space-y-2">
+            <p className="font-bold text-slate-700">No items found</p>
             <p>Select another category above.</p>
           </div>
         ) : (
@@ -495,29 +646,33 @@ export default function EMenuPage() {
               <div
                 key={prod.id}
                 id={`product-${prod.id}`}
-                style={{ backgroundColor: activeTheme.cardBg }}
-                className={`rounded-2xl border ${activeTheme.cardBorder} p-2.5 flex flex-col justify-between space-y-2.5 transition shadow-xs`}
+                className="bg-white rounded-2xl border border-slate-200/80 p-2.5 flex flex-col justify-between space-y-2.5 transition shadow-xs hover:shadow-md hover:border-[#2F6FED]/40"
               >
                 {/* Product Image with Price Badge */}
-                <div className="relative h-28 w-full rounded-xl overflow-hidden bg-black/40">
+                <div className="relative h-28 w-full rounded-xl overflow-hidden bg-slate-100">
                   <img
                     src={prod.image}
                     alt={prod.name}
-                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src =
+                        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
+                    }}
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                     loading="lazy"
                   />
                   {/* Floating Price Tag Badge (Bottom Right) */}
-                  <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-md bg-black/90 backdrop-blur-xs font-mono font-black text-amber-400 text-[11px] shadow">
+                  <div className="absolute bottom-1.5 right-1.5 px-2.5 py-0.5 rounded-lg bg-white/95 backdrop-blur-md font-mono font-black text-[#2F6FED] text-[12px] shadow-sm border border-blue-100/60">
                     ${Number(prod.price).toFixed(2)}
                   </div>
                 </div>
 
                 {/* Title & 1-Line Description */}
                 <div className="space-y-0.5">
-                  <h3 className="font-bold text-white text-xs leading-snug line-clamp-1">
+                  <h3 className="font-bold text-slate-900 text-xs leading-snug line-clamp-1">
                     {prod.name}
                   </h3>
-                  <p className="text-[11px] text-stone-400 line-clamp-1 leading-normal">
+                  <p className="text-[11px] text-slate-500 line-clamp-1 leading-normal">
                     {prod.details || 'Handcrafted fresh daily.'}
                   </p>
                 </div>
@@ -527,14 +682,14 @@ export default function EMenuPage() {
                   <button
                     type="button"
                     onClick={() => openCustomizer(prod)}
-                    className="py-1.5 px-2 rounded-xl bg-[#2A1D15] hover:bg-[#38271D] text-stone-200 text-xs font-bold text-center active:scale-95 transition cursor-pointer"
+                    className="py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold text-center active:scale-95 transition cursor-pointer"
                   >
                     Opt
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDirectAddToCart(prod)}
-                    className={`py-1.5 px-2 rounded-xl text-xs font-black text-center shadow-md active:scale-95 transition cursor-pointer ${activeTheme.accentBtn}`}
+                    className="py-1.5 px-2 rounded-xl text-xs font-black text-center shadow-md active:scale-95 transition cursor-pointer bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-[#2F6FED]/25"
                   >
                     + Add
                   </button>
@@ -546,7 +701,7 @@ export default function EMenuPage() {
       </main>
 
       {/* ======================================================== */}
-      {/* 4. STICKY BOTTOM BAR (EXACTLY MATCHING IMAGE.PNG)        */}
+      {/* 4. STICKY BOTTOM BASKET BAR                              */}
       {/* ======================================================== */}
       <div className="fixed bottom-0 left-0 right-0 z-40 p-3 pointer-events-none flex justify-center">
         <div className="w-full max-w-[480px] pointer-events-auto">
@@ -556,30 +711,29 @@ export default function EMenuPage() {
               triggerHaptic?.('medium');
               setIsCartOpen(true);
             }}
-            style={{ backgroundColor: activeTheme.accent }}
-            className="w-full py-3.5 px-5 rounded-2xl text-white font-extrabold text-sm flex items-center justify-between shadow-2xl active:scale-98 transition shadow-orange-600/40 cursor-pointer"
+            className="w-full py-3.5 px-5 rounded-2xl text-white font-extrabold text-sm flex items-center justify-between shadow-2xl active:scale-98 transition bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 shadow-[#2F6FED]/35 cursor-pointer"
           >
-            <span>View Basket ({totalItemCount})</span>
+            <div className="flex items-center gap-2">
+              <span className="text-base">🛍️</span>
+              <span>View Basket ({totalItemCount})</span>
+            </div>
             <span className="font-mono text-base font-black">${cartGrandTotal}</span>
           </button>
         </div>
       </div>
 
       {/* ======================================================== */}
-      {/* 5. LOCATION & BRANCH PICKER MODAL                        */}
+      {/* 5. LOCATION & BRANCH PICKER MODAL (LIGHT CLEAN THEME)    */}
       {/* ======================================================== */}
       {isLocationModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-xs p-3">
-          <div
-            style={{ backgroundColor: activeTheme.cardBg }}
-            className="w-full max-w-[460px] rounded-3xl p-5 space-y-4 border border-white/10 shadow-2xl"
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
-              <h3 className="font-bold text-sm text-white">Dining Location &amp; Branch</h3>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs p-3">
+          <div className="w-full max-w-[460px] rounded-3xl p-5 space-y-4 bg-white border border-slate-200 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="font-extrabold text-sm text-slate-900">Dining Location &amp; Branch</h3>
               <button
                 type="button"
                 onClick={() => setIsLocationModalOpen(false)}
-                className="p-1 text-stone-400 hover:text-white"
+                className="p-1 text-slate-400 hover:text-slate-700"
               >
                 <CloseOutlined />
               </button>
@@ -587,12 +741,12 @@ export default function EMenuPage() {
 
             {/* Dining Mode */}
             <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-stone-400 uppercase">Dining Option</span>
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Dining Option</span>
               <div className="grid grid-cols-3 gap-2 text-xs">
                 {[
                   { id: 'dine_in', label: '🍽️ Dine-in' },
                   { id: 'takeaway', label: '🛍️ Takeaway' },
-                  { id: 'delivery', label: '🛵 Delivery' }
+                  { id: 'delivery', label: '🛵 Delivery' },
                 ].map((mode) => (
                   <button
                     key={mode.id}
@@ -600,8 +754,8 @@ export default function EMenuPage() {
                     onClick={() => setDiningMode(mode.id)}
                     className={`py-2 px-2 rounded-xl font-bold transition text-center ${
                       diningMode === mode.id
-                        ? activeTheme.accentBtn
-                        : 'bg-white/5 text-stone-300 border border-white/5'
+                        ? 'bg-[#2F6FED] text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     {mode.label}
@@ -612,11 +766,11 @@ export default function EMenuPage() {
 
             {/* Table Number */}
             <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-stone-400 uppercase">Table Number</span>
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Table Number</span>
               <select
                 value={customerLocation}
                 onChange={(e) => setCustomerLocation(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-black/60 border border-white/10 text-xs font-bold text-amber-300 outline-none"
+                className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 outline-none focus:border-[#2F6FED]"
               >
                 {[
                   'Table #01',
@@ -626,9 +780,9 @@ export default function EMenuPage() {
                   'Table #12 (Window)',
                   'Terrace #03',
                   'Bar Counter',
-                  'VIP Lounge'
+                  'VIP Lounge',
                 ].map((t) => (
-                  <option key={t} value={t} className="bg-stone-900 text-white">
+                  <option key={t} value={t} className="bg-white text-slate-900">
                     {t}
                   </option>
                 ))}
@@ -636,8 +790,8 @@ export default function EMenuPage() {
             </div>
 
             {/* Switch Store / Branch */}
-            <div className="space-y-1.5 pt-2 border-t border-white/10">
-              <span className="text-[11px] font-bold text-stone-400 uppercase">Switch Store / Branch</span>
+            <div className="space-y-1.5 pt-2 border-t border-slate-100">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Switch Store / Branch</span>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {storeOptions.map((st) => (
                   <button
@@ -649,8 +803,8 @@ export default function EMenuPage() {
                     }}
                     className={`p-2.5 rounded-xl font-bold text-left transition flex items-center gap-2 ${
                       currentSlug === st.slug
-                        ? 'bg-white/20 text-white border border-white/40 shadow-sm'
-                        : 'bg-white/5 text-stone-300 border border-white/5 hover:bg-white/10'
+                        ? 'bg-blue-50 text-[#2F6FED] border border-[#2F6FED]/50 shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     <span>{st.emoji}</span>
@@ -661,20 +815,20 @@ export default function EMenuPage() {
             </div>
 
             {/* Telegram Mini App Link */}
-            <div className="pt-2 border-t border-white/10 space-y-1.5">
-              <span className="text-[11px] font-bold text-stone-400 uppercase">Telegram Mini App Link</span>
+            <div className="pt-2 border-t border-slate-100 space-y-1.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Telegram Mini App Link</span>
               <div
                 onClick={() => {
                   const link = `https://t.me/aura_emenu_order_bot/menu?startapp=shop_${currentSlug}`;
                   navigator.clipboard.writeText(link);
                   message.success('Copied: ' + link);
                 }}
-                className="p-2.5 rounded-xl bg-black/60 border border-white/10 flex items-center justify-between text-xs cursor-pointer hover:border-amber-400/40 transition active:scale-98"
+                className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs cursor-pointer hover:border-[#2F6FED]/60 transition active:scale-98"
               >
-                <code className="text-amber-400 font-mono text-[11px] truncate max-w-[320px]">
+                <code className="text-[#2F6FED] font-mono text-[11px] truncate max-w-[320px]">
                   https://t.me/aura_emenu_order_bot/menu?startapp=shop_{currentSlug}
                 </code>
-                <span className="text-[11px] font-bold text-stone-300 shrink-0 ml-2 bg-white/10 px-2 py-0.5 rounded-md">
+                <span className="text-[11px] font-bold text-slate-600 shrink-0 ml-2 bg-slate-200 px-2 py-0.5 rounded-md">
                   Copy Link
                 </span>
               </div>
@@ -683,7 +837,7 @@ export default function EMenuPage() {
             <button
               type="button"
               onClick={() => setIsLocationModalOpen(false)}
-              className={`w-full py-2.5 rounded-xl text-xs font-bold ${activeTheme.accentBtn}`}
+              className="w-full py-2.5 rounded-xl text-xs font-bold bg-[#2F6FED] hover:bg-[#255bc2] text-white shadow-sm transition"
             >
               Done
             </button>
@@ -692,20 +846,17 @@ export default function EMenuPage() {
       )}
 
       {/* ======================================================== */}
-      {/* 6. PRODUCT CUSTOMIZER MODAL ("Opt")                      */}
+      {/* 6. PRODUCT CUSTOMIZER MODAL ("Opt") (LIGHT THEME)        */}
       {/* ======================================================== */}
       {customizingProduct && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-xs p-3">
-          <div
-            style={{ backgroundColor: activeTheme.cardBg }}
-            className="w-full max-w-[460px] rounded-3xl p-5 space-y-4 border border-white/10 shadow-2xl max-h-[85vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
-              <h3 className="font-extrabold text-sm text-white">Customize Item</h3>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs p-3">
+          <div className="w-full max-w-[460px] rounded-3xl p-5 space-y-4 bg-white border border-slate-200 shadow-2xl max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="font-extrabold text-sm text-slate-900">Customize Item</h3>
               <button
                 type="button"
                 onClick={() => setCustomizingProduct(null)}
-                className="p-1 text-stone-400 hover:text-white"
+                className="p-1 text-slate-400 hover:text-slate-700"
               >
                 <CloseOutlined />
               </button>
@@ -715,11 +866,16 @@ export default function EMenuPage() {
               <img
                 src={customizingProduct.image}
                 alt=""
-                className="w-14 h-14 rounded-2xl object-cover shrink-0"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src =
+                    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
+                }}
+                className="w-14 h-14 rounded-2xl object-cover shrink-0 bg-slate-100"
               />
               <div>
-                <h4 className="font-extrabold text-sm text-white">{customizingProduct.name}</h4>
-                <span className={`font-mono text-xs ${activeTheme.priceText}`}>
+                <h4 className="font-extrabold text-sm text-slate-900">{customizingProduct.name}</h4>
+                <span className="font-mono text-xs font-bold text-[#2F6FED]">
                   Base Price: ${Number(customizingProduct.price).toFixed(2)}
                 </span>
               </div>
@@ -727,7 +883,7 @@ export default function EMenuPage() {
 
             {/* Portion / Size */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-stone-400 uppercase block">Portion / Size</label>
+              <label className="text-[11px] font-bold text-slate-500 uppercase block">Portion / Size</label>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {['Regular (12oz)', 'Large (16oz) (+$0.75)'].map((size) => (
                   <button
@@ -736,8 +892,8 @@ export default function EMenuPage() {
                     onClick={() => setSelectedSize(size)}
                     className={`py-2 px-2.5 rounded-xl font-bold transition text-center ${
                       selectedSize === size
-                        ? activeTheme.accentBtn
-                        : 'bg-white/5 text-stone-300 border border-white/5'
+                        ? 'bg-[#2F6FED] text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     {size}
@@ -748,7 +904,7 @@ export default function EMenuPage() {
 
             {/* Milk / Base */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-stone-400 uppercase block">Artisan Milk</label>
+              <label className="text-[11px] font-bold text-slate-500 uppercase block">Artisan Milk</label>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {['Fresh Cow Milk', 'Oat Milk (+$0.60)', 'Almond Milk (+$0.60)', 'Skim Milk'].map((milk) => (
                   <button
@@ -757,8 +913,8 @@ export default function EMenuPage() {
                     onClick={() => setSelectedMilk(milk)}
                     className={`py-2 px-2.5 rounded-xl font-bold transition text-center ${
                       selectedMilk === milk
-                        ? activeTheme.accentBtn
-                        : 'bg-white/5 text-stone-300 border border-white/5'
+                        ? 'bg-[#2F6FED] text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     {milk}
@@ -769,7 +925,7 @@ export default function EMenuPage() {
 
             {/* Ice & Temperature */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-stone-400 uppercase block">Ice &amp; Temp</label>
+              <label className="text-[11px] font-bold text-slate-500 uppercase block">Ice &amp; Temp</label>
               <div className="grid grid-cols-3 gap-2 text-xs">
                 {['Hot', 'Less Ice', 'Normal Ice'].map((ice) => (
                   <button
@@ -778,8 +934,8 @@ export default function EMenuPage() {
                     onClick={() => setSelectedIce(ice)}
                     className={`py-2 px-2 rounded-xl font-bold transition text-center ${
                       selectedIce === ice
-                        ? activeTheme.accentBtn
-                        : 'bg-white/5 text-stone-300 border border-white/5'
+                        ? 'bg-[#2F6FED] text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     {ice}
@@ -790,32 +946,32 @@ export default function EMenuPage() {
 
             {/* Chef Notes */}
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-stone-400 uppercase block">Barista / Chef Notes</label>
+              <label className="text-[11px] font-bold text-slate-500 uppercase block">Barista / Chef Notes</label>
               <input
                 type="text"
                 value={specialInstructions}
                 onChange={(e) => setSpecialInstructions(e.target.value)}
                 placeholder="e.g. Extra hot, no sugar..."
-                className="w-full p-2.5 rounded-xl bg-black/60 border border-white/10 text-xs text-white placeholder-stone-500 outline-none"
+                className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-[#2F6FED]"
               />
             </div>
 
             {/* Quantity */}
             <div className="flex items-center justify-between pt-1">
-              <span className="text-xs font-bold text-stone-300">Quantity</span>
+              <span className="text-xs font-bold text-slate-700">Quantity</span>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setCustomizeQty((q) => Math.max(1, q - 1))}
-                  className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center font-bold"
+                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700"
                 >
                   <MinusOutlined style={{ fontSize: 10 }} />
                 </button>
-                <span className="font-mono font-bold text-sm">{customizeQty}</span>
+                <span className="font-mono font-bold text-sm text-slate-900">{customizeQty}</span>
                 <button
                   type="button"
                   onClick={() => setCustomizeQty((q) => q + 1)}
-                  className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center font-bold"
+                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700"
                 >
                   <PlusOutlined style={{ fontSize: 10 }} />
                 </button>
@@ -825,7 +981,7 @@ export default function EMenuPage() {
             <button
               type="button"
               onClick={handleAddCustomizedToCart}
-              className={`w-full py-3 rounded-2xl text-xs font-black shadow-lg cursor-pointer ${activeTheme.accentBtn}`}
+              className="w-full py-3 rounded-2xl text-xs font-black shadow-lg cursor-pointer bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-[#2F6FED]/25 transition"
             >
               Add Customized Item to Basket
             </button>
@@ -839,9 +995,9 @@ export default function EMenuPage() {
                   navigator.clipboard.writeText(itemLink);
                   message.success('Copied Direct Item Link: ' + itemLink);
                 }}
-                className="text-[11px] text-stone-400 hover:text-amber-400 transition cursor-pointer"
+                className="text-[11px] text-slate-500 hover:text-[#2F6FED] transition cursor-pointer"
               >
-                🔗 Copy Direct Item Link: <span className="font-mono">item_{customizingProduct.id}</span>
+                🔗 Copy Direct Item Link: <span className="font-mono font-bold">item_{customizingProduct.id}</span>
               </button>
             </div>
           </div>
@@ -849,21 +1005,18 @@ export default function EMenuPage() {
       )}
 
       {/* ======================================================== */}
-      {/* 7. BASKET & CHECKOUT DRAWER                              */}
+      {/* 7. BASKET & CHECKOUT DRAWER (LIGHT CLEAN THEME)          */}
       {/* ======================================================== */}
       {isCartOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/85 backdrop-blur-xs p-3">
-          <div
-            style={{ backgroundColor: activeTheme.cardBg }}
-            className="w-full max-w-[460px] rounded-3xl p-5 space-y-4 border border-white/10 shadow-2xl max-h-[88vh] flex flex-col justify-between"
-          >
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs p-3">
+          <div className="w-full max-w-[460px] rounded-3xl p-5 space-y-4 bg-white border border-slate-200 shadow-2xl max-h-[88vh] flex flex-col justify-between">
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
-              <h3 className="font-extrabold text-sm text-white">Your Basket ({totalItemCount})</h3>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+              <h3 className="font-extrabold text-sm text-slate-900">Your Basket ({totalItemCount})</h3>
               <button
                 type="button"
                 onClick={() => setIsCartOpen(false)}
-                className="p-1 text-stone-400 hover:text-white"
+                className="p-1 text-slate-400 hover:text-slate-700"
               >
                 <CloseOutlined />
               </button>
@@ -874,25 +1027,34 @@ export default function EMenuPage() {
               {cart.length === 0 ? (
                 <div className="py-14 text-center space-y-2">
                   <span className="text-3xl block">🛍️</span>
-                  <p className="font-bold text-xs text-stone-300">Your basket is currently empty</p>
-                  <p className="text-[11px] text-stone-500">Add some artisan items to place an order.</p>
+                  <p className="font-bold text-xs text-slate-700">Your basket is currently empty</p>
+                  <p className="text-[11px] text-slate-400">Add some artisan items to place an order.</p>
                 </div>
               ) : (
                 <div className="space-y-2.5">
                   {cart.map((item, idx) => (
                     <div
                       key={idx}
-                      className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between gap-3"
+                      className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3 shadow-2xs"
                     >
                       <div className="flex items-center gap-2.5">
-                        <img src={item.image} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                        <img
+                          src={item.image}
+                          alt=""
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src =
+                              'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
+                          }}
+                          className="w-11 h-11 rounded-xl object-cover shrink-0 bg-slate-200"
+                        />
                         <div>
-                          <h4 className="font-bold text-xs text-white leading-tight">{item.name}</h4>
-                          <span className={`text-[11px] font-mono ${activeTheme.priceText}`}>
+                          <h4 className="font-bold text-xs text-slate-900 leading-tight">{item.name}</h4>
+                          <span className="text-[11.5px] font-mono font-bold text-[#2F6FED]">
                             ${item.price.toFixed(2)}
                           </span>
                           {item.options && Object.keys(item.options).length > 0 && (
-                            <p className="text-[10px] text-stone-400">
+                            <p className="text-[10px] text-slate-500">
                               {Object.entries(item.options).map(([k, v]) => `${k}: ${v}`).join(' • ')}
                             </p>
                           )}
@@ -903,15 +1065,17 @@ export default function EMenuPage() {
                         <button
                           type="button"
                           onClick={() => handleUpdateCartQty(idx, -1)}
-                          className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center font-bold text-xs"
+                          className="w-6 h-6 rounded-lg bg-slate-200 hover:bg-slate-300 flex items-center justify-center font-bold text-xs text-slate-700"
                         >
                           -
                         </button>
-                        <span className="font-mono font-bold text-xs w-4 text-center">{item.quantity}</span>
+                        <span className="font-mono font-bold text-xs w-4 text-center text-slate-900">
+                          {item.quantity}
+                        </span>
                         <button
                           type="button"
                           onClick={() => handleUpdateCartQty(idx, 1)}
-                          className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center font-bold text-xs"
+                          className="w-6 h-6 rounded-lg bg-slate-200 hover:bg-slate-300 flex items-center justify-center font-bold text-xs text-slate-700"
                         >
                           +
                         </button>
@@ -920,10 +1084,10 @@ export default function EMenuPage() {
                   ))}
 
                   {/* VIP 20% Discount */}
-                  <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 flex items-center justify-between">
+                  <div className="p-3 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 flex items-center justify-between">
                     <div>
-                      <span className="text-[9px] font-black uppercase text-amber-400">Promo Code: FIRST20</span>
-                      <p className="text-xs font-bold text-white">20% VIP Order Discount</p>
+                      <span className="text-[9.5px] font-black uppercase text-[#2F6FED]">Promo Code: FIRST20</span>
+                      <p className="text-xs font-bold text-slate-900">20% VIP Order Discount</p>
                     </div>
                     <button
                       type="button"
@@ -932,7 +1096,9 @@ export default function EMenuPage() {
                         message.info(hasClaimedCoupon ? 'Coupon removed' : '20% discount applied!');
                       }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition ${
-                        hasClaimedCoupon ? 'bg-emerald-500 text-slate-950 font-black' : 'bg-white/10 text-white'
+                        hasClaimedCoupon
+                          ? 'bg-emerald-500 text-white font-black'
+                          : 'bg-[#2F6FED] text-white hover:bg-[#255bc2]'
                       }`}
                     >
                       {hasClaimedCoupon ? 'Claimed ✓' : 'Apply'}
@@ -944,27 +1110,27 @@ export default function EMenuPage() {
 
             {/* Order Summary & Submit */}
             {cart.length > 0 && (
-              <div className="pt-3 border-t border-white/10 space-y-3 shrink-0">
+              <div className="pt-3 border-t border-slate-100 space-y-3 shrink-0">
                 <div className="space-y-1 text-xs">
-                  <div className="flex justify-between text-stone-400">
+                  <div className="flex justify-between text-slate-500">
                     <span>Subtotal:</span>
-                    <span className="font-mono text-white">${cartSubtotal.toFixed(2)}</span>
+                    <span className="font-mono text-slate-900 font-bold">${cartSubtotal.toFixed(2)}</span>
                   </div>
                   {cartDiscount > 0 && (
-                    <div className="flex justify-between text-emerald-400">
+                    <div className="flex justify-between text-emerald-600 font-semibold">
                       <span>Discount (20%):</span>
                       <span className="font-mono">-${cartDiscount.toFixed(2)}</span>
                     </div>
                   )}
                   {deliveryFee > 0 && (
-                    <div className="flex justify-between text-stone-400">
+                    <div className="flex justify-between text-slate-500">
                       <span>Delivery ({customerLocation}):</span>
-                      <span className="font-mono text-white">${deliveryFee.toFixed(2)}</span>
+                      <span className="font-mono text-slate-900 font-bold">${deliveryFee.toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-sm font-black pt-1.5 border-t border-white/10 text-white">
+                  <div className="flex justify-between text-sm font-black pt-1.5 border-t border-slate-100 text-slate-900">
                     <span>Total Amount:</span>
-                    <span className={`font-mono text-base ${activeTheme.priceText}`}>${cartGrandTotal}</span>
+                    <span className="font-mono text-base font-black text-[#2F6FED]">${cartGrandTotal}</span>
                   </div>
                 </div>
 
@@ -972,7 +1138,7 @@ export default function EMenuPage() {
                   type="button"
                   disabled={isSubmittingOrder}
                   onClick={handleConfirmOrder}
-                  className={`w-full py-3.5 rounded-2xl text-xs font-black shadow-xl cursor-pointer ${activeTheme.accentBtn}`}
+                  className="w-full py-3.5 rounded-2xl text-xs font-black shadow-xl cursor-pointer bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-[#2F6FED]/25 transition"
                 >
                   {isSubmittingOrder ? 'Sending to Kitchen...' : `Place Order ($${cartGrandTotal})`}
                 </button>
@@ -981,7 +1147,6 @@ export default function EMenuPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

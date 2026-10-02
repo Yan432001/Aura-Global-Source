@@ -93,28 +93,63 @@ const RetailProductCard = ({
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
 
-            {/* Brand / Category Pill */}
-            {product.brand && (
-              <Tag
-                style={{
-                  position: 'absolute',
-                  top: isPhone ? 6 : 8,
-                  left: isPhone ? 6 : 8,
-                  margin: 0,
-                  borderRadius: 999,
-                  border: 'none',
-                  background: 'rgba(255,255,255,0.92)',
-                  color: publicTheme.primary,
-                  fontWeight: 700,
-                  fontSize: isPhone ? 10 : 11,
-                  padding: isPhone ? '1px 6px' : '2px 8px',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
-                  backdropFilter: 'blur(4px)',
-                }}
-              >
-                {product.brand}
-              </Tag>
-            )}
+            {/* Brand / Category Pill and Promo Badge */}
+            <div
+              style={{
+                position: 'absolute',
+                top: isPhone ? 6 : 8,
+                left: isPhone ? 6 : 8,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 3,
+                zIndex: 2,
+                alignItems: 'flex-start',
+              }}
+            >
+              {product.badge && (
+                <span
+                  style={{
+                    borderRadius: 999,
+                    background: product.badge.includes('🔥')
+                      ? '#ef4444'
+                      : product.badge.includes('⚡')
+                      ? '#f59e0b'
+                      : product.badge.includes('Price')
+                      ? '#10b981'
+                      : '#2F6FED',
+                    color: '#ffffff',
+                    fontWeight: 800,
+                    fontSize: isPhone ? 9.5 : 10.5,
+                    padding: '2px 8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+                    display: 'inline-block',
+                    width: 'fit-content',
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {product.badge}
+                </span>
+              )}
+
+              {product.brand && (
+                <Tag
+                  style={{
+                    margin: 0,
+                    borderRadius: 999,
+                    border: 'none',
+                    background: 'rgba(255,255,255,0.92)',
+                    color: publicTheme.primary,
+                    fontWeight: 700,
+                    fontSize: isPhone ? 10 : 11,
+                    padding: isPhone ? '1px 6px' : '2px 8px',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                    backdropFilter: 'blur(4px)',
+                  }}
+                >
+                  {product.brand}
+                </Tag>
+              )}
+            </div>
 
             {/* Quick Favorite / Wishlist Heart Button */}
             <Button
@@ -249,16 +284,26 @@ const RetailProductCard = ({
               {formatCurrency(product.price)}
             </Text>
             {product.originalPrice && product.originalPrice > product.price && (
-              <Text
-                delete
-                style={{
-                  color: publicTheme.subtext,
-                  fontSize: isPhone ? 10 : 11,
-                  display: 'block',
-                }}
-              >
-                {formatCurrency(product.originalPrice)}
-              </Text>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Text
+                  delete
+                  style={{
+                    color: publicTheme.subtext,
+                    fontSize: isPhone ? 10 : 11,
+                  }}
+                >
+                  {formatCurrency(product.originalPrice)}
+                </Text>
+                <span
+                  style={{
+                    color: '#ef4444',
+                    fontWeight: 800,
+                    fontSize: isPhone ? 9.5 : 10.5,
+                  }}
+                >
+                  -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                </span>
+              </div>
             )}
           </div>
 
@@ -278,135 +323,134 @@ const RetailProductCard = ({
           </Tag>
         </Flex>
 
-        {/* Compact App-Style Action Bar on Phone & Tablet */}
-        {isCompact ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+        {/* Action Button Section matching image: Row 1 Order product, Row 2 Telegram & Wishlist, Row 3 Like & Share */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 6 : 8, width: '100%', marginTop: 'auto', paddingTop: 6 }}>
+          {/* Row 1: Order Product Full Width */}
+          <Button
+            type="primary"
+            block
+            icon={<ShoppingCartOutlined style={{ fontSize: isPhone ? 13 : 14 }} />}
+            onClick={(event) => handleAdd?.(product, event.currentTarget)}
+            style={{
+              borderRadius: 10,
+              background: '#2F6FED',
+              borderColor: '#2F6FED',
+              fontWeight: 700,
+              fontSize: isPhone ? 12 : 13,
+              height: isPhone ? 34 : 38,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              boxShadow: '0 2px 8px rgba(47, 111, 237, 0.2)',
+            }}
+          >
+            Order product
+          </Button>
+
+          {/* Row 2: Telegram E-Menu & Wishlist */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isPhone ? 6 : 8 }}>
             <Button
-              icon={<ShoppingCartOutlined style={{ fontSize: 13 }} />}
-              type="primary"
-              onClick={(event) => handleAdd?.(product, event.currentTarget)}
+              icon={<SendOutlined style={{ color: '#2481cc', fontSize: isPhone ? 11 : 12 }} />}
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenTelegram?.(product);
+              }}
               style={{
-                flex: 1,
-                height: isPhone ? 32 : 34,
                 borderRadius: 10,
-                background: publicTheme.ribbon,
-                border: 'none',
+                border: '1px solid rgba(36, 129, 204, 0.35)',
+                background: 'rgba(36, 129, 204, 0.06)',
+                color: '#2481cc',
                 fontWeight: 700,
                 fontSize: isPhone ? 11 : 12,
+                height: isPhone ? 32 : 34,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 4,
-                padding: '0 8px',
-              }}
-            >
-              + Order
-            </Button>
-
-            <Button
-              icon={<SendOutlined style={{ color: '#2481cc', fontSize: 12 }} />}
-              onClick={(event) => {
-                event.stopPropagation();
-                onOpenTelegram?.(product);
-              }}
-              style={{
-                width: isPhone ? 32 : 34,
-                height: isPhone ? 32 : 34,
-                minWidth: isPhone ? 32 : 34,
-                borderRadius: 10,
-                padding: 0,
-                background: 'rgba(36, 129, 204, 0.08)',
-                border: '1px solid rgba(36, 129, 204, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Telegram E-Menu"
-            />
-
-            <Button
-              icon={<ShareAltOutlined style={{ fontSize: 12, color: publicTheme.subtext }} />}
-              onClick={(event) => {
-                event.stopPropagation();
-                onShare?.(product);
-              }}
-              style={{
-                width: isPhone ? 30 : 34,
-                height: isPhone ? 32 : 34,
-                minWidth: isPhone ? 30 : 34,
-                borderRadius: 10,
-                padding: 0,
-                border: `1px solid ${publicTheme.softBorder}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Share product"
-            />
-          </div>
-        ) : (
-          /* Desktop Action Row */
-          <Space wrap size={[6, 6]} style={{ width: '100%' }}>
-            <Button
-              icon={<ShoppingCartOutlined />}
-              type="primary"
-              onClick={(event) => handleAdd?.(product, event.currentTarget)}
-              style={{
-                borderRadius: 12,
-                background: publicTheme.ribbon,
-                border: 'none',
-                fontWeight: 700,
-                fontSize: 13,
-                height: 36,
-              }}
-            >
-              Order product
-            </Button>
-            <Button
-              icon={<SendOutlined style={{ color: '#2481cc' }} />}
-              onClick={(event) => {
-                event.stopPropagation();
-                onOpenTelegram?.(product);
-              }}
-              style={{
-                borderRadius: 12,
-                border: '1px solid rgba(36, 129, 204, 0.3)',
-                background: 'rgba(36, 129, 204, 0.08)',
-                color: '#2481cc',
-                fontWeight: 700,
-                fontSize: 13,
-                height: 36,
+                padding: '0 4px',
               }}
             >
               Telegram E-Menu
             </Button>
             <Button
-              icon={isWishlisted ? <HeartFilled /> : <HeartOutlined />}
-              onClick={() => handleWish?.(product)}
+              icon={
+                isWishlisted ? (
+                  <HeartFilled style={{ color: publicTheme.danger, fontSize: isPhone ? 11 : 12 }} />
+                ) : (
+                  <HeartOutlined style={{ color: publicTheme.text, fontSize: isPhone ? 11 : 12 }} />
+                )
+              }
+              onClick={(event) => {
+                event.stopPropagation();
+                handleWish?.(product);
+              }}
               style={{
-                borderRadius: 12,
-                color: isWishlisted ? publicTheme.danger : undefined,
-                height: 36,
+                borderRadius: 10,
+                borderColor: publicTheme.softBorder,
+                color: isWishlisted ? publicTheme.danger : publicTheme.text,
+                fontWeight: 600,
+                fontSize: isPhone ? 11 : 12,
+                height: isPhone ? 32 : 34,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                padding: '0 4px',
               }}
             >
               Wishlist
             </Button>
+          </div>
+
+          {/* Row 3: Like & Share */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isPhone ? 6 : 8 }}>
             <Button
-              icon={<LikeOutlined />}
-              onClick={() => onLike?.(product)}
-              style={{ borderRadius: 12, height: 36 }}
+              icon={<LikeOutlined style={{ fontSize: isPhone ? 11 : 12 }} />}
+              onClick={(event) => {
+                event.stopPropagation();
+                onLike?.(product);
+              }}
+              style={{
+                borderRadius: 10,
+                borderColor: publicTheme.softBorder,
+                color: publicTheme.text,
+                fontWeight: 600,
+                fontSize: isPhone ? 11 : 12,
+                height: isPhone ? 32 : 34,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                padding: '0 4px',
+              }}
             >
               Like
             </Button>
             <Button
-              icon={<ShareAltOutlined />}
-              onClick={() => onShare?.(product)}
-              style={{ borderRadius: 12, height: 36 }}
+              icon={<ShareAltOutlined style={{ fontSize: isPhone ? 11 : 12 }} />}
+              onClick={(event) => {
+                event.stopPropagation();
+                onShare?.(product);
+              }}
+              style={{
+                borderRadius: 10,
+                borderColor: publicTheme.softBorder,
+                color: publicTheme.text,
+                fontWeight: 600,
+                fontSize: isPhone ? 11 : 12,
+                height: isPhone ? 32 : 34,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                padding: '0 4px',
+              }}
             >
               Share
             </Button>
-          </Space>
-        )}
+          </div>
+        </div>
       </div>
     </Card>
   );

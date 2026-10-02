@@ -20,6 +20,7 @@ import {
   StarFilled,
 } from '@ant-design/icons';
 import { formatCurrency } from '../../../utils/webTheme';
+import simpleData from '../../../../data/simpleData';
 
 // Telegram staff & kitchen dispatch channels per shop
 export const shopTelegramGroups = {
@@ -32,6 +33,7 @@ export const shopTelegramGroups = {
   'sbc-store': '☕ Aura Specialty Coffee Bar Group',
   'aura-bakery': '🥐 Aura Artisan Bakery Kitchen Group',
   'aura-bistro': '🥗 Aura Bistro Kitchen Orders Group',
+  'aura-lounge': '🍵 Aura Botanical Lounge Orders Group',
   'aura-tech': '⚡ Aura Tech Store Fulfillment Group',
 };
 
@@ -47,7 +49,7 @@ export const BOTFATHER_CONFIG = {
 
 /**
  * TelegramMiniAppModal
- * Direct Telegram launching modal with scannable QR code and deep-link launcher.
+ * Clean, shop-focused Telegram Mini App launcher with scannable QR code and deep-link.
  */
 export default function TelegramMiniAppModal({
   open,
@@ -59,25 +61,63 @@ export default function TelegramMiniAppModal({
 
   // Derive target shop if only product is provided
   const targetShop = useMemo(() => {
-    if (shop) return shop;
-    if (product) {
+    const SELLER_SLUG_MAP = {
+      'seller-1': 'sbc-store',
+      'seller-2': 'aura-bakery',
+      'seller-3': 'aura-lounge',
+      'seller-4': 'aura-bistro',
+      'seller-5': 'aura-tech',
+      'seller-6': 'sbc-store',
+    };
+
+    if (shop) {
+      const resolvedSlug =
+        shop.slug ||
+        SELLER_SLUG_MAP[shop.id] ||
+        (simpleData.stores || []).find(
+          (s) =>
+            s.id === shop.id ||
+            s.slug === shop.id ||
+            s.name?.toLowerCase() === shop.name?.toLowerCase()
+        )?.slug ||
+        'sbc-store';
+
+      const matchedStore = (simpleData.stores || []).find((s) => s.slug === resolvedSlug);
+
       return {
-        id: product.shopId || 'seller-1',
-        slug: product.shopSlug || 'sbc-store',
-        name: product.shopName || 'Apex Warehouse Systems',
+        ...shop,
+        id: shop.id || resolvedSlug,
+        slug: resolvedSlug,
+        name: shop.name || matchedStore?.name || 'Aura Store',
+        rating: shop.rating || matchedStore?.rating || 4.9,
+        branch: shop.branch || 'phnom-penh',
+        heroImage: shop.heroImage || shop.banner || matchedStore?.banner,
+        logo: shop.logo || matchedStore?.logo,
+        logoText: shop.logoText || shop.name?.slice(0, 2) || matchedStore?.name?.slice(0, 2) || 'AS',
+      };
+    }
+    if (product) {
+      const prodStore = (simpleData.stores || []).find(
+        (s) => s.id === product.biller_id || s.slug === product.shopSlug
+      );
+      const prodSlug = product.shopSlug || prodStore?.slug || 'sbc-store';
+      return {
+        id: product.shopId || prodSlug,
+        slug: prodSlug,
+        name: product.shopName || prodStore?.name || 'Aura Specialty Store',
         rating: 4.9,
-        branch: 'bangkok-hub',
-        heroImage: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200&h=800&fit=crop',
+        branch: 'phnom-penh',
+        heroImage: prodStore?.banner || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200&h=800&fit=crop',
         logoText: 'AS',
       };
     }
     return {
-      id: 'seller-1',
+      id: 'sbc-store',
       slug: 'sbc-store',
-      name: 'Aura Global Shop',
+      name: 'Aura Specialty Coffee',
       rating: 4.9,
-      branch: 'bangkok-hub',
-      heroImage: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200&h=800&fit=crop',
+      branch: 'phnom-penh',
+      heroImage: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80',
       logoText: 'AS',
     };
   }, [shop, product]);
@@ -88,17 +128,19 @@ export default function TelegramMiniAppModal({
       return `item_${product.id}`;
     }
     if (targetShop) {
-      const slug = targetShop.slug || targetShop.id || 'sbc-store';
+      const slug = targetShop.slug || 'sbc-store';
       return `shop_${slug}`;
     }
     return 'shop_sbc-store';
   }, [product, targetShop]);
 
   const directBotLink = `https://t.me/${BOTFATHER_CONFIG.botUsername}/menu?startapp=${startParam}`;
-  const targetGroup = shopTelegramGroups[targetShop?.slug] || shopTelegramGroups[targetShop?.id] || 'Kitchen Dispatch Staff Group';
+  const targetGroup =
+    shopTelegramGroups[targetShop?.slug] ||
+    shopTelegramGroups[targetShop?.id] ||
+    'Kitchen Dispatch Staff Group';
 
   const handleLaunchTelegram = () => {
-    // Launch direct bot link for universal compatibility
     window.open(directBotLink, '_blank', 'noopener,noreferrer');
   };
 
@@ -145,7 +187,6 @@ export default function TelegramMiniAppModal({
     }
 
     try {
-      // Clean, compact QR Card dimensions (560 x 660 px)
       const W = 560;
       const H = 660;
       const card = document.createElement('canvas');
@@ -174,7 +215,6 @@ export default function TelegramMiniAppModal({
         ? `${targetShop?.name || 'Aura'} • $${Number(product.price).toFixed(2)} • Telegram Mini App`
         : `${targetShop?.branch ? targetShop.branch.toUpperCase() : 'SPECIALTY STORE'} • TELEGRAM MINI APP`;
 
-      // Brand tag badge
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
@@ -196,23 +236,21 @@ export default function TelegramMiniAppModal({
       ctx.font = '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillText(subtitle, W / 2, headerY + 80);
 
-      // 4. Centered QR Code Box (Exact style from popup)
+      // 4. Centered QR Code Box
       const qrBoxSize = 370;
       const qrBoxX = (W - qrBoxSize) / 2;
       const qrBoxY = headerY + 104;
 
       drawRoundedRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 22, '#f8fafc', '#e2e8f0', 1.5);
 
-      // Draw the QR Code image cleanly centered
       const qrSize = 320;
       const qrX = qrBoxX + (qrBoxSize - qrSize) / 2;
       const qrY = qrBoxY + (qrBoxSize - qrSize) / 2;
 
-      // Inner white plate for maximum contrast
       drawRoundedRect(ctx, qrX - 8, qrY - 8, qrSize + 16, qrSize + 16, 16, '#ffffff', '#e2e8f0', 1);
       ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 
-      // 5. Bottom Instructions (Matching modal popup)
+      // 5. Bottom Instructions
       const bottomY = qrBoxY + qrBoxSize + 24;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -257,6 +295,7 @@ export default function TelegramMiniAppModal({
       footer={null}
       width={560}
       centered
+      destroyOnHidden
       styles={{
         content: {
           padding: 0,
@@ -391,6 +430,7 @@ export default function TelegramMiniAppModal({
             <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
               <Avatar
                 size={64}
+                src={targetShop?.logo}
                 style={{
                   background: '#2481cc',
                   fontWeight: 800,
@@ -454,17 +494,21 @@ export default function TelegramMiniAppModal({
                 size="large"
                 onClick={() => {
                   onClose?.();
-                  navigate(`/shop/${targetShop?.slug || 'sbc-store'}`);
+                  if (product) {
+                    navigate(`/shop/${targetShop?.slug || 'sbc-store'}?item=${product.id}`);
+                  } else {
+                    navigate(`/shop/${targetShop?.slug || 'sbc-store'}`);
+                  }
                 }}
                 style={{
                   height: 42,
                   borderRadius: 14,
-                  background: '#FF5722',
+                  background: '#2F6FED',
                   color: '#ffffff',
                   border: 'none',
                   fontWeight: 800,
                   fontSize: 13,
-                  boxShadow: '0 6px 18px rgba(255, 87, 34, 0.3)',
+                  boxShadow: '0 4px 14px rgba(47, 111, 237, 0.25)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

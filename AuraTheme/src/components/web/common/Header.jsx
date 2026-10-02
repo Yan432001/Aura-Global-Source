@@ -69,8 +69,9 @@ const websitePages = [
   { id: 'pg-4', title: 'Services & Solutions', path: '/service', description: 'Digital E-Menu setup, wholesale coffee/bakery supply, POS integration, and event catering' },
   { id: 'pg-5', title: 'Learning Academy', path: '/learn', description: 'Courses, onboarding tracks, and operational playbooks' },
   { id: 'pg-6', title: 'Operations Portal', path: '/admins/dashboard', description: 'Management dashboard for sales, inventory, and system settings' },
-  { id: 'pg-7', title: 'Wishlist', path: '/wishlist', description: 'Your saved products and bookmarked equipment' },
-  { id: 'pg-8', title: 'Cart & Orders', path: '/cart', description: 'Review your items and proceed to order fulfillment' },
+  { id: 'pg-7', title: 'Web E-Menu (Our Tasty Foods)', path: '/shop/menu/aura-bakery', description: 'Interactive website contactless digital e-menu with table ordering' },
+  { id: 'pg-8', title: 'Wishlist', path: '/wishlist', description: 'Your saved products and bookmarked equipment' },
+  { id: 'pg-9', title: 'Cart & Orders', path: '/cart', description: 'Review your items and proceed to order fulfillment' },
 ];
 
 const Header = ({ currentPage }) => {
