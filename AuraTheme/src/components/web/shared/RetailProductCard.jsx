@@ -247,21 +247,6 @@ const RetailProductCard = ({
           >
             {product.name}
           </Title>
-
-          {!isPhone && (
-            <Paragraph
-              ellipsis={{ rows: isTablet ? 1 : 2 }}
-              style={{
-                margin: 0,
-                color: publicTheme.subtext,
-                fontSize: 12,
-                minHeight: isTablet ? 20 : 38,
-                lineHeight: 1.4,
-              }}
-            >
-              {product.description}
-            </Paragraph>
-          )}
         </div>
 
         {/* Price & Stock */}

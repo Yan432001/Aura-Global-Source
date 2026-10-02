@@ -649,7 +649,12 @@ export default function EMenuPage() {
                 className="bg-white rounded-2xl border border-slate-200/80 p-2.5 flex flex-col justify-between space-y-2.5 transition shadow-xs hover:shadow-md hover:border-[#2F6FED]/40"
               >
                 {/* Product Image with Price Badge */}
-                <div className="relative h-28 w-full rounded-xl overflow-hidden bg-slate-100">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openCustomizer(prod)}
+                  className="relative h-28 w-full rounded-xl overflow-hidden bg-slate-100 cursor-pointer"
+                >
                   <img
                     src={prod.image}
                     alt={prod.name}
@@ -668,8 +673,13 @@ export default function EMenuPage() {
                 </div>
 
                 {/* Title & 1-Line Description */}
-                <div className="space-y-0.5">
-                  <h3 className="font-bold text-slate-900 text-xs leading-snug line-clamp-1">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openCustomizer(prod)}
+                  className="space-y-0.5 cursor-pointer"
+                >
+                  <h3 className="font-bold text-slate-900 text-xs leading-snug line-clamp-1 hover:text-[#2F6FED] transition">
                     {prod.name}
                   </h3>
                   <p className="text-[11px] text-slate-500 line-clamp-1 leading-normal">
@@ -677,14 +687,21 @@ export default function EMenuPage() {
                   </p>
                 </div>
 
-                {/* Card Bottom Buttons: "Opt" + "+ Add" */}
+                {/* Card Bottom Buttons: "Detail" + "+ Add" */}
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
                     type="button"
                     onClick={() => openCustomizer(prod)}
-                    className="py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold text-center active:scale-95 transition cursor-pointer"
+                    className="py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold text-center active:scale-95 transition cursor-pointer flex items-center justify-center gap-1"
                   >
-                    Opt
+                    <span>👁️ Detail</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDirectAddToCart(prod)}
+                    className="py-1.5 px-2 rounded-xl text-xs font-black text-center shadow-md active:scale-95 transition cursor-pointer bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-[#2F6FED]/25"
+                  >
+                    + Add
                   </button>
                   <button
                     type="button"

@@ -927,11 +927,6 @@ export default function WebEMenuPage() {
                         </span>
                       )}
                     </div>
-
-                    {/* Short Description (Exact match to image.png) */}
-                    <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 font-normal">
-                      {item.description}
-                    </p>
                   </div>
 
                   {/* Bottom Row: Price & add to cart + Button (Exact match to image.png) */}
