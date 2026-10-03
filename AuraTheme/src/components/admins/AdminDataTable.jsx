@@ -652,7 +652,7 @@ export default function AdminDataTable({
 
   return (
     <Card
-      bordered
+      variant="outlined"
       style={{
         borderRadius: 12,
         background: adminTheme.card,
@@ -660,7 +660,7 @@ export default function AdminDataTable({
         boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
         marginBottom: 24,
       }}
-      bodyStyle={{ padding: '20px 24px' }}
+      styles={{ body: { padding: '20px 24px' } }}
     >
       {/* Title & Top Bar */}
       <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: 18 }}>

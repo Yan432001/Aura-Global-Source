@@ -110,7 +110,7 @@ async function startServer() {
     try {
       const { createServer: createViteServer } = await import('vite');
       viteDevServer = await createViteServer({
-        server: { middlewareMode: true },
+        server: { middlewareMode: true, hmr: false },
         appType: 'spa',
         root: auraThemeRoot,
         configFile: path.resolve(auraThemeRoot, 'vite.config.js')

@@ -130,16 +130,28 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
       open={open}
       onCancel={onClose}
       footer={null}
-      width={1160}
-      centered
+      width={isMobile ? '100vw' : 1160}
+      centered={!isMobile}
       destroyOnHidden
+      zIndex={10050}
+      style={
+        isMobile
+          ? {
+              top: 0,
+              margin: 0,
+              paddingBottom: 0,
+              maxWidth: '100vw',
+              height: '100vh',
+            }
+          : {}
+      }
       closeIcon={
         <div
           style={{
-            width: 36,
-            height: 36,
+            width: isMobile ? 32 : 36,
+            height: isMobile ? 32 : 36,
             borderRadius: '50%',
-            background: 'rgba(15, 23, 42, 0.75)',
+            background: 'rgba(15, 23, 42, 0.85)',
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
@@ -147,28 +159,30 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
             backdropFilter: 'blur(10px)',
             transition: 'all 0.25s ease',
             boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
-            border: '1px solid rgba(255,255,255,0.2)',
+            border: '1px solid rgba(255,255,255,0.25)',
           }}
           className="hover:scale-105 active:scale-95"
         >
-          <CloseOutlined style={{ fontSize: 13 }} />
+          <CloseOutlined style={{ fontSize: isMobile ? 12 : 13 }} />
         </div>
       }
       styles={{
         body: {
           padding: 0,
           overflow: 'hidden',
-          borderRadius: 24,
-          maxHeight: '92vh',
+          borderRadius: isMobile ? 0 : 24,
+          maxHeight: isMobile ? '100vh' : '92vh',
+          height: isMobile ? '100vh' : 'auto',
           display: 'flex',
           flexDirection: 'column',
         },
         content: {
           padding: 0,
-          borderRadius: 24,
+          borderRadius: isMobile ? 0 : 24,
           overflow: 'hidden',
           boxShadow: '0 30px 80px -15px rgba(15, 23, 42, 0.45), 0 0 1px 1px rgba(47, 111, 237, 0.2)',
-          border: '1px solid rgba(47, 111, 237, 0.16)',
+          border: isMobile ? 'none' : '1px solid rgba(47, 111, 237, 0.16)',
+          height: isMobile ? '100vh' : 'auto',
         },
       }}
       title={null}
@@ -180,8 +194,12 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
           width: '100%',
           background: '#ffffff',
           overflowY: 'auto',
-          maxHeight: '92vh',
+          maxHeight: isMobile ? '100vh' : '92vh',
+          height: isMobile ? '100vh' : 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
         }}
+        className="no-scrollbar"
       >
         {/* ======================================================== */}
         {/* 1. EXPANSIVE CINEMATIC HERO COVER BANNER                 */}
@@ -189,7 +207,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
         <div
           style={{
             position: 'relative',
-            height: isMobile ? 210 : 270,
+            height: isMobile ? 180 : 270,
             width: '100%',
             overflow: 'hidden',
             background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
@@ -228,12 +246,14 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
           <div
             style={{
               position: 'absolute',
-              top: 18,
-              left: 22,
+              top: isMobile ? 12 : 18,
+              left: isMobile ? 12 : 22,
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
-              flexWrap: 'wrap',
+              gap: isMobile ? 6 : 8,
+              flexWrap: 'nowrap',
+              maxWidth: isMobile ? 'calc(100% - 60px)' : 'auto',
+              overflow: 'hidden',
               zIndex: 2,
             }}
           >
@@ -241,47 +261,49 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 6,
+                gap: 5,
                 background: 'rgba(47, 111, 237, 0.95)',
                 color: '#ffffff',
-                padding: '5px 13px',
+                padding: isMobile ? '3px 8px' : '5px 13px',
                 borderRadius: 999,
-                fontSize: 11,
+                fontSize: isMobile ? 10 : 11,
                 fontWeight: 800,
                 backdropFilter: 'blur(8px)',
                 boxShadow: '0 4px 12px rgba(47, 111, 237, 0.4)',
                 letterSpacing: '0.04em',
+                whiteSpace: 'nowrap',
               }}
             >
-              <SafetyCertificateFilled style={{ fontSize: 13 }} />
-              <span>VERIFIED MERCHANT</span>
+              <SafetyCertificateFilled style={{ fontSize: isMobile ? 11 : 13 }} />
+              <span>{isMobile ? 'VERIFIED' : 'VERIFIED MERCHANT'}</span>
             </div>
 
             <div
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 6,
+                gap: 5,
                 background: 'rgba(16, 185, 129, 0.95)',
                 color: '#ffffff',
-                padding: '5px 12px',
+                padding: isMobile ? '3px 8px' : '5px 12px',
                 borderRadius: 999,
-                fontSize: 11,
+                fontSize: isMobile ? 10 : 11,
                 fontWeight: 700,
                 backdropFilter: 'blur(8px)',
                 boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
+                whiteSpace: 'nowrap',
               }}
             >
               <span
                 style={{
-                  width: 7,
-                  height: 7,
+                  width: 6,
+                  height: 6,
                   borderRadius: '50%',
                   background: '#ffffff',
-                  boxShadow: '0 0 8px #ffffff',
+                  boxShadow: '0 0 6px #ffffff',
                 }}
               />
-              <span>OPEN NOW</span>
+              <span>{isMobile ? 'OPEN' : 'OPEN NOW'}</span>
             </div>
 
             <div
@@ -304,52 +326,54 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
             </div>
           </div>
 
-          {/* Top-Right Est. Badge */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 18,
-              right: 66,
-              background: 'rgba(255, 255, 255, 0.94)',
-              color: '#0f172a',
-              padding: '5px 14px',
-              borderRadius: 999,
-              fontSize: 11.5,
-              fontWeight: 800,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-              zIndex: 2,
-            }}
-          >
-            Est. {shop.established || '2019'}
-          </div>
+          {/* Top-Right Est. Badge (Hidden on mobile to prevent overlapping close button) */}
+          {!isMobile && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 18,
+                right: 66,
+                background: 'rgba(255, 255, 255, 0.94)',
+                color: '#0f172a',
+                padding: '5px 14px',
+                borderRadius: 999,
+                fontSize: 11.5,
+                fontWeight: 800,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                zIndex: 2,
+              }}
+            >
+              Est. {shop.established || '2019'}
+            </div>
+          )}
 
           {/* Bottom Identity & Quick Action Strip */}
           <div
             style={{
               position: 'absolute',
-              bottom: 18,
-              left: 24,
-              right: 24,
+              bottom: isMobile ? 12 : 18,
+              left: isMobile ? 14 : 24,
+              right: isMobile ? 14 : 24,
               display: 'flex',
               alignItems: isMobile ? 'flex-start' : 'flex-end',
               justifyContent: 'space-between',
               flexDirection: isMobile ? 'column' : 'row',
-              gap: 14,
+              gap: isMobile ? 8 : 14,
               zIndex: 2,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16 }}>
               <Avatar
-                size={isMobile ? 60 : 76}
+                size={isMobile ? 48 : 76}
                 src={logoSrc}
                 onError={() => false}
                 style={{
                   background: publicTheme.ribbon || '#2F6FED',
                   color: '#ffffff',
                   fontWeight: 900,
-                  fontSize: isMobile ? 22 : 28,
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
-                  border: '3.5px solid #ffffff',
+                  fontSize: isMobile ? 16 : 28,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+                  border: isMobile ? '2.5px solid #ffffff' : '3.5px solid #ffffff',
                   flexShrink: 0,
                 }}
               >
@@ -365,7 +389,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     fontWeight: 900,
                     textShadow: '0 2px 10px rgba(0,0,0,0.7)',
                     lineHeight: 1.2,
-                    fontSize: isMobile ? 20 : 25,
+                    fontSize: isMobile ? 16 : 25,
                     letterSpacing: '-0.02em',
                   }}
                 >
@@ -375,15 +399,15 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 10,
+                    gap: isMobile ? 6 : 10,
                     color: 'rgba(255,255,255,0.95)',
-                    fontSize: 12.5,
-                    marginTop: 5,
+                    fontSize: isMobile ? 11 : 12.5,
+                    marginTop: 3,
                     flexWrap: 'wrap',
                   }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <EnvironmentOutlined style={{ color: '#93c5fd' }} />
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <EnvironmentOutlined style={{ color: '#93c5fd', fontSize: isMobile ? 11 : 13 }} />
                     <strong>
                       {shop.branch
                         ? shop.branch.replace(/-/g, ' ').toUpperCase()
@@ -391,6 +415,12 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     </strong>
                   </span>
                   <span style={{ opacity: 0.6 }}>•</span>
+                  {shop.established && (
+                    <>
+                      <span>Est. {shop.established}</span>
+                      <span style={{ opacity: 0.6 }}>•</span>
+                    </>
+                  )}
                   <span
                     style={{
                       display: 'flex',
@@ -495,31 +525,31 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
         {/* ======================================================== */}
         <div
           style={{
-            padding: isMobile ? '16px 18px 24px' : '26px 32px 32px',
+            padding: isMobile ? '12px 14px 28px' : '26px 32px 32px',
             width: '100%',
             background: '#f8fafc',
           }}
         >
-          <Row gutter={[26, 26]} style={{ width: '100%', margin: 0 }}>
+          <Row gutter={isMobile ? [14, 14] : [26, 26]} style={{ width: '100%', margin: 0 }}>
             {/* ---------------------------------------------------- */}
             {/* LEFT COLUMN: Overview, Metrics & Telegram Card       */}
             {/* ---------------------------------------------------- */}
             <Col xs={24} lg={9} style={{ padding: 0 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16 }}>
                 {/* 4 Performance Metric Cards in 2x2 Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: isMobile ? 8 : 12 }}>
                   <div
                     style={{
                       background: '#ffffff',
-                      borderRadius: 16,
-                      padding: '14px 16px',
+                      borderRadius: isMobile ? 12 : 16,
+                      padding: isMobile ? '8px 10px' : '14px 16px',
                       border: `1px solid ${publicTheme.softBorder}`,
                       boxShadow: '0 2px 8px rgba(47, 111, 237, 0.04)',
                     }}
                   >
                     <div
                       style={{
-                        fontSize: 11,
+                        fontSize: isMobile ? 9.5 : 11,
                         color: publicTheme.subtext,
                         fontWeight: 700,
                         textTransform: 'uppercase',
@@ -530,18 +560,18 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     </div>
                     <div
                       style={{
-                        fontSize: 20,
+                        fontSize: isMobile ? 15 : 20,
                         fontWeight: 900,
                         color: '#f59e0b',
-                        marginTop: 4,
+                        marginTop: 3,
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 5,
+                        gap: 4,
                       }}
                     >
-                      <StarFilled />
+                      <StarFilled style={{ fontSize: isMobile ? 13 : 15 }} />
                       <span>{shop.rating || '4.9'}</span>
-                      <span style={{ fontSize: 11.5, fontWeight: 600, color: publicTheme.subtext }}>
+                      <span style={{ fontSize: isMobile ? 10 : 11.5, fontWeight: 600, color: publicTheme.subtext }}>
                         / 5.0
                       </span>
                     </div>
@@ -550,15 +580,15 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                   <div
                     style={{
                       background: '#ffffff',
-                      borderRadius: 16,
-                      padding: '14px 16px',
+                      borderRadius: isMobile ? 12 : 16,
+                      padding: isMobile ? '8px 10px' : '14px 16px',
                       border: `1px solid ${publicTheme.softBorder}`,
                       boxShadow: '0 2px 8px rgba(47, 111, 237, 0.04)',
                     }}
                   >
                     <div
                       style={{
-                        fontSize: 11,
+                        fontSize: isMobile ? 9.5 : 11,
                         color: publicTheme.subtext,
                         fontWeight: 700,
                         textTransform: 'uppercase',
@@ -569,10 +599,10 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     </div>
                     <div
                       style={{
-                        fontSize: 20,
+                        fontSize: isMobile ? 15 : 20,
                         fontWeight: 900,
                         color: publicTheme.text,
-                        marginTop: 4,
+                        marginTop: 3,
                       }}
                     >
                       {formatCompact(shop.followers || 12400)}
@@ -582,15 +612,15 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                   <div
                     style={{
                       background: '#ffffff',
-                      borderRadius: 16,
-                      padding: '14px 16px',
+                      borderRadius: isMobile ? 12 : 16,
+                      padding: isMobile ? '8px 10px' : '14px 16px',
                       border: `1px solid ${publicTheme.softBorder}`,
                       boxShadow: '0 2px 8px rgba(47, 111, 237, 0.04)',
                     }}
                   >
                     <div
                       style={{
-                        fontSize: 11,
+                        fontSize: isMobile ? 9.5 : 11,
                         color: publicTheme.subtext,
                         fontWeight: 700,
                         textTransform: 'uppercase',
@@ -601,10 +631,10 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     </div>
                     <div
                       style={{
-                        fontSize: 20,
+                        fontSize: isMobile ? 15 : 20,
                         fontWeight: 900,
                         color: '#2563eb',
-                        marginTop: 4,
+                        marginTop: 3,
                       }}
                     >
                       {displayProducts.length} items
@@ -614,15 +644,15 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                   <div
                     style={{
                       background: '#ffffff',
-                      borderRadius: 16,
-                      padding: '14px 16px',
+                      borderRadius: isMobile ? 12 : 16,
+                      padding: isMobile ? '8px 10px' : '14px 16px',
                       border: `1px solid ${publicTheme.softBorder}`,
                       boxShadow: '0 2px 8px rgba(47, 111, 237, 0.04)',
                     }}
                   >
                     <div
                       style={{
-                        fontSize: 11,
+                        fontSize: isMobile ? 9.5 : 11,
                         color: publicTheme.subtext,
                         fontWeight: 700,
                         textTransform: 'uppercase',
@@ -633,10 +663,10 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                     </div>
                     <div
                       style={{
-                        fontSize: 16,
+                        fontSize: isMobile ? 13 : 16,
                         fontWeight: 900,
                         color: '#10b981',
-                        marginTop: 5,
+                        marginTop: 3,
                       }}
                     >
                       {shop.responseTime || '< 15 mins'}

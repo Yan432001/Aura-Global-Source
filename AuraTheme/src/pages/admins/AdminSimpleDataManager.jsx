@@ -19,6 +19,7 @@ import {
   Modal,
   App,
   Tooltip,
+  Descriptions,
 } from 'antd';
 import {
   DashboardOutlined,
@@ -74,7 +75,6 @@ export default function AdminSimpleDataManager() {
   const [formModalType, setFormModalType] = useState(''); // 'user' | 'post' | 'story' | 'media' | 'category' | 'comment' | 'saved' | 'report'
   const [editingRecord, setEditingRecord] = useState(null);
   const [form] = Form.useForm();
-  const [settingsForm] = Form.useForm();
 
   // Keep in sync with query parameter
   useEffect(() => {
@@ -108,9 +108,10 @@ export default function AdminSimpleDataManager() {
   const openEditModal = (type, record) => {
     setFormModalType(type);
     setEditingRecord(record);
-    form.resetFields();
-    form.setFieldsValue(record);
     setFormModalVisible(true);
+    setTimeout(() => {
+      form.setFieldsValue(record);
+    }, 0);
   };
 
   const handleFormSubmit = async () => {
@@ -908,7 +909,6 @@ export default function AdminSimpleDataManager() {
         style={{ borderRadius: 12 }}
       >
         <Form
-          form={settingsForm}
           layout="vertical"
           initialValues={dataStore.settings}
           onFinish={handleSaveSettings}
@@ -1094,6 +1094,7 @@ export default function AdminSimpleDataManager() {
           </div>
         }
         open={formModalVisible}
+        forceRender
         onCancel={() => setFormModalVisible(false)}
         onOk={handleFormSubmit}
         okText={editingRecord ? 'Save Changes' : 'Create Record'}

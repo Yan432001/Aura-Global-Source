@@ -38,6 +38,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { products, shops } from '../../../data/shopData';
 import { formatCurrency, publicTheme } from '../../../utils/webTheme';
 import OfflineWarningBanner from '../../common/OfflineWarningBanner';
+import AuraLogo from '../../common/AuraLogo';
 
 const { useBreakpoint } = Grid;
 const { Text, Title } = Typography;
@@ -624,28 +625,8 @@ const Header = ({ currentPage }) => {
             }}
           >
             {/* 1. Logo on the left */}
-            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', flexShrink: 0 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 10,
-                  background: publicTheme.ribbon,
-                  boxShadow: '0 4px 12px rgba(47, 111, 237, 0.25)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 800,
-                  fontSize: 13,
-                  flexShrink: 0,
-                }}
-              >
-                AS
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 800, color: publicTheme.text, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>
-                Aura
-              </span>
+            <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
+              <AuraLogo size={28} showText={true} subtitle="MARKET" textColor={publicTheme.text} />
             </Link>
 
             {/* 2. Search Box in the middle */}
@@ -739,32 +720,8 @@ const Header = ({ currentPage }) => {
           >
             {/* Row 1: Tablet Top Bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0, textDecoration: 'none', flexShrink: 0 }}>
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 9,
-                    background: publicTheme.ribbon,
-                    boxShadow: '0 6px 16px rgba(47, 111, 237, 0.22)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: 800,
-                    fontSize: 13,
-                  }}
-                >
-                  AS
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 800, color: publicTheme.text, lineHeight: 1.2 }}>
-                    Aura Supply
-                  </div>
-                  <div style={{ fontSize: 10.5, color: publicTheme.subtext, lineHeight: 1 }}>
-                    B2B Marketplace
-                  </div>
-                </div>
+              <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
+                <AuraLogo size={32} showText={true} subtitle="B2B MARKET" textColor={publicTheme.text} />
               </Link>
 
               <div ref={searchContainerRef} style={{ position: 'relative', flex: 1, maxWidth: 340, marginLeft: 6, marginRight: 6 }}>
@@ -941,33 +898,9 @@ const Header = ({ currentPage }) => {
             }}
           >
             <Row align="middle" justify="space-between" gutter={[12, 12]}>
-              <Col xs={14} md={6} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 14,
-                      background: publicTheme.ribbon,
-                      boxShadow: '0 10px 24px rgba(47, 111, 237, 0.24)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 700,
-                      fontSize: 15,
-                    }}
-                  >
-                    AS
-                  </div>
-                  <div>
-                    <Title level={5} style={{ margin: 0, color: publicTheme.text, fontFamily: '"Aptos", "Segoe UI", sans-serif' }}>
-                      Aura Supply
-                    </Title>
-                    <Text style={{ fontSize: 11.5, color: publicTheme.subtext }}>
-                      B2B sourcing, service, and learning
-                    </Text>
-                  </div>
+              <Col xs={14} md={6} style={{ display: 'flex', alignItems: 'center' }}>
+                <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+                  <AuraLogo size={38} showText={true} subtitle="B2B SOURCING" textColor={publicTheme.text} />
                 </Link>
               </Col>
 

@@ -703,13 +703,6 @@ export default function EMenuPage() {
                   >
                     + Add
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDirectAddToCart(prod)}
-                    className="py-1.5 px-2 rounded-xl text-xs font-black text-center shadow-md active:scale-95 transition cursor-pointer bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-[#2F6FED]/25"
-                  >
-                    + Add
-                  </button>
                 </div>
               </div>
             ))}

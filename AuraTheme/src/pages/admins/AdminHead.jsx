@@ -10,13 +10,18 @@ import {
   SettingOutlined,
   SunOutlined,
   UserOutlined,
+  ControlOutlined,
+  ShopOutlined,
+  DownOutlined,
+  CheckOutlined,
 } from '@ant-design/icons';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeSettings from '../../contexts/ThemeSettings';
 import { getModuleByKey } from '../../data/erpModules';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useBranchesAndBillers } from '../../hooks/useBranchesAndBillers';
 import OfflineWarningBanner from '../../components/common/OfflineWarningBanner';
 
 const { Header } = Layout;
@@ -29,20 +34,61 @@ const pageTitles = {
   '/admins/orders': 'Orders Management',
   '/admins/qrcode': 'Store QR Code Generator',
   '/admins/qr-generator': 'Store QR Code Generator',
+  '/admins/modules': 'ERP Modules Switchboard',
+  '/admins/branches': 'Branches & Multiple Billers',
+  '/admins/settings/branches': 'Branches & Multiple Billers',
+  '/admins/billers': 'Multiple Billers Management',
+  '/admins/settings/billers': 'Multiple Billers Management',
 };
 
 const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
   const adminTheme = useAdminTheme();
   const iconButtonStyle = { width: 40, height: 40, borderRadius: 12, color: adminTheme.subtext };
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { themeMode, toggleThemeMode } = useTheme();
+  const { branches, billers, activeBranch, setActiveBranchId } = useBranchesAndBillers();
 
   const userMenuItems = [
     { key: 'profile', icon: <UserOutlined />, label: 'Profile' },
     { key: 'settings', icon: <SettingOutlined />, label: 'Settings' },
     { type: 'divider' },
     { key: 'logout', icon: <LogoutOutlined />, label: 'Logout', danger: true, onClick: logout },
+  ];
+
+  const branchMenuItems = [
+    {
+      key: 'header',
+      type: 'group',
+      label: 'Switch Store Branch & Biller Context',
+    },
+    ...branches.map((b) => {
+      const linkedBiller = billers.find((bil) => bil.id === b.biller_id);
+      const isSelected = activeBranch?.id === b.id;
+      return {
+        key: `branch-${b.id}`,
+        icon: isSelected ? <CheckOutlined style={{ color: '#16a34a' }} /> : <ShopOutlined style={{ color: '#2563eb' }} />,
+        label: (
+          <div style={{ padding: '2px 0' }}>
+            <div style={{ fontWeight: isSelected ? 700 : 500, color: isSelected ? '#2563eb' : undefined }}>
+              {b.name}
+            </div>
+            <div style={{ fontSize: 11, color: adminTheme.subtext }}>
+              Biller: {linkedBiller?.trading_name || linkedBiller?.company_name || 'Central'} &bull; {b.city}
+            </div>
+          </div>
+        ),
+        onClick: () => setActiveBranchId(b.id),
+      };
+    }),
+    { type: 'divider' },
+    {
+      key: 'manage-branches',
+      icon: <SettingOutlined />,
+      label: <span style={{ fontWeight: 600 }}>Manage All Branches &amp; Billers</span>,
+      onClick: () => navigate('/admins/settings/branches'),
+    },
   ];
 
   const currentTitle = pageTitles[location.pathname] || 'ERP Workspace';
@@ -117,6 +163,29 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
         )}
 
         <Flex align="center" gap={8} wrap="wrap">
+          {/* Active Branch / Multiple Biller Context Dropdown */}
+          <Dropdown menu={{ items: branchMenuItems }} trigger={['click']} placement="bottomRight">
+            <Button
+              style={{
+                height: 40,
+                borderRadius: 10,
+                background: adminTheme.cardMuted,
+                border: `1px solid ${adminTheme.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '0 12px',
+                color: adminTheme.text,
+              }}
+            >
+              <ShopOutlined style={{ color: '#2563eb', fontSize: 15 }} />
+              <span style={{ fontWeight: 600, fontSize: 12.5, maxWidth: isMobile ? 120 : 180 }} className="truncate">
+                {activeBranch?.name || 'Select Branch'}
+              </span>
+              <DownOutlined style={{ fontSize: 9, opacity: 0.6 }} />
+            </Button>
+          </Dropdown>
+
           {!isMobile && (
             <Tooltip title="Fullscreen">
               <Button type="text" icon={<ExpandOutlined style={{ fontSize: 16 }} />} onClick={handleFullscreen} style={iconButtonStyle} />
@@ -133,6 +202,15 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
           </Tooltip>
 
           <ThemeSettings />
+
+          <Tooltip title="ERP Modules Switchboard (Open/Close Modules)">
+            <Button
+              type="text"
+              icon={<ControlOutlined style={{ fontSize: 16 }} />}
+              onClick={() => navigate('/admins/modules')}
+              style={iconButtonStyle}
+            />
+          </Tooltip>
 
           <Badge count={5} size="small" offset={[-4, 4]}>
             <Button

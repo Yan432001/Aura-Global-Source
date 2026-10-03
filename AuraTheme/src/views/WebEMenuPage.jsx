@@ -873,7 +873,7 @@ export default function WebEMenuPage() {
               return (
                 <div
                   key={item.id}
-                  className="bg-white rounded-3xl p-5 border border-slate-100/90 shadow-xs hover:shadow-xl hover:border-slate-200 transition-all duration-300 flex flex-col justify-between relative group"
+                  className="bg-white rounded-3xl p-5 border border-slate-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_16px_36px_-6px_rgba(163,29,29,0.14),0_8px_16px_-4px_rgba(0,0,0,0.05)] hover:border-rose-100 hover:-translate-y-1.5 active:scale-[0.98] transition-all duration-300 ease-out flex flex-col justify-between relative group cursor-pointer"
                 >
                   {/* Top: Heart Favorite Button */}
                   <div className="flex justify-end mb-1">

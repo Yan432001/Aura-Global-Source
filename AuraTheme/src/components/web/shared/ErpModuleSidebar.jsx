@@ -20,6 +20,7 @@ import {
 } from '@ant-design/icons';
 import { erpModules, getMenuLineage } from '../../../data/erpModules';
 import { useAdminTheme } from '../../../hooks/useAdminTheme';
+import { useAdminModules } from '../../../hooks/useAdminModules';
 
 const { Text } = Typography;
 
@@ -138,6 +139,7 @@ const FlatMenuTree = ({ items, moduleKey, activeMenuKey, activeLineage, openGrou
 
 const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigate }) => {
   const adminTheme = useAdminTheme();
+  const { isModuleOpen } = useAdminModules();
   const activeLineage = useMemo(() => getMenuLineage(activeModuleKey, activeMenuKey), [activeMenuKey, activeModuleKey]);
 
   // Sidebar state is always derived from the current URL: whenever the active
@@ -170,10 +172,24 @@ const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigat
 
   const modulesByKey = useMemo(() => Object.fromEntries(erpModules.map((module) => [module.key, module])), []);
 
+  // Filter out any closed/disabled modules
+  const visibleModules = useMemo(() => {
+    return erpModules.filter((module) => isModuleOpen(module.key));
+  }, [isModuleOpen]);
+
+  const visibleSectionGroups = useMemo(() => {
+    return sectionGroups
+      .map((section) => ({
+        ...section,
+        keys: section.keys.filter((moduleKey) => isModuleOpen(moduleKey)),
+      }))
+      .filter((section) => section.keys.length > 0);
+  }, [isModuleOpen]);
+
   if (collapsed) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {erpModules.map((module) => {
+        {visibleModules.map((module) => {
           const isActive = activeModuleKey === module.key;
           return (
             <Tooltip key={module.key} title={module.label} placement="right">
@@ -204,7 +220,7 @@ const ErpModuleSidebar = ({ collapsed, activeModuleKey, activeMenuKey, onNavigat
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {sectionGroups.map((section) => (
+      {visibleSectionGroups.map((section) => (
         <div key={section.label}>
           <Text
             style={{

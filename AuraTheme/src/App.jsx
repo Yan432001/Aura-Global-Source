@@ -34,6 +34,9 @@ import SalesReport from './pages/admins/SalesReport';
 import InventoryReport from './pages/admins/InventoryReport';
 import UserManagement from './pages/admins/UserManagement';
 import AdminQrCodeGeneratorPage from './pages/admins/AdminQrCodeGeneratorPage';
+import AdminModulesManager from './pages/admins/AdminModulesManager';
+import AdminBranchesManager from './pages/admins/AdminBranchesManager';
+import { AdminModulesProvider } from './contexts/AdminModulesContext';
 
 // E-Menu Telegram Mini App Layout & Views
 import EMenuLayout from './pages/emenu/EMenuLayout';
@@ -64,7 +67,9 @@ const AdminThemeWrapper = ({ children }) => {
 const ThemedAdminLayout = () => (
   <ThemeProvider>
     <AdminThemeWrapper>
-      <AdminLayout />
+      <AdminModulesProvider>
+        <AdminLayout />
+      </AdminModulesProvider>
     </AdminThemeWrapper>
   </ThemeProvider>
 );
@@ -124,6 +129,12 @@ const AppContent = () => {
         <Route path="reports/inventory" element={<InventoryReport />} />
         <Route path="settings/categories" element={<CategoriesPage />} />
         <Route path="settings/users" element={<UserManagement />} />
+        <Route path="modules" element={<AdminModulesManager />} />
+        <Route path="settings/modules" element={<AdminModulesManager />} />
+        <Route path="branches" element={<AdminBranchesManager />} />
+        <Route path="settings/branches" element={<AdminBranchesManager />} />
+        <Route path="billers" element={<AdminBranchesManager />} />
+        <Route path="settings/billers" element={<AdminBranchesManager />} />
       </Route>
 
       {/* 5. Catch-All Route */}

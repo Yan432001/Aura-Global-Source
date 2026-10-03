@@ -39,16 +39,19 @@ const RetailProductCard = ({
   return (
     <Card
       hoverable
-      className="app-product-card retail-product-card-wrapper"
+      className="app-product-card retail-product-card-wrapper hover:-translate-y-1 hover:shadow-xl active:scale-[0.98] transition-all duration-300"
       style={{
         borderRadius: isPhone ? 18 : isTablet ? 22 : 26,
         border: `1px solid ${publicTheme.border}`,
         background: publicTheme.cardBackground,
-        boxShadow: publicTheme.lightShadow,
+        boxShadow: isPhone
+          ? '0 4px 16px -2px rgba(15, 23, 42, 0.07), 0 2px 6px -1px rgba(0, 0, 0, 0.04)'
+          : publicTheme.lightShadow,
         height: '100%',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
+        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
       styles={{
         body: {

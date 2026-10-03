@@ -46,7 +46,6 @@ export default function AdminCmsManager() {
   const [modalType, setModalType] = useState('');
   const [editingItem, setEditingItem] = useState(null);
   const [form] = Form.useForm();
-  const [settingsForm] = Form.useForm();
 
   // Language tab for bilingual editing: 'en' | 'km'
   const [contentLang, setContentLang] = useState('en');
@@ -59,7 +58,6 @@ export default function AdminCmsManager() {
       const json = await res.json();
       if (json.status && json.data) {
         setSettings(json.data.settings || {});
-        settingsForm.setFieldsValue(json.data.settings || {});
         setMenus(json.data.menus || []);
         setHeroSlides(json.data.heroSlides || []);
         setPages(json.data.pages || []);
@@ -130,11 +128,13 @@ export default function AdminCmsManager() {
   const openModal = (type, item = null) => {
     setModalType(type);
     setEditingItem(item);
-    form.resetFields();
-    if (item) {
-      form.setFieldsValue(item);
-    }
     setModalVisible(true);
+    setTimeout(() => {
+      form.resetFields();
+      if (item) {
+        form.setFieldsValue(item);
+      }
+    }, 0);
   };
 
   const handleModalSubmit = async () => {
@@ -249,7 +249,6 @@ export default function AdminCmsManager() {
       styles={{ body: { padding: 24 } }}
     >
       <Form
-        form={settingsForm}
         layout="vertical"
         onFinish={handleSaveSettings}
         initialValues={settings}
@@ -998,6 +997,7 @@ export default function AdminCmsManager() {
 
     return (
       <Modal
+        forceRender
         title={modalTitle}
         open={modalVisible}
         onCancel={() => setModalVisible(false)}

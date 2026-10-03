@@ -1005,4 +1005,41 @@ export const products = baseProducts.map((product, index) => {
   };
 });
 
+export const defaultMasterProducts = products;
+
 export const brands = Array.from(new Set(products.map((product) => product.brand))).sort();
+
+export const LIVE_PRODUCTS_STORAGE_KEY = 'aura_live_products';
+
+export const getLiveProducts = () => {
+  if (typeof window === 'undefined') return defaultMasterProducts;
+  try {
+    const raw = window.localStorage.getItem(LIVE_PRODUCTS_STORAGE_KEY);
+    if (!raw) return defaultMasterProducts;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultMasterProducts;
+  } catch (err) {
+    console.warn('[shopData] Failed reading live products from localStorage, falling back:', err);
+    return defaultMasterProducts;
+  }
+};
+
+export const saveLiveProducts = (newProducts) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LIVE_PRODUCTS_STORAGE_KEY, JSON.stringify(newProducts));
+    window.dispatchEvent(new CustomEvent('aura_live_products_updated', { detail: newProducts }));
+  } catch (err) {
+    console.error('[shopData] Failed saving live products:', err);
+  }
+};
+
+export const resetLiveProducts = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(LIVE_PRODUCTS_STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent('aura_live_products_updated', { detail: defaultMasterProducts }));
+  } catch (err) {
+    console.error('[shopData] Failed resetting live products:', err);
+  }
+};
