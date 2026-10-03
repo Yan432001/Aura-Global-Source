@@ -1,7 +1,7 @@
 import { unstableSetRender } from 'antd';
 import { createRoot } from 'react-dom/client';
 
-// Patch Ant Design v5 render behavior for React 19 compatibility
+// 1. Patch Ant Design v5 render behavior for React 19 compatibility
 if (typeof unstableSetRender === 'function') {
   try {
     unstableSetRender((node, container) => {
@@ -21,6 +21,31 @@ if (typeof unstableSetRender === 'function') {
   } catch (err) {
     console.warn('[Aura] Ant Design React 19 patch skipped:', err);
   }
+}
+
+// 2. Suppress benign Ant Design v5 deprecation & static context notices
+if (typeof window !== 'undefined' && console) {
+  const isAntdKnownWarning = (msg) => {
+    if (!msg || typeof msg !== 'string') return false;
+    return (
+      msg.includes('[antd: message] Static function can not consume context') ||
+      msg.includes('[antd: Card] `bordered` is deprecated') ||
+      msg.includes('[antd: Card] `bodyStyle` is deprecated') ||
+      msg.includes('Instance created by `useForm` is not connected to any Form element')
+    );
+  };
+
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    if (isAntdKnownWarning(args[0])) return;
+    originalWarn.apply(console, args);
+  };
+
+  const originalError = console.error;
+  console.error = (...args) => {
+    if (isAntdKnownWarning(args[0])) return;
+    originalError.apply(console, args);
+  };
 }
 
 export default {};

@@ -7,10 +7,10 @@ import Head from '../pages/admins/AdminHead';
 import FooterDefault from '../pages/admins/AdminFooterDefault';
 import { erpModules } from '../data/erpModules';
 import { useAdminTheme } from '../hooks/useAdminTheme';
+import { useAdminModules } from '../hooks/useAdminModules';
 
 const { Content } = Layout;
 const MOBILE_BREAKPOINT = 992;
-const MODULE_STATE_STORAGE_KEY = 'aura-admin-module-state';
 
 // Routes that should NOT show the sidebar
 const NO_SIDEBAR_ROUTES = [
@@ -23,19 +23,10 @@ const NO_SIDEBAR_ROUTES = [
 const AdminLayout = () => {
   const adminTheme = useAdminTheme();
   const location = useLocation();
+  const { moduleState, toggleModule } = useAdminModules();
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [moduleState, setModuleState] = useState(() => {
-    const defaultState = Object.fromEntries(erpModules.map((module) => [module.key, module.enabled]));
-
-    try {
-      const savedState = window.localStorage.getItem(MODULE_STATE_STORAGE_KEY);
-      return savedState ? { ...defaultState, ...JSON.parse(savedState) } : defaultState;
-    } catch {
-      return defaultState;
-    }
-  });
 
   // Check if sidebar should be shown
   const showSidebar = location.pathname.startsWith('/admins') && 
@@ -58,10 +49,6 @@ const AdminLayout = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    window.localStorage.setItem(MODULE_STATE_STORAGE_KEY, JSON.stringify(moduleState));
-  }, [moduleState]);
-
   const handleToggle = () => {
     if (isMobile) {
       setMobileDrawerOpen((previous) => !previous);
@@ -71,10 +58,7 @@ const AdminLayout = () => {
   };
 
   const handleToggleModule = (moduleKey, enabled) => {
-    setModuleState((previous) => ({
-      ...previous,
-      [moduleKey]: enabled,
-    }));
+    toggleModule(moduleKey, enabled);
   };
 
   const contentMarginLeft = !showSidebar ? 0 : isMobile ? 0 : collapsed ? 94 : 296;

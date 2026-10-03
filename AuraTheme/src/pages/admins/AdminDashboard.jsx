@@ -1,6 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Col, Flex, Grid, Row, Space, Tag, Typography } from 'antd';
+import {
+  Button,
+  Card,
+  Col,
+  Flex,
+  Grid,
+  Row,
+  Space,
+  Tag,
+  Typography,
+  Alert,
+  Tooltip as AntTooltip,
+} from 'antd';
 import {
   ApiOutlined,
   CheckCircleFilled,
@@ -21,101 +33,139 @@ import {
   ToolOutlined,
   WarningOutlined,
   QrcodeOutlined,
+  ControlOutlined,
+  BuildOutlined,
+  AppstoreOutlined,
+  ShoppingCartOutlined,
+  CreditCardOutlined,
+  MedicineBoxOutlined,
+  ReconciliationOutlined,
+  BankOutlined,
+  CheckOutlined,
+  EyeInvisibleOutlined,
+  ArrowUpOutlined,
 } from '@ant-design/icons';
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
   ComposedChart,
   Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
+  Legend,
 } from 'recharts';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import { useAdminModules } from '../../hooks/useAdminModules';
+import { erpModules } from '../../data/erpModules';
 
 const { Text, Title } = Typography;
 const { useBreakpoint } = Grid;
 
-const kpiCards = [
+// Base KPI telemetry cards
+const baseKpiCards = [
   { title: 'ERP System Uptime', value: '99.9%', sub: 'Last 30 days', icon: <CloudServerOutlined />, colorKey: 'orange', bars: [8, 14, 10, 22, 16, 26, 18, 30, 20, 34, 24, 40] },
   { title: 'API Status', value: 'Healthy', sub: 'All operational', icon: <ApiOutlined />, colorKey: 'teal', bars: [20, 10, 26, 12, 30, 14, 24, 10, 28, 16, 22, 12] },
-  { title: 'Open ERP Tickets', value: '18', sub: '5 high priority', icon: <SafetyCertificateOutlined />, colorKey: 'orange', bars: [12, 18, 14, 24, 12, 20, 16, 26, 14, 22, 18, 28] },
+  { title: 'Active Modules', value: 'Dynamic', sub: 'Configured in Switchboard', icon: <ControlOutlined />, colorKey: 'green', bars: [12, 18, 14, 24, 12, 20, 16, 26, 14, 22, 18, 28] },
   { title: 'Background Jobs', value: 'Running', sub: '12/12 jobs healthy', icon: <ClusterOutlined />, colorKey: 'teal', bars: [10, 10, 10, 34, 10, 10, 10, 10, 10, 10, 10, 10] },
 ];
 
-const storageByModule = [
-  { module: 'Inventory', gb: 280 },
-  { module: 'Sales', gb: 260 },
-  { module: 'Accounting', gb: 140, highlight: true },
-  { module: 'HR', gb: 68 },
-  { module: 'Payroll', gb: 120 },
-  { module: 'Procurement', gb: 260 },
-];
-const maxStorage = Math.max(...storageByModule.map((m) => m.gb));
-
-const moduleUptime = [
-  { module: 'Inventory', uptime: '99.9%', ok: true },
-  { module: 'Sales Engine', uptime: '99.8%', ok: true },
-  { module: 'Accounting Sync', uptime: '98.5%', ok: true },
-  { module: 'HR Module', uptime: '19.7%', ok: false },
-  { module: 'Payroll Engine', uptime: '99.9%', ok: true },
-  { module: 'Procurement Sync', uptime: '97.2%', ok: true },
+// All possible module storage allocations
+const allStorageByModule = [
+  { moduleKey: 'inventory', module: 'Inventory', gb: 280 },
+  { moduleKey: 'sales', module: 'Sales', gb: 260 },
+  { moduleKey: 'asset', module: 'Assets', gb: 195, highlight: true },
+  { moduleKey: 'accounting', module: 'Accounting', gb: 140 },
+  { moduleKey: 'hr', module: 'HR & Staff', gb: 68 },
+  { moduleKey: 'payroll', module: 'Payroll', gb: 120 },
+  { moduleKey: 'procurement', module: 'Procurement', gb: 260 },
+  { moduleKey: 'pos', module: 'POS Register', gb: 95 },
+  { moduleKey: 'clinic', module: 'Clinic OPD', gb: 155 },
+  { moduleKey: 'cms', module: 'Website CMS', gb: 220 },
 ];
 
-const mfaTotal = 24;
-const mfaFilled = 21;
-
-const quickActions = [
-  { label: 'Restart ERP Services', icon: <ReloadOutlined /> },
-  { label: 'Sync Inventory', icon: <SyncOutlined /> },
-  { label: 'Clear System Cache', icon: <DeleteOutlined /> },
-  { label: 'Schedule Maintenance', icon: <ScheduleOutlined /> },
-  { label: 'Stop Background Jobs', icon: <PauseCircleOutlined /> },
-  { label: 'Re-run Payroll Job', icon: <ToolOutlined /> },
+// All module uptime records
+const allModuleUptime = [
+  { moduleKey: 'inventory', module: 'Inventory Engine', uptime: '99.9%', ok: true },
+  { moduleKey: 'sales', module: 'Sales & Invoicing', uptime: '99.8%', ok: true },
+  { moduleKey: 'asset', module: 'Assets & Equipment', uptime: '99.7%', ok: true },
+  { moduleKey: 'accounting', module: 'Accounting Sync', uptime: '98.5%', ok: true },
+  { moduleKey: 'hr', module: 'HR Module', uptime: '99.2%', ok: true },
+  { moduleKey: 'payroll', module: 'Payroll Engine', uptime: '99.9%', ok: true },
+  { moduleKey: 'procurement', module: 'Procurement Sync', uptime: '97.2%', ok: true },
+  { moduleKey: 'pos', module: 'POS Registers', uptime: '99.8%', ok: true },
+  { moduleKey: 'clinic', module: 'Clinic Services', uptime: '99.5%', ok: true },
+  { moduleKey: 'cms', module: 'Website CMS Sync', uptime: '100%', ok: true },
 ];
 
-const peakHours = [
-  { time: '9 AM', percent: 85 },
-  { time: '10 AM', percent: 92 },
-  { time: '11 AM', percent: 78 },
-  { time: '12 PM', percent: 45 },
-  { time: '1 PM', percent: 38 },
-  { time: '2 PM', percent: 68 },
-  { time: '3 PM', percent: 82 },
-  { time: '4 PM', percent: 95 },
-  { time: '5 PM', percent: 88 },
-  { time: '6 PM', percent: 52 },
+// Specific module chart datasets
+const assetChartData = [
+  { category: 'Machinery', value: 240, maintenance: 8 },
+  { category: 'Fitouts', value: 180, maintenance: 4 },
+  { category: 'Vehicles', value: 115, maintenance: 6 },
+  { category: 'IT & POS', value: 85, maintenance: 2 },
+  { category: 'Furniture', value: 45, maintenance: 1 },
 ];
 
-const loginCount = [
-  { time: '09:00 AM', count: 320 }, { time: '10:00 AM', count: 480 }, { time: '11:00 AM', count: 610 },
-  { time: '12:00 PM', count: 540 }, { time: '01:00 PM', count: 700 }, { time: '02:00 PM', count: 460 },
-  { time: '03:00 PM', count: 586 }, { time: '04:00 PM', count: 720 }, { time: '05:00 PM', count: 520 },
-  { time: '06:00 PM', count: 640 }, { time: '07:00 PM', count: 400 }, { time: '08:00 PM', count: 300 },
+const inventoryChartData = [
+  { month: 'Jan', stockIn: 4200, stockOut: 3800, inventoryVal: 185 },
+  { month: 'Feb', stockIn: 4600, stockOut: 4100, inventoryVal: 195 },
+  { month: 'Mar', stockIn: 5100, stockOut: 4700, inventoryVal: 210 },
+  { month: 'Apr', stockIn: 4800, stockOut: 4600, inventoryVal: 205 },
+  { month: 'May', stockIn: 5400, stockOut: 5200, inventoryVal: 225 },
+  { month: 'Jun', stockIn: 6100, stockOut: 5800, inventoryVal: 240 },
 ];
 
-const usageTrend = [
-  { day: 'Mon', users: 2400 }, { day: 'Tue', users: 5600 }, { day: 'Wed', users: 5400 },
-  { day: 'Thu', users: 2200 }, { day: 'Fri', users: 5800 }, { day: 'Sat', users: 7600 }, { day: 'Sun', users: 7500 },
+const salesChartData = [
+  { month: 'Jan', directSales: 32000, onlineOrders: 18000, invoices: 14000 },
+  { month: 'Feb', directSales: 35000, onlineOrders: 21000, invoices: 16000 },
+  { month: 'Mar', directSales: 41000, onlineOrders: 26000, invoices: 19000 },
+  { month: 'Apr', directSales: 38000, onlineOrders: 24000, invoices: 18000 },
+  { month: 'May', directSales: 48000, onlineOrders: 31000, invoices: 22000 },
+  { month: 'Jun', directSales: 54000, onlineOrders: 36000, invoices: 27000 },
 ];
 
-const securityCompliance = [
-  { label: 'Failed Logins', value: 47, sub: 'Last 24h', colorKey: 'red', spark: [4, 8, 5, 12, 7, 15, 10, 20, 14, 24] },
-  { label: 'Suspicious Alerts', value: 12, sub: 'Active', colorKey: 'teal', spark: [10, 8, 12, 6, 14, 9, 16, 11, 13, 12] },
-  { label: 'Blocked IPs', value: 34, sub: 'Currently blocked', colorKey: 'orange', spark: [6, 10, 8, 16, 12, 20, 15, 24, 18, 26] },
+const posHourlyData = [
+  { hour: '8 AM', khqr: 45, cash: 32, card: 12 },
+  { hour: '10 AM', khqr: 120, cash: 65, card: 35 },
+  { hour: '12 PM', khqr: 210, cash: 95, card: 70 },
+  { hour: '2 PM', khqr: 140, cash: 60, card: 40 },
+  { hour: '4 PM', khqr: 190, cash: 85, card: 55 },
+  { hour: '6 PM', khqr: 240, cash: 110, card: 80 },
+  { hour: '8 PM', khqr: 110, cash: 45, card: 25 },
 ];
 
-const userRoles = [
-  { label: 'Employees', value: 2145, colorKey: 'orange', width: '58%' },
-  { label: 'Managers', value: 234, colorKey: 'teal', width: '22%' },
-  { label: 'HR Operations', value: 45, colorKey: 'dark', width: '12%' },
-  { label: 'Admins', value: 12, colorKey: 'gold', width: '8%' },
+const clinicActivityData = [
+  { day: 'Mon', opd: 84, ipd: 14, pharmacy: 95 },
+  { day: 'Tue', opd: 92, ipd: 16, pharmacy: 104 },
+  { day: 'Wed', opd: 110, ipd: 19, pharmacy: 125 },
+  { day: 'Thu', opd: 88, ipd: 12, pharmacy: 98 },
+  { day: 'Fri', opd: 102, ipd: 18, pharmacy: 115 },
+  { day: 'Sat', opd: 130, ipd: 22, pharmacy: 142 },
+  { day: 'Sun', opd: 75, ipd: 10, pharmacy: 80 },
 ];
 
-const heatmapGrid = Array.from({ length: 9 }, (_, row) =>
-  Array.from({ length: 24 }, (_, col) => (row * 7 + col * 3) % 11)
-);
+const cmsTrafficData = [
+  { day: 'Mon', pageviews: 2450, qrScans: 620, articles: 480 },
+  { day: 'Tue', pageviews: 3100, qrScans: 740, articles: 560 },
+  { day: 'Wed', pageviews: 2950, qrScans: 810, articles: 510 },
+  { day: 'Thu', pageviews: 3400, qrScans: 890, articles: 640 },
+  { day: 'Fri', pageviews: 4200, qrScans: 1120, articles: 780 },
+  { day: 'Sat', pageviews: 5600, qrScans: 1650, articles: 980 },
+  { day: 'Sun', pageviews: 5200, qrScans: 1540, articles: 920 },
+];
+
+const accountingAgingData = [
+  { bucket: 'Current', receivable: 142000, payable: 88000 },
+  { bucket: '1-30 Days', receivable: 65000, payable: 42000 },
+  { bucket: '31-60 Days', receivable: 28000, payable: 18000 },
+  { bucket: '61-90 Days', receivable: 14000, payable: 8000 },
+  { bucket: '90+ Days', receivable: 6500, payable: 3200 },
+];
 
 const MiniBars = ({ data, color }) => (
   <Flex align="flex-end" gap={3} style={{ height: 32 }}>
@@ -125,185 +175,763 @@ const MiniBars = ({ data, color }) => (
   </Flex>
 );
 
-const MiniSparkline = ({ data, color }) => {
-  const w = 90;
-  const h = 34;
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const step = w / (data.length - 1);
-  const points = data.map((v, i) => `${i * step},${h - ((v - min) / range) * h}`).join(' ');
-
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
-      <polyline points={points} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-};
-
 const AdminDashboard = () => {
   const adminTheme = useAdminTheme();
+  const navigate = useNavigate();
   const screens = useBreakpoint();
   const isMobile = !screens.md;
-  const chartHeight = isMobile ? 200 : 240;
-  const rangePills = useMemo(() => ['1H', '1D', '1W', '1M'], []);
+  const chartHeight = isMobile ? 220 : 260;
+
+  const {
+    moduleState,
+    isModuleOpen,
+    toggleModule,
+    activeModulesCount,
+    totalModulesCount,
+  } = useAdminModules();
+
+  const [activeCategoryFilter, setActiveCategoryFilter] = useState('all');
 
   const c = {
     teal: adminTheme.systemTeal,
     orange: adminTheme.systemOrange,
     orangeSoft: adminTheme.systemOrangeSoft,
-    green: '#22c55e',
-    greenSoft: 'rgba(34,197,94,0.14)',
-    red: '#f5484d',
-    redSoft: 'rgba(245,72,77,0.14)',
+    green: '#16a34a',
+    greenSoft: 'rgba(22,163,74,0.14)',
+    red: '#dc2626',
+    redSoft: 'rgba(220,38,38,0.14)',
     gold: '#f0b429',
+    blue: '#2563eb',
+    purple: '#7c3aed',
     dark: adminTheme.text,
   };
 
   const cardStyle = {
-    borderRadius: 18,
+    borderRadius: 16,
     border: `1px solid ${adminTheme.border}`,
     background: adminTheme.card,
     height: '100%',
   };
 
-  const pillBtn = (active) => ({
-    border: `1px solid ${active ? c.teal : adminTheme.border}`,
-    background: active ? c.teal : 'transparent',
-    color: active ? '#fff' : adminTheme.subtext,
-    borderRadius: 8,
-    padding: '3px 10px',
-    fontSize: 11.5,
-    fontWeight: 700,
-    cursor: 'pointer',
-  });
+  // Dynamically filter storage allocation and uptime based on OPEN modules
+  const visibleStorage = useMemo(() => {
+    return allStorageByModule.filter((m) => isModuleOpen(m.moduleKey));
+  }, [isModuleOpen]);
 
-  const peakColor = (percent) => {
-    if (percent >= 90) return c.red;
-    if (percent >= 70) return c.gold;
-    if (percent >= 50) return c.green;
-    return c.orange;
-  };
+  const maxStorage = useMemo(() => {
+    if (!visibleStorage.length) return 100;
+    return Math.max(...visibleStorage.map((m) => m.gb));
+  }, [visibleStorage]);
 
-  const heatmapColor = (level) => {
-    if (level <= 2) return adminTheme.cardMuted;
-    if (level <= 4) return c.orangeSoft;
-    if (level <= 6) return '#f9c397';
-    if (level <= 8) return '#f4762a';
-    return '#c94f13';
-  };
+  const visibleUptime = useMemo(() => {
+    return allModuleUptime.filter((m) => isModuleOpen(m.moduleKey));
+  }, [isModuleOpen]);
 
-  const navigate = useNavigate();
+  // Closed modules list for quick re-enabling
+  const closedModules = useMemo(() => {
+    return erpModules.filter((m) => !isModuleOpen(m.key));
+  }, [erpModules, isModuleOpen]);
 
   return (
     <Space direction="vertical" size={18} style={{ width: '100%' }}>
+      {/* 1. Dashboard Top Header & Switchboard Gateway */}
       <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
         <div>
-          <Title level={4} style={{ margin: 0, color: adminTheme.text }}>IT Admin Dashboard</Title>
-          <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>Dashboard / IT Admin Dashboard</Text>
+          <Title level={4} style={{ margin: 0, color: adminTheme.text }}>
+            Aura ERP Command Center &amp; Module Analytics
+          </Title>
+          <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>
+            Live telemetry &bull; {activeModulesCount} of {totalModulesCount} Modules Active
+          </Text>
         </div>
+
         <Space size={10} wrap>
+          {/* Main button to open Module Switchboard Page */}
           <Button
             type="primary"
+            icon={<ControlOutlined />}
+            onClick={() => navigate('/admins/modules')}
+            style={{
+              fontWeight: 700,
+              background: '#2563eb',
+              borderRadius: 10,
+              boxShadow: '0 2px 8px rgba(37,99,235,0.3)',
+            }}
+          >
+            Modules Switchboard ({activeModulesCount}/{totalModulesCount})
+          </Button>
+
+          <Button
             icon={<GlobalOutlined />}
             onClick={() => navigate('/admins?module=data&section=dashboard')}
-            style={{ fontWeight: 600, background: '#2563eb' }}
+            style={{ fontWeight: 600, borderRadius: 10 }}
           >
-            Website Data Panel
+            Website CMS
           </Button>
+
           <Button
             icon={<QrcodeOutlined />}
             onClick={() => navigate('/admins?module=data&section=qrcode')}
-            style={{ fontWeight: 600, borderColor: '#0284c7', color: '#0284c7' }}
+            style={{ fontWeight: 600, borderRadius: 10, borderColor: '#0284c7', color: '#0284c7' }}
           >
-            Table QR Tool
+            Store QR
           </Button>
-          <Tag icon={<CheckCircleFilled />} style={{ margin: 0, borderRadius: 8, border: 'none', background: c.greenSoft, color: c.green, padding: '6px 12px', fontWeight: 700 }}>
-            Active Users 248
+
+          <Tag
+            icon={<CheckCircleFilled />}
+            style={{
+              margin: 0,
+              borderRadius: 8,
+              border: 'none',
+              background: c.greenSoft,
+              color: c.green,
+              padding: '6px 12px',
+              fontWeight: 700,
+            }}
+          >
+            All Systems Healthy
           </Tag>
-          <Tag icon={<ExclamationCircleFilled />} style={{ margin: 0, borderRadius: 8, border: 'none', background: c.redSoft, color: c.red, padding: '6px 12px', fontWeight: 700 }}>
-            Security Alerts 3
-          </Tag>
-          <Space size={0} style={{ border: `1px solid ${adminTheme.border}`, borderRadius: 8, padding: 3 }}>
-            <Button size="small" type="text" style={{ background: c.orange, color: '#fff', borderRadius: 6, fontWeight: 700, fontSize: 12 }}>Production</Button>
-            <Button size="small" type="text" style={{ color: adminTheme.subtext, fontSize: 12 }}>Staging</Button>
-            <Button size="small" type="text" style={{ color: adminTheme.subtext, fontSize: 12 }}>Development</Button>
-          </Space>
         </Space>
       </Flex>
 
-      <Row gutter={[16, 16]}>
-        {kpiCards.map((item) => (
-          <Col xs={12} lg={6} key={item.title}>
-            <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
-              <Flex justify="space-between" align="flex-start">
-                <div>
-                  <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>{item.title}</Text>
-                  <Title level={3} style={{ margin: '4px 0 2px', color: adminTheme.text }}>{item.value}</Title>
-                  <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{item.sub}</Text>
-                </div>
-                <div style={{ width: 34, height: 34, borderRadius: 10, background: `${c[item.colorKey]}1a`, color: c[item.colorKey], display: 'grid', placeItems: 'center', fontSize: 16 }}>
-                  {item.icon}
-                </div>
-              </Flex>
-              <div style={{ marginTop: 10 }}>
-                <MiniBars data={item.bars} color={c[item.colorKey]} />
+      {/* 2. Closed Module Alert Banner (shows if e.g. Assets or others are closed) */}
+      {closedModules.length > 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          icon={<EyeInvisibleOutlined style={{ color: '#ea580c' }} />}
+          message={
+            <Flex justify="space-between" align="center" wrap="wrap" gap={10}>
+              <div>
+                <strong>{closedModules.length} Module(s) Deactivated: </strong>
+                {closedModules.map((m) => (
+                  <Tag
+                    key={m.key}
+                    color="orange"
+                    style={{ borderRadius: 6, fontWeight: 600, margin: '0 4px' }}
+                  >
+                    {m.label} ({m.key})
+                  </Tag>
+                ))}
+                <span style={{ fontSize: 12, color: '#64748b' }}>
+                  — These modules are hidden from the sidebar menu and their charts are excluded from the dashboard.
+                </span>
               </div>
-            </Card>
-          </Col>
-        ))}
+
+              <Space size={8}>
+                {closedModules.map((m) => (
+                  <Button
+                    key={m.key}
+                    size="small"
+                    type="primary"
+                    style={{ background: '#16a34a', borderColor: '#16a34a', borderRadius: 6, fontSize: 11.5 }}
+                    onClick={() => toggleModule(m.key, true)}
+                  >
+                    Re-open {m.label}
+                  </Button>
+                ))}
+                <Button
+                  size="small"
+                  icon={<ControlOutlined />}
+                  onClick={() => navigate('/admins/modules')}
+                  style={{ borderRadius: 6, fontSize: 11.5 }}
+                >
+                  Manage Modules
+                </Button>
+              </Space>
+            </Flex>
+          }
+          style={{ borderRadius: 12, border: '1px solid #fed7aa' }}
+        />
+      )}
+
+      {/* 3. Top System KPI Cards */}
+      <Row gutter={[16, 16]}>
+        {baseKpiCards.map((item, idx) => {
+          const displayVal = idx === 2 ? `${activeModulesCount} / ${totalModulesCount}` : item.value;
+          return (
+            <Col xs={12} lg={6} key={item.title}>
+              <Card style={cardStyle} styles={{ body: { padding: 18 } }}>
+                <Flex justify="space-between" align="flex-start">
+                  <div>
+                    <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>{item.title}</Text>
+                    <Title level={3} style={{ margin: '4px 0 2px', color: adminTheme.text }}>
+                      {displayVal}
+                    </Title>
+                    <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{item.sub}</Text>
+                  </div>
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      background: `${c[item.colorKey]}1a`,
+                      color: c[item.colorKey],
+                      display: 'grid',
+                      placeItems: 'center',
+                      fontSize: 17,
+                    }}
+                  >
+                    {item.icon}
+                  </div>
+                </Flex>
+                <div style={{ marginTop: 10 }}>
+                  <MiniBars data={item.bars} color={c[item.colorKey]} />
+                </div>
+              </Card>
+            </Col>
+          );
+        })}
       </Row>
 
+      {/* 4. Filter Toolbar for Module Charts */}
+      <Card style={cardStyle} styles={{ body: { padding: '12px 18px' } }}>
+        <Flex justify="space-between" align="center" wrap="wrap" gap={10}>
+          <Flex align="center" gap={8}>
+            <Text strong style={{ color: adminTheme.text, fontSize: 13 }}>
+              Filter Module Charts:
+            </Text>
+            <Space size={6} wrap>
+              {[
+                { key: 'all', label: `All Active (${activeModulesCount})` },
+                { key: 'operations', label: 'Operations & Assets' },
+                { key: 'commerce', label: 'Commerce & POS' },
+                { key: 'health', label: 'Clinic OPD' },
+                { key: 'finance', label: 'Finance & Accounting' },
+                { key: 'content', label: 'Digital CMS' },
+              ].map((f) => (
+                <Button
+                  key={f.key}
+                  size="small"
+                  type={activeCategoryFilter === f.key ? 'primary' : 'default'}
+                  onClick={() => setActiveCategoryFilter(f.key)}
+                  style={{
+                    borderRadius: 8,
+                    fontSize: 12,
+                    ...(activeCategoryFilter === f.key ? { background: '#2563eb' } : {}),
+                  }}
+                >
+                  {f.label}
+                </Button>
+              ))}
+            </Space>
+          </Flex>
+
+          <Button
+            type="link"
+            size="small"
+            icon={<ControlOutlined />}
+            onClick={() => navigate('/admins/modules')}
+            style={{ fontWeight: 600 }}
+          >
+            Configure Open/Close Switches
+          </Button>
+        </Flex>
+      </Card>
+
+      {/* ==================================================================== */}
+      {/* 5. MODULE DATA CHARTS (Dynamically Rendered / Hidden When Closed)    */}
+      {/* ==================================================================== */}
+
+      <Row gutter={[16, 16]}>
+        {/* ------------------------------------------------------------------ */}
+        {/* A. ASSETS MODULE CHART                                            */}
+        {/* Ex: If Assets is closed, this entire card is completely hidden!   */}
+        {/* ------------------------------------------------------------------ */}
+        {isModuleOpen('asset') && (activeCategoryFilter === 'all' || activeCategoryFilter === 'operations') && (
+          <Col xs={24} xl={12}>
+            <Card
+              style={cardStyle}
+              styles={{ body: { padding: 20 } }}
+              title={
+                <Flex justify="space-between" align="center">
+                  <Flex align="center" gap={8}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: '#4567ff18', color: '#4567ff', display: 'grid', placeItems: 'center' }}>
+                      <BuildOutlined />
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 700, color: adminTheme.text }}>Fixed Assets &amp; Equipment Valuation</span>
+                      <Text style={{ display: 'block', fontSize: 11.5, color: adminTheme.subtext, fontWeight: 'normal' }}>
+                        Asset master records, depreciation &amp; maintenance
+                      </Text>
+                    </div>
+                  </Flex>
+                  <Tag color="purple" style={{ borderRadius: 6, fontWeight: 700 }}>
+                    Assets Active
+                  </Tag>
+                </Flex>
+              }
+            >
+              <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Total Asset Value</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: adminTheme.text }}>$665,000</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Tracked Assets</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#2563eb' }}>684 Units</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Maintenance Due</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#ea580c' }}>4 Items</Title>
+                </Col>
+              </Row>
+
+              <ResponsiveContainer width="100%" height={chartHeight}>
+                <BarChart data={assetChartData} margin={{ left: -10, right: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.15)" />
+                  <XAxis dataKey="category" tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 10, border: `1px solid ${adminTheme.border}`, background: adminTheme.card, color: adminTheme.text }}
+                    formatter={(val, name) => [name === 'value' ? `$${val}k Valuation` : `${val} Scheduled`, name === 'value' ? 'Net Book Value' : 'Maintenance']}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
+                  <Bar dataKey="value" name="Net Book Value ($K)" fill="#4567ff" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="maintenance" name="Maintenance Cycles" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* B. INVENTORY MODULE CHART                                         */}
+        {/* ------------------------------------------------------------------ */}
+        {isModuleOpen('inventory') && (activeCategoryFilter === 'all' || activeCategoryFilter === 'operations') && (
+          <Col xs={24} xl={12}>
+            <Card
+              style={cardStyle}
+              styles={{ body: { padding: 20 } }}
+              title={
+                <Flex justify="space-between" align="center">
+                  <Flex align="center" gap={8}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: '#0a84ff18', color: '#0a84ff', display: 'grid', placeItems: 'center' }}>
+                      <AppstoreOutlined />
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 700, color: adminTheme.text }}>Inventory Movement &amp; Stock Flow</span>
+                      <Text style={{ display: 'block', fontSize: 11.5, color: adminTheme.subtext, fontWeight: 'normal' }}>
+                        Inbound receiving, outbound dispatch &amp; stock valuation
+                      </Text>
+                    </div>
+                  </Flex>
+                  <Tag color="blue" style={{ borderRadius: 6, fontWeight: 700 }}>
+                    Inventory Active
+                  </Tag>
+                </Flex>
+              }
+            >
+              <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Stock SKUs</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: adminTheme.text }}>12,450</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Stock In (Mo.)</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#16a34a' }}>6,100 pcs</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Low Stock Warning</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#dc2626' }}>12 SKUs</Title>
+                </Col>
+              </Row>
+
+              <ResponsiveContainer width="100%" height={chartHeight}>
+                <ComposedChart data={inventoryChartData} margin={{ left: -10, right: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.15)" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ borderRadius: 10, border: `1px solid ${adminTheme.border}`, background: adminTheme.card, color: adminTheme.text }} />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
+                  <Bar dataKey="stockIn" name="Stock Inbound (Units)" fill="#0a84ff" radius={[6, 6, 0, 0]} />
+                  <Line type="monotone" dataKey="stockOut" name="Stock Dispatched" stroke="#ea580c" strokeWidth={2} dot={{ r: 3 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* C. SALES & ORDERS MODULE CHART                                    */}
+        {/* ------------------------------------------------------------------ */}
+        {isModuleOpen('sales') && (activeCategoryFilter === 'all' || activeCategoryFilter === 'commerce') && (
+          <Col xs={24} xl={12}>
+            <Card
+              style={cardStyle}
+              styles={{ body: { padding: 20 } }}
+              title={
+                <Flex justify="space-between" align="center">
+                  <Flex align="center" gap={8}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: '#18a95718', color: '#18a957', display: 'grid', placeItems: 'center' }}>
+                      <ShoppingCartOutlined />
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 700, color: adminTheme.text }}>Commercial Sales &amp; Invoices</span>
+                      <Text style={{ display: 'block', fontSize: 11.5, color: adminTheme.subtext, fontWeight: 'normal' }}>
+                        Invoiced revenue, storefront orders &amp; dispatch
+                      </Text>
+                    </div>
+                  </Flex>
+                  <Tag color="green" style={{ borderRadius: 6, fontWeight: 700 }}>
+                    Sales Active
+                  </Tag>
+                </Flex>
+              }
+            >
+              <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Monthly Gross</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: adminTheme.text }}>$117,000</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Online Growth</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#16a34a' }}>+28.4%</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Active Orders</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#2563eb' }}>384</Title>
+                </Col>
+              </Row>
+
+              <ResponsiveContainer width="100%" height={chartHeight}>
+                <AreaChart data={salesChartData} margin={{ left: -10, right: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.15)" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 10, border: `1px solid ${adminTheme.border}`, background: adminTheme.card, color: adminTheme.text }}
+                    formatter={(val) => [`$${val.toLocaleString()}`, 'Revenue']}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
+                  <Area type="monotone" dataKey="directSales" name="Direct Sales ($)" stroke="#18a957" fill="#18a957" fillOpacity={0.2} strokeWidth={2} />
+                  <Area type="monotone" dataKey="onlineOrders" name="Online & TMA ($)" stroke="#0a84ff" fill="#0a84ff" fillOpacity={0.15} strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* D. POINT OF SALE (POS) MODULE CHART                                */}
+        {/* ------------------------------------------------------------------ */}
+        {isModuleOpen('pos') && (activeCategoryFilter === 'all' || activeCategoryFilter === 'commerce') && (
+          <Col xs={24} xl={12}>
+            <Card
+              style={cardStyle}
+              styles={{ body: { padding: 20 } }}
+              title={
+                <Flex justify="space-between" align="center">
+                  <Flex align="center" gap={8}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: '#f2994a18', color: '#f2994a', display: 'grid', placeItems: 'center' }}>
+                      <CreditCardOutlined />
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 700, color: adminTheme.text }}>POS Cashier Velocity &amp; Payment Mix</span>
+                      <Text style={{ display: 'block', fontSize: 11.5, color: adminTheme.subtext, fontWeight: 'normal' }}>
+                        Live register throughput: Bakong KHQR, Cash &amp; Cards
+                      </Text>
+                    </div>
+                  </Flex>
+                  <Tag color="orange" style={{ borderRadius: 6, fontWeight: 700 }}>
+                    POS Active
+                  </Tag>
+                </Flex>
+              }
+            >
+              <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Active Registers</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: adminTheme.text }}>14 Lanes</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Bakong KHQR Mix</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#2563eb' }}>62%</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Peak Speed</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#16a34a' }}>240 tx/hr</Title>
+                </Col>
+              </Row>
+
+              <ResponsiveContainer width="100%" height={chartHeight}>
+                <BarChart data={posHourlyData} margin={{ left: -10, right: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.15)" />
+                  <XAxis dataKey="hour" tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ borderRadius: 10, border: `1px solid ${adminTheme.border}`, background: adminTheme.card, color: adminTheme.text }} />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
+                  <Bar dataKey="khqr" name="Bakong KHQR" fill="#0284c7" stackId="a" />
+                  <Bar dataKey="cash" name="Cash" fill="#16a34a" stackId="a" />
+                  <Bar dataKey="card" name="Card" fill="#f59e0b" stackId="a" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* E. CLINIC & HEALTHCARE MODULE CHART                                */}
+        {/* ------------------------------------------------------------------ */}
+        {isModuleOpen('clinic') && (activeCategoryFilter === 'all' || activeCategoryFilter === 'health') && (
+          <Col xs={24} xl={12}>
+            <Card
+              style={cardStyle}
+              styles={{ body: { padding: 20 } }}
+              title={
+                <Flex justify="space-between" align="center">
+                  <Flex align="center" gap={8}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: '#ef5b5b18', color: '#ef5b5b', display: 'grid', placeItems: 'center' }}>
+                      <MedicineBoxOutlined />
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 700, color: adminTheme.text }}>Clinic Patient Flow &amp; Pharmacy</span>
+                      <Text style={{ display: 'block', fontSize: 11.5, color: adminTheme.subtext, fontWeight: 'normal' }}>
+                        OPD consultations, IPD bed admissions &amp; pharmacy
+                      </Text>
+                    </div>
+                  </Flex>
+                  <Tag color="volcano" style={{ borderRadius: 6, fontWeight: 700 }}>
+                    Clinic Active
+                  </Tag>
+                </Flex>
+              }
+            >
+              <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Patients Today</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: adminTheme.text }}>184</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Bed Occupancy</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#2563eb' }}>86%</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Prescriptions</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#16a34a' }}>142</Title>
+                </Col>
+              </Row>
+
+              <ResponsiveContainer width="100%" height={chartHeight}>
+                <BarChart data={clinicActivityData} margin={{ left: -10, right: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.15)" />
+                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ borderRadius: 10, border: `1px solid ${adminTheme.border}`, background: adminTheme.card, color: adminTheme.text }} />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
+                  <Bar dataKey="opd" name="OPD Visits" fill="#ef5b5b" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="ipd" name="IPD Inpatients" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="pharmacy" name="Pharmacy Issues" fill="#10b981" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* F. WEBSITE CMS & STOREFRONT ENGAGEMENT CHART                       */}
+        {/* ------------------------------------------------------------------ */}
+        {isModuleOpen('cms') && (activeCategoryFilter === 'all' || activeCategoryFilter === 'content') && (
+          <Col xs={24} xl={12}>
+            <Card
+              style={cardStyle}
+              styles={{ body: { padding: 20 } }}
+              title={
+                <Flex justify="space-between" align="center">
+                  <Flex align="center" gap={8}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: '#2563eb18', color: '#2563eb', display: 'grid', placeItems: 'center' }}>
+                      <GlobalOutlined />
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 700, color: adminTheme.text }}>Website CMS &amp; Store QR Scans</span>
+                      <Text style={{ display: 'block', fontSize: 11.5, color: adminTheme.subtext, fontWeight: 'normal' }}>
+                        Live visitor traffic, store counter scans &amp; blog readership
+                      </Text>
+                    </div>
+                  </Flex>
+                  <Tag color="cyan" style={{ borderRadius: 6, fontWeight: 700 }}>
+                    CMS Active
+                  </Tag>
+                </Flex>
+              }
+            >
+              <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Weekly Visits</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: adminTheme.text }}>26,850</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>QR Menu Scans</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#2563eb' }}>7,420</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Khmer Reader %</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#16a34a' }}>54%</Title>
+                </Col>
+              </Row>
+
+              <ResponsiveContainer width="100%" height={chartHeight}>
+                <AreaChart data={cmsTrafficData} margin={{ left: -10, right: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.15)" />
+                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ borderRadius: 10, border: `1px solid ${adminTheme.border}`, background: adminTheme.card, color: adminTheme.text }} />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
+                  <Area type="monotone" dataKey="pageviews" name="Pageviews" stroke="#2563eb" fill="#2563eb" fillOpacity={0.16} strokeWidth={2} />
+                  <Area type="monotone" dataKey="qrScans" name="Store QR Scans" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.12} strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* G. ACCOUNTING & AR/AP AGING CHART                                  */}
+        {/* ------------------------------------------------------------------ */}
+        {isModuleOpen('accounting') && (activeCategoryFilter === 'all' || activeCategoryFilter === 'finance') && (
+          <Col xs={24} xl={12}>
+            <Card
+              style={cardStyle}
+              styles={{ body: { padding: 20 } }}
+              title={
+                <Flex justify="space-between" align="center">
+                  <Flex align="center" gap={8}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: '#5b6cff18', color: '#5b6cff', display: 'grid', placeItems: 'center' }}>
+                      <BankOutlined />
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 700, color: adminTheme.text }}>Accounting AR/AP Aging &amp; Liquidity</span>
+                      <Text style={{ display: 'block', fontSize: 11.5, color: adminTheme.subtext, fontWeight: 'normal' }}>
+                        Customer receivables vs supplier payables schedule
+                      </Text>
+                    </div>
+                  </Flex>
+                  <Tag color="geekblue" style={{ borderRadius: 6, fontWeight: 700 }}>
+                    Accounting Active
+                  </Tag>
+                </Flex>
+              }
+            >
+              <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Open Receivables</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#16a34a' }}>$255,500</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Open Payables</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#ea580c' }}>$159,200</Title>
+                </Col>
+                <Col span={8}>
+                  <Text style={{ fontSize: 11.5, color: adminTheme.subtext }}>Net Liquidity</Text>
+                  <Title level={4} style={{ margin: '2px 0 0', color: '#2563eb' }}>+$96,300</Title>
+                </Col>
+              </Row>
+
+              <ResponsiveContainer width="100%" height={chartHeight}>
+                <BarChart data={accountingAgingData} margin={{ left: -10, right: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(150,150,150,0.15)" />
+                  <XAxis dataKey="bucket" tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 10, border: `1px solid ${adminTheme.border}`, background: adminTheme.card, color: adminTheme.text }}
+                    formatter={(val) => [`$${val.toLocaleString()}`, '']}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
+                  <Bar dataKey="receivable" name="Receivable (AR)" fill="#16a34a" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="payable" name="Payable (AP)" fill="#dc2626" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+        )}
+      </Row>
+
+      {/* ==================================================================== */}
+      {/* 6. CROSS-MODULE SYSTEM TELEMETRY (Storage & Uptime)                 */}
+      {/* Dynamic rows: ONLY open modules appear here!                        */}
+      {/* ==================================================================== */}
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={16}>
           <Card style={cardStyle} styles={{ body: { padding: 20 } }}>
             <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
               <Flex align="center" gap={8}>
                 <DatabaseOutlined style={{ color: c.teal }} />
-                <Title level={5} style={{ margin: 0, color: adminTheme.text }}>Storage Usage by Module (GB)</Title>
+                <Title level={5} style={{ margin: 0, color: adminTheme.text }}>
+                  Storage Allocation by Active Modules (GB)
+                </Title>
               </Flex>
-              <Space size={6}>
-                {rangePills.map((p) => (
-                  <span key={p} style={pillBtn(p === '1H')}>{p}</span>
-                ))}
-              </Space>
+              <Text style={{ fontSize: 12, color: adminTheme.subtext }}>
+                {visibleStorage.length} Active Modules Tracked
+              </Text>
             </Flex>
-            <Row gutter={[10, 10]}>
-              {storageByModule.map((item) => (
-                <Col span={4} key={item.module}>
-                  <Flex vertical align="center" gap={8}>
-                    <div style={{ width: '100%', height: 160, borderRadius: 10, background: adminTheme.cardMuted, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'flex-end' }}>
+
+            {visibleStorage.length > 0 ? (
+              <Row gutter={[10, 10]}>
+                {visibleStorage.map((item) => (
+                  <Col span={Math.max(3, Math.floor(24 / Math.max(1, visibleStorage.length)))} key={item.moduleKey}>
+                    <Flex vertical align="center" gap={8}>
                       <div
                         style={{
                           width: '100%',
-                          height: `${(item.gb / maxStorage) * 100}%`,
-                          background: item.highlight ? c.orange : c.teal,
-                          borderRadius: '10px 10px 0 0',
+                          height: 150,
+                          borderRadius: 10,
+                          background: adminTheme.cardMuted,
+                          position: 'relative',
+                          overflow: 'hidden',
                           display: 'flex',
-                          alignItems: 'flex-start',
-                          justifyContent: 'center',
-                          paddingTop: 8,
+                          alignItems: 'flex-end',
                         }}
                       >
-                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>{item.gb} GB</Text>
+                        <div
+                          style={{
+                            width: '100%',
+                            height: `${(item.gb / maxStorage) * 100}%`,
+                            background: item.highlight ? c.orange : c.teal,
+                            borderRadius: '10px 10px 0 0',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'center',
+                            paddingTop: 8,
+                          }}
+                        >
+                          <Text style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>
+                            {item.gb} GB
+                          </Text>
+                        </div>
                       </div>
-                    </div>
-                    <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{item.module}</Text>
-                  </Flex>
-                </Col>
-              ))}
-            </Row>
-            <Row gutter={[10, 10]} style={{ marginTop: 16 }}>
-              {moduleUptime.map((item) => (
-                <Col xs={12} sm={8} key={item.module}>
-                  <Flex justify="space-between" align="center" style={{ padding: '10px 12px', borderRadius: 10, background: adminTheme.cardMuted }}>
+                      <Text style={{ color: adminTheme.subtext, fontSize: 11, textAlign: 'center' }}>
+                        {item.module}
+                      </Text>
+                    </Flex>
+                  </Col>
+                ))}
+              </Row>
+            ) : (
+              <div style={{ padding: 24, textAlign: 'center', color: adminTheme.subtext }}>
+                No active modules configured. Open modules in the Switchboard.
+              </div>
+            )}
+
+            {/* Module Uptime Grid (Only Active Modules) */}
+            <Row gutter={[10, 10]} style={{ marginTop: 20 }}>
+              {visibleUptime.map((item) => (
+                <Col xs={12} sm={8} key={item.moduleKey}>
+                  <Flex
+                    justify="space-between"
+                    align="center"
+                    style={{ padding: '10px 12px', borderRadius: 10, background: adminTheme.cardMuted }}
+                  >
                     <div>
-                      <Text style={{ color: adminTheme.text, fontSize: 12.5, fontWeight: 600, display: 'block' }}>{item.module}</Text>
-                      <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>Uptime: {item.uptime}</Text>
+                      <Text style={{ color: adminTheme.text, fontSize: 12, fontWeight: 600, display: 'block' }}>
+                        {item.module}
+                      </Text>
+                      <Text style={{ color: adminTheme.subtext, fontSize: 11 }}>Uptime: {item.uptime}</Text>
                     </div>
-                    {item.ok
-                      ? <CheckCircleFilled style={{ color: c.green, fontSize: 16 }} />
-                      : <ExclamationCircleFilled style={{ color: c.red, fontSize: 16 }} />}
+                    {item.ok ? (
+                      <CheckCircleFilled style={{ color: c.green, fontSize: 15 }} />
+                    ) : (
+                      <ExclamationCircleFilled style={{ color: c.red, fontSize: 15 }} />
+                    )}
                   </Flex>
                 </Col>
               ))}
@@ -311,22 +939,70 @@ const AdminDashboard = () => {
           </Card>
         </Col>
 
+        {/* Quick Actions & Security */}
         <Col xs={24} xl={8}>
           <Space direction="vertical" size={16} style={{ width: '100%' }}>
             <Card style={cardStyle} styles={{ body: { padding: 20 } }}>
               <Flex align="center" gap={8} style={{ marginBottom: 14 }}>
-                <LockOutlined style={{ color: c.teal }} />
-                <Title level={5} style={{ margin: 0, color: adminTheme.text }}>MFA Enabled Users</Title>
+                <ControlOutlined style={{ color: '#2563eb' }} />
+                <Title level={5} style={{ margin: 0, color: adminTheme.text }}>
+                  ERP Modules Switchboard
+                </Title>
               </Flex>
-              <Flex justify="space-between" align="center" style={{ marginBottom: 10 }}>
-                <Text style={{ color: adminTheme.subtext, fontSize: 12.5 }}>2,168 out of 2,436 users</Text>
-                <Text strong style={{ color: adminTheme.text }}>89%</Text>
-              </Flex>
-              <Flex gap={5} wrap="wrap">
-                {Array.from({ length: mfaTotal }).map((_, i) => (
-                  <span key={i} style={{ width: 12, height: 12, borderRadius: 999, background: i < mfaFilled ? c.orange : adminTheme.cardMuted }} />
-                ))}
-              </Flex>
+              <Text style={{ color: adminTheme.subtext, fontSize: 12, display: 'block', marginBottom: 12 }}>
+                Quickly toggle features on or off. Disabled modules immediately disappear from the sidebar menu and dashboard charts.
+              </Text>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {erpModules.slice(0, 5).map((m) => {
+                  const isOpen = isModuleOpen(m.key);
+                  return (
+                    <Flex
+                      key={m.key}
+                      justify="space-between"
+                      align="center"
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        background: adminTheme.cardMuted,
+                      }}
+                    >
+                      <Flex align="center" gap={8}>
+                        <span style={{ color: m.accent || '#2563eb', fontWeight: 600, fontSize: 13 }}>
+                          {m.label}
+                        </span>
+                        {m.key === 'asset' && (
+                          <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px' }}>
+                            Assets
+                          </Tag>
+                        )}
+                      </Flex>
+                      <Button
+                        size="small"
+                        type={isOpen ? 'text' : 'primary'}
+                        style={
+                          isOpen
+                            ? { color: '#16a34a', fontWeight: 700, fontSize: 11 }
+                            : { background: '#ea580c', borderColor: '#ea580c', fontSize: 11, borderRadius: 6 }
+                        }
+                        onClick={() => toggleModule(m.key, !isOpen)}
+                      >
+                        {isOpen ? 'ACTIVE' : 'RE-OPEN'}
+                      </Button>
+                    </Flex>
+                  );
+                })}
+              </div>
+
+              <Button
+                block
+                type="dashed"
+                icon={<ControlOutlined />}
+                onClick={() => navigate('/admins/modules')}
+                style={{ marginTop: 14, borderRadius: 8, fontWeight: 600 }}
+              >
+                Open Full Switchboard ({totalModulesCount} Modules)
+              </Button>
             </Card>
 
             <Card style={cardStyle} styles={{ body: { padding: 20 } }}>
@@ -335,161 +1011,28 @@ const AdminDashboard = () => {
                 <Title level={5} style={{ margin: 0, color: adminTheme.text }}>Quick IT Actions</Title>
               </Flex>
               <Row gutter={[10, 14]}>
-                {quickActions.map((action) => (
+                {[
+                  { label: 'Restart ERP', icon: <ReloadOutlined /> },
+                  { label: 'Sync Inventory', icon: <SyncOutlined /> },
+                  { label: 'Clear Cache', icon: <DeleteOutlined /> },
+                  { label: 'Schedule Run', icon: <ScheduleOutlined /> },
+                  { label: 'Stop Jobs', icon: <PauseCircleOutlined /> },
+                  { label: 'Audit Assets', icon: <BuildOutlined /> },
+                ].map((action) => (
                   <Col span={8} key={action.label}>
                     <Flex vertical align="center" gap={6}>
                       <Button
                         shape="circle"
                         icon={action.icon}
-                        style={{ width: 46, height: 46, background: c.dark, color: adminTheme.card, border: 'none', fontSize: 16 }}
+                        style={{ width: 42, height: 42, background: c.dark, color: adminTheme.card, border: 'none', fontSize: 15 }}
                       />
-                      <Text style={{ color: adminTheme.subtext, fontSize: 10.5, textAlign: 'center', lineHeight: 1.2 }}>{action.label}</Text>
+                      <Text style={{ color: adminTheme.subtext, fontSize: 10.5, textAlign: 'center', lineHeight: 1.2 }}>
+                        {action.label}
+                      </Text>
                     </Flex>
                   </Col>
                 ))}
               </Row>
-            </Card>
-          </Space>
-        </Col>
-      </Row>
-
-      <Card style={cardStyle} styles={{ body: { padding: 20 } }}>
-        <Flex align="center" gap={8} style={{ marginBottom: 16 }}>
-          <TeamOutlined style={{ color: c.teal }} />
-          <Title level={5} style={{ margin: 0, color: adminTheme.text }}>User Access &amp; Role Management</Title>
-        </Flex>
-
-        <Flex justify="space-between" align="center" style={{ marginBottom: 12 }} wrap="wrap" gap={8}>
-          <Text strong style={{ color: adminTheme.text }}>Peak Hours (Today)</Text>
-          <Space size={14} wrap>
-            {[{ l: 'Low (0-50%)', color: c.orange }, { l: 'Medium (50-70%)', color: c.green }, { l: 'High (70-90%)', color: c.gold }, { l: 'Peak (90-100%)', color: c.red }].map((x) => (
-              <Text key={x.l} style={{ fontSize: 11.5, color: adminTheme.subtext }}>
-                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 999, background: x.color, marginRight: 6 }} />
-                {x.l}
-              </Text>
-            ))}
-          </Space>
-        </Flex>
-
-        <Row gutter={[10, 10]}>
-          {peakHours.map((item) => {
-            const tone = peakColor(item.percent);
-            return (
-              <Col xs={12} sm={8} md={4} key={item.time}>
-                <div style={{ padding: 12, borderRadius: 10, background: adminTheme.cardMuted }}>
-                  <Flex justify="space-between" align="center">
-                    <Text style={{ color: adminTheme.subtext, fontSize: 11.5 }}>{item.time}</Text>
-                    <span style={{ width: 7, height: 7, borderRadius: 999, background: tone }} />
-                  </Flex>
-                  <Title level={5} style={{ margin: '2px 0 8px', color: adminTheme.text }}>{item.percent}%</Title>
-                  <div style={{ height: 5, borderRadius: 999, background: adminTheme.border }}>
-                    <div style={{ width: `${item.percent}%`, height: '100%', borderRadius: 999, background: tone }} />
-                  </div>
-                </div>
-              </Col>
-            );
-          })}
-        </Row>
-
-        <Text strong style={{ color: adminTheme.text, display: 'block', margin: '20px 0 10px' }}>Login Count Analysis</Text>
-        <ResponsiveContainer width="100%" height={chartHeight}>
-          <AreaChart data={loginCount} margin={{ left: -20, right: 10 }}>
-            <XAxis dataKey="time" tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
-            <Tooltip
-              contentStyle={{ borderRadius: 10, border: `1px solid ${adminTheme.border}`, background: adminTheme.card, color: adminTheme.text }}
-              formatter={(value) => [value, 'Login Count']}
-            />
-            <Area type="monotone" dataKey="count" stroke={c.orange} strokeWidth={2} fill={c.orange} fillOpacity={0.16} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </Card>
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={12}>
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            <Card style={cardStyle} styles={{ body: { padding: 20 } }}>
-              <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-                <Flex align="center" gap={8}>
-                  <ClusterOutlined style={{ color: c.teal }} />
-                  <Title level={5} style={{ margin: 0, color: adminTheme.text }}>ERP Usage Trend</Title>
-                </Flex>
-                <Space size={6}>
-                  {rangePills.map((p) => (
-                    <span key={p} style={pillBtn(p === '1W')}>{p}</span>
-                  ))}
-                </Space>
-              </Flex>
-              <ResponsiveContainer width="100%" height={chartHeight - 20}>
-                <ComposedChart data={usageTrend} margin={{ left: -20, right: 10 }}>
-                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: adminTheme.subtext }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ borderRadius: 10, border: `1px solid ${adminTheme.border}`, background: adminTheme.card, color: adminTheme.text }} />
-                  <Area type="monotone" dataKey="users" stroke={c.teal} strokeWidth={2} fill={c.teal} fillOpacity={0.14} />
-                  <Line type="monotone" dataKey="users" stroke={c.teal} strokeWidth={2} dot={false} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </Card>
-
-            <Card style={cardStyle} styles={{ body: { padding: 20 } }}>
-              <Title level={5} style={{ margin: '0 0 14px', color: adminTheme.text }}>Security &amp; Compliance</Title>
-              <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                {securityCompliance.map((item) => (
-                  <Flex key={item.label} justify="space-between" align="center">
-                    <div>
-                      <Title level={3} style={{ marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 10, color: adminTheme.text, display: 'inline-block' }}>{item.value}</Title>
-                      <Text style={{ color: adminTheme.text, fontSize: 12.5, fontWeight: 600 }}>{item.label}</Text>
-                      <Text style={{ color: adminTheme.subtext, fontSize: 11.5, display: 'block' }}>{item.sub}</Text>
-                    </div>
-                    <MiniSparkline data={item.spark} color={c[item.colorKey]} />
-                  </Flex>
-                ))}
-              </Space>
-            </Card>
-          </Space>
-        </Col>
-
-        <Col xs={24} xl={12}>
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            <Card style={cardStyle} styles={{ body: { padding: 20 } }}>
-              <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
-                <Title level={5} style={{ margin: 0, color: adminTheme.text }}>User Roles Distribution</Title>
-                <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>Monthly</Text>
-              </Flex>
-              <Flex style={{ height: 14, borderRadius: 999, overflow: 'hidden', marginBottom: 16 }}>
-                {userRoles.map((role) => (
-                  <div key={role.label} style={{ width: role.width, background: c[role.colorKey] }} />
-                ))}
-              </Flex>
-              <Row gutter={[12, 12]}>
-                {userRoles.map((role) => (
-                  <Col span={12} key={role.label}>
-                    <Text style={{ color: adminTheme.subtext, fontSize: 12 }}>
-                      <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 999, background: c[role.colorKey], marginRight: 6 }} />
-                      {role.label}
-                    </Text>
-                    <Title level={4} style={{ margin: '2px 0 0', color: adminTheme.text }}>{role.value.toLocaleString()}</Title>
-                  </Col>
-                ))}
-              </Row>
-            </Card>
-
-            <Card style={cardStyle} styles={{ body: { padding: 20 } }}>
-              <Flex justify="space-between" align="center" style={{ marginBottom: 14 }}>
-                <Flex align="center" gap={8}>
-                  <WarningOutlined style={{ color: c.orange }} />
-                  <Title level={5} style={{ margin: 0, color: adminTheme.text }}>Integration Error Counts (24h)</Title>
-                </Flex>
-              </Flex>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, overflowX: 'auto' }}>
-                {heatmapGrid.map((row, r) => (
-                  <div key={r} style={{ display: 'flex', gap: 4 }}>
-                    {row.map((level, cIdx) => (
-                      <div key={cIdx} style={{ width: 14, height: 14, borderRadius: 4, background: heatmapColor(level), flexShrink: 0 }} />
-                    ))}
-                  </div>
-                ))}
-              </div>
             </Card>
           </Space>
         </Col>

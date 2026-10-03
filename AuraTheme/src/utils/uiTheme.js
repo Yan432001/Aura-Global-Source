@@ -26,56 +26,56 @@ export const publicTheme = {
 
 const adminThemeLight = {
   pageBackground:
-    'radial-gradient(circle at 6% 0%, rgba(47, 111, 237, 0.08), transparent 32%), radial-gradient(circle at 96% 12%, rgba(244, 118, 42, 0.07), transparent 28%), linear-gradient(180deg, #eef2fb 0%, #f4f6fc 100%)',
+    'radial-gradient(circle at 8% 6%, rgba(47, 111, 237, 0.07), transparent 30%), radial-gradient(circle at 92% 8%, rgba(255, 122, 61, 0.04), transparent 25%), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
   sidebar: '#ffffff',
-  sidebarMuted: '#8a94a6',
-  sidebarBorder: 'rgba(20, 24, 33, 0.06)',
-  sidebarActiveBg: '#fff1e8',
-  sidebarActiveText: '#fa6423',
-  sidebarHoverBg: '#f5f7fb',
-  sidebarSectionLabel: '#a7acb8',
+  sidebarMuted: '#64748b',
+  sidebarBorder: 'rgba(226, 232, 240, 0.85)',
+  sidebarActiveBg: 'rgba(47, 111, 237, 0.08)',
+  sidebarActiveText: '#2f6fed',
+  sidebarHoverBg: 'rgba(47, 111, 237, 0.04)',
+  sidebarSectionLabel: '#94a3b8',
   topPanel: '#ffffff',
   card: '#ffffff',
-  cardMuted: '#f6f8fb',
-  text: '#1f2937',
-  subtext: '#8a94a6',
-  border: 'rgba(20, 24, 33, 0.08)',
+  cardMuted: '#f8fafc',
+  text: '#0f172a',
+  subtext: '#64748b',
+  border: 'rgba(226, 232, 240, 0.85)',
   primary: '#2f6fed',
-  success: '#22c55e',
-  warning: '#f5a623',
-  danger: '#f5484d',
-  shadow: '0 12px 30px rgba(20, 24, 33, 0.06)',
-  systemTeal: '#0f5c68',
-  systemTealSoft: '#e3edee',
-  systemOrange: '#f4762a',
-  systemOrangeSoft: '#fdece0',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  shadow: '0 10px 30px -5px rgba(15, 23, 42, 0.06), 0 4px 12px -2px rgba(15, 23, 42, 0.03)',
+  systemTeal: '#0d9488',
+  systemTealSoft: 'rgba(13, 148, 136, 0.12)',
+  systemOrange: '#ff7a3d',
+  systemOrangeSoft: 'rgba(255, 122, 61, 0.12)',
 };
 
 const adminThemeDark = {
   pageBackground:
-    'radial-gradient(circle at 6% 0%, rgba(47, 111, 237, 0.14), transparent 32%), radial-gradient(circle at 96% 12%, rgba(244, 118, 42, 0.1), transparent 28%), linear-gradient(180deg, #10131c 0%, #151926 100%)',
-  sidebar: '#141824',
-  sidebarMuted: '#7d8699',
+    'radial-gradient(circle at 8% 6%, rgba(47, 111, 237, 0.12), transparent 30%), radial-gradient(circle at 92% 8%, rgba(255, 122, 61, 0.06), transparent 25%), linear-gradient(180deg, #0b0f19 0%, #0f172a 100%)',
+  sidebar: '#0f172a',
+  sidebarMuted: '#94a3b8',
   sidebarBorder: 'rgba(255, 255, 255, 0.08)',
-  sidebarActiveBg: 'rgba(250, 100, 35, 0.16)',
-  sidebarActiveText: '#ff8a4d',
+  sidebarActiveBg: 'rgba(47, 111, 237, 0.18)',
+  sidebarActiveText: '#60a5fa',
   sidebarHoverBg: 'rgba(255, 255, 255, 0.05)',
-  sidebarSectionLabel: '#5b6478',
-  topPanel: '#141824',
-  card: '#1a1f2e',
-  cardMuted: '#212739',
-  text: '#e8eaf0',
-  subtext: '#8f97ab',
+  sidebarSectionLabel: '#64748b',
+  topPanel: '#0f172a',
+  card: '#1e293b',
+  cardMuted: '#182234',
+  text: '#f8fafc',
+  subtext: '#94a3b8',
   border: 'rgba(255, 255, 255, 0.08)',
-  primary: '#4c86ff',
-  success: '#34d399',
-  warning: '#fbbf24',
-  danger: '#f87171',
-  shadow: '0 12px 30px rgba(0, 0, 0, 0.4)',
-  systemTeal: '#2dd4bf',
-  systemTealSoft: 'rgba(45, 212, 191, 0.14)',
-  systemOrange: '#ff8a4d',
-  systemOrangeSoft: 'rgba(255, 138, 77, 0.16)',
+  primary: '#3b82f6',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  shadow: '0 12px 30px rgba(0, 0, 0, 0.45)',
+  systemTeal: '#14b8a6',
+  systemTealSoft: 'rgba(20, 184, 166, 0.16)',
+  systemOrange: '#ff9a5c',
+  systemOrangeSoft: 'rgba(255, 154, 92, 0.18)',
 };
 
 // Static default (light) — for any code path outside a component render.
@@ -94,18 +94,88 @@ const hexToRgba = (hex, alpha) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+// Wallpaper generators for Transparent Background System
+export const getWallpaperBackground = (wallpaperKey, isDark) => {
+  switch (wallpaperKey) {
+    case 'cyber':
+      return `radial-gradient(at 15% 15%, rgba(6, 182, 212, ${isDark ? 0.35 : 0.22}) 0px, transparent 55%), radial-gradient(at 85% 85%, rgba(99, 102, 241, ${isDark ? 0.4 : 0.28}) 0px, transparent 55%), radial-gradient(at 50% 50%, rgba(236, 72, 153, ${isDark ? 0.25 : 0.16}) 0px, transparent 65%), linear-gradient(180deg, ${isDark ? '#050811' : '#f0fdff'} 0%, ${isDark ? '#0b1329' : '#e0f2fe'} 100%)`;
+    case 'sunset':
+      return `radial-gradient(at 15% 20%, rgba(244, 63, 94, ${isDark ? 0.35 : 0.22}) 0px, transparent 50%), radial-gradient(at 85% 25%, rgba(245, 158, 11, ${isDark ? 0.4 : 0.26}) 0px, transparent 55%), radial-gradient(at 50% 90%, rgba(168, 85, 247, ${isDark ? 0.3 : 0.18}) 0px, transparent 55%), linear-gradient(135deg, ${isDark ? '#140711' : '#fff1f2'} 0%, ${isDark ? '#0b0614' : '#ffe4e6'} 100%)`;
+    case 'emerald':
+      return `radial-gradient(at 10% 10%, rgba(16, 185, 129, ${isDark ? 0.4 : 0.26}) 0px, transparent 50%), radial-gradient(at 90% 20%, rgba(2, 132, 199, ${isDark ? 0.35 : 0.22}) 0px, transparent 50%), radial-gradient(at 80% 90%, rgba(217, 119, 6, ${isDark ? 0.25 : 0.16}) 0px, transparent 50%), linear-gradient(180deg, ${isDark ? '#03140e' : '#ecfdf5'} 0%, ${isDark ? '#021814' : '#d1fae5'} 100%)`;
+    case 'cosmic':
+      return `radial-gradient(at 30% 30%, rgba(147, 51, 234, 0.45) 0px, transparent 50%), radial-gradient(at 70% 60%, rgba(59, 130, 246, 0.4) 0px, transparent 50%), radial-gradient(at 20% 80%, rgba(236, 72, 153, 0.3) 0px, transparent 50%), linear-gradient(145deg, #020617 0%, #0b0f19 100%)`;
+    case 'minimal':
+      return `radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.16), transparent 40%), radial-gradient(circle at 90% 90%, rgba(14, 165, 233, 0.16), transparent 40%), linear-gradient(180deg, ${isDark ? '#0a0e17' : '#f8fafc'} 0%, ${isDark ? '#0f172a' : '#f1f5f9'} 100%)`;
+    case 'aurora':
+    default:
+      return `radial-gradient(at 0% 0%, rgba(47, 111, 237, ${isDark ? 0.45 : 0.28}) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(124, 58, 237, ${isDark ? 0.4 : 0.24}) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(16, 185, 129, ${isDark ? 0.3 : 0.18}) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(234, 88, 12, ${isDark ? 0.25 : 0.14}) 0px, transparent 50%), linear-gradient(135deg, ${isDark ? '#080c14' : '#f0f4ff'} 0%, ${isDark ? '#0f172a' : '#e6edfd'} 100%)`;
+  }
+};
+
 // Reactive admin theme: merges the light/dark palette with the primary
-// color chosen in the Theme Customizer, so custom-styled admin pages
-// (not just native antd components) follow both settings.
-export const useAdminThemeTokens = (themeMode, presetPrimary) => {
-  const base = themeMode === 'dark' ? adminThemeDark : adminThemeLight;
-  if (!presetPrimary || presetPrimary === base.primary) return base;
+// color chosen in the Theme Customizer and transparent background system.
+export const useAdminThemeTokens = (themeMode, presetPrimary, customSettings = {}) => {
+  const isDark = themeMode === 'dark';
+  const base = isDark ? adminThemeDark : adminThemeLight;
+  const primary = presetPrimary || base.primary;
+
+  const transparentConfig = customSettings?.transparentSystem;
+  if (!transparentConfig?.enabled) {
+    if (!presetPrimary || presetPrimary === base.primary) return base;
+    return {
+      ...base,
+      primary,
+      sidebarActiveText: primary,
+      sidebarActiveBg: hexToRgba(primary, isDark ? 0.18 : 0.12),
+      isTransparent: false,
+    };
+  }
+
+  // Calculate opacity and transparent tokens
+  const opacityFraction = Math.max(0.2, Math.min(1, (transparentConfig.surfaceOpacity || 78) / 100));
+  const glow = transparentConfig.glassBorderGlow !== false;
+  const wallpaperKey = transparentConfig.wallpaper || 'aurora';
+  const pageBg = getWallpaperBackground(wallpaperKey, isDark);
+
+  const cardRgba = isDark
+    ? `rgba(22, 31, 48, ${opacityFraction})`
+    : `rgba(255, 255, 255, ${opacityFraction})`;
+
+  const cardMutedRgba = isDark
+    ? `rgba(15, 23, 42, ${Math.max(0.2, opacityFraction - 0.1)})`
+    : `rgba(240, 245, 255, ${Math.max(0.3, opacityFraction - 0.1)})`;
+
+  const sidebarRgba = transparentConfig.transparentSidebar !== false
+    ? (isDark ? `rgba(15, 23, 42, ${Math.min(0.92, opacityFraction + 0.08)})` : `rgba(255, 255, 255, ${Math.min(0.92, opacityFraction + 0.08)})`)
+    : (isDark ? '#0f172a' : '#ffffff');
+
+  const topPanelRgba = transparentConfig.transparentHeader !== false
+    ? (isDark ? `rgba(15, 23, 42, ${opacityFraction})` : `rgba(255, 255, 255, ${opacityFraction})`)
+    : (isDark ? '#0f172a' : '#ffffff');
+
+  const glassBorder = isDark
+    ? (glow ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)')
+    : (glow ? 'rgba(255, 255, 255, 0.75)' : 'rgba(226, 232, 240, 0.7)');
 
   return {
     ...base,
-    primary: presetPrimary,
-    sidebarActiveText: presetPrimary,
-    sidebarActiveBg: hexToRgba(presetPrimary, themeMode === 'dark' ? 0.18 : 0.12),
+    pageBackground: pageBg,
+    card: cardRgba,
+    cardMuted: cardMutedRgba,
+    sidebar: sidebarRgba,
+    topPanel: topPanelRgba,
+    border: glassBorder,
+    sidebarBorder: glassBorder,
+    primary,
+    sidebarActiveText: primary,
+    sidebarActiveBg: hexToRgba(primary, isDark ? 0.24 : 0.14),
+    isTransparent: true,
+    glassBlur: transparentConfig.blurRadius || 20,
+    glassSaturation: transparentConfig.saturation || 140,
+    glassShadow: isDark
+      ? '0 12px 36px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+      : '0 12px 36px 0 rgba(47, 111, 237, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
   };
 };
 

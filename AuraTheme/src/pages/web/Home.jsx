@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   Typography,
   Row,
@@ -8,7 +8,9 @@ import {
   Avatar,
   Grid,
   Space,
-  message
+  message,
+  Spin,
+  Progress
 } from 'antd';
 import {
   ArrowRightOutlined,
@@ -27,13 +29,20 @@ import {
   PlusOutlined,
   CheckOutlined,
   ShareAltOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import simpleData from '../../../../data/simpleData';
-import { shops } from '../../data/shopData';
+import { shops, products as retailProducts, shopCategories } from '../../data/shopData';
 import { useCart } from '../../contexts/CartContext';
+import { useWishlist } from '../../contexts/WishlistContext';
 import { publicTheme, formatCurrency, formatCompact } from '../../utils/webTheme';
+import { animateAddToCart } from '../../utils/helpers';
 import TelegramMiniAppModal, { BOTFATHER_CONFIG } from '../../components/web/shared/TelegramMiniAppModal';
+import RetailProductCard from '../../components/web/shared/RetailProductCard';
+import RetailShopCard from '../../components/web/shared/RetailShopCard';
+import ProductQuickViewModal from '../../components/web/shared/ProductQuickViewModal';
+import ShopQuickViewModal from '../../components/web/shared/ShopQuickViewModal';
 
 const { Title, Text, Paragraph } = Typography;
 const { useBreakpoint } = Grid;
@@ -60,9 +69,42 @@ export default function Home() {
   const navigate = useNavigate();
   const screens = useBreakpoint();
   const countdown = useCountdown(18);
-  const { addItem } = useCart();
+  const { addItem, addToCart } = useCart();
+  const { wishlist, toggleWishlist } = useWishlist();
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activeRetailCategory, setActiveRetailCategory] = useState('all');
   const [telegramShop, setTelegramShop] = useState(null);
+  const [previewShop, setPreviewShop] = useState(null);
+  const [previewProduct, setPreviewProduct] = useState(null);
+  const [telegramProduct, setTelegramProduct] = useState(null);
+
+  // Shop favorites & wishlist
+  const [wishlistedShopIds, setWishlistedShopIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aura_favorite_shops');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const toggleShopWishlist = (shop) => {
+    const isSaved = wishlistedShopIds.includes(shop.id);
+    const updated = isSaved
+      ? wishlistedShopIds.filter((id) => id !== shop.id)
+      : [...wishlistedShopIds, shop.id];
+
+    setWishlistedShopIds(updated);
+    try {
+      localStorage.setItem('aura_favorite_shops', JSON.stringify(updated));
+    } catch {}
+
+    if (isSaved) {
+      message.info(`${shop.name} removed from favorites`);
+    } else {
+      message.success(`${shop.name} added to favorites`);
+    }
+  };
 
   // Persistent shop social states (likes, follows)
   const [likedShops, setLikedShops] = useState(() => {
@@ -87,35 +129,50 @@ export default function Home() {
 
   const handleOpenTelegramModal = (storeOrShop) => {
     if (!storeOrShop) return;
-    const found = shops.find(
-      (s) =>
-        s.id === storeOrShop.slug ||
-        s.slug === storeOrShop.slug ||
-        s.name?.toLowerCase() === storeOrShop.name?.toLowerCase()
-    );
-    if (found) {
-      setTelegramShop({ ...found, slug: storeOrShop.slug || found.slug || found.id });
-      return;
-    }
-    // Build compliant shop object for modal
+    const SELLER_SLUG_MAP = {
+      'seller-1': 'sbc-store',
+      'seller-2': 'aura-bakery',
+      'seller-3': 'aura-lounge',
+      'seller-4': 'aura-bistro',
+      'seller-5': 'aura-tech',
+      'seller-6': 'sbc-store',
+    };
+
+    const resolvedSlug =
+      storeOrShop.slug ||
+      SELLER_SLUG_MAP[storeOrShop.id] ||
+      (simpleData.stores || []).find(
+        (s) =>
+          s.id === storeOrShop.id ||
+          s.slug === storeOrShop.id ||
+          s.name?.toLowerCase() === storeOrShop.name?.toLowerCase()
+      )?.slug ||
+      'sbc-store';
+
+    const matchedStore = (simpleData.stores || []).find((s) => s.slug === resolvedSlug);
+
     setTelegramShop({
-      id: storeOrShop.slug || `store-${storeOrShop.id}`,
-      slug: storeOrShop.slug || 'sbc-store',
-      name: storeOrShop.name,
-      branch: storeOrShop.branch || 'bangkok-hub',
-      rating: storeOrShop.rating || 4.9,
-      followers: storeOrShop.followers || 5400,
+      ...storeOrShop,
+      id: storeOrShop.id || resolvedSlug,
+      slug: resolvedSlug,
+      name: storeOrShop.name || matchedStore?.name || 'Aura Store',
+      branch: storeOrShop.branch || 'phnom-penh',
+      rating: storeOrShop.rating || matchedStore?.rating || 4.9,
+      followers: storeOrShop.followers || 12400,
       heroImage:
+        storeOrShop.heroImage ||
         storeOrShop.banner ||
-        storeOrShop.cover ||
+        matchedStore?.banner ||
         'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200&h=800&fit=crop',
-      logoText: storeOrShop.name?.slice(0, 2)?.toUpperCase() || 'EM',
+      logo: storeOrShop.logo || matchedStore?.logo,
+      logoText: storeOrShop.logoText || storeOrShop.name?.slice(0, 2)?.toUpperCase() || 'AS',
       summary:
+        storeOrShop.summary ||
         storeOrShop.tagline ||
-        storeOrShop.description ||
+        matchedStore?.tagline ||
         'Digital contactless dining and takeaway e-menu.',
       specialties: ['E-Menu', 'Online Order', 'Telegram Mini App'],
-      responseTime: 'instant',
+      responseTime: storeOrShop.responseTime || 'instant',
     });
   };
 
@@ -147,14 +204,15 @@ export default function Home() {
     });
   };
 
-  const handleShareShop = async (store, e) => {
-    if (e) e.stopPropagation();
-    const shareUrl = `${window.location.origin}/shop/${store.slug}`;
+  const handleShareShop = async (storeOrShop, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const shopId = storeOrShop.id || storeOrShop.slug;
+    const shareUrl = `${window.location.origin}/shops/${shopId}`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: store.name,
-          text: `Check out ${store.name} E-Menu on Telegram!`,
+          title: storeOrShop.name,
+          text: storeOrShop.summary || `Check out ${storeOrShop.name} on Aura Global!`,
           url: shareUrl,
         });
         return;
@@ -162,7 +220,7 @@ export default function Home() {
     }
     if (navigator.clipboard) {
       await navigator.clipboard.writeText(shareUrl);
-      message.success(`🔗 ${store.name} link copied to clipboard!`);
+      message.success(`🔗 ${storeOrShop.name} link copied to clipboard!`);
     }
   };
 
@@ -170,6 +228,83 @@ export default function Home() {
     if (activeCategory === 'all') return products;
     return products.filter((p) => Number(p.category_id) === Number(activeCategory));
   }, [products, activeCategory]);
+
+  const filteredRetailProducts = useMemo(() => {
+    if (activeRetailCategory === 'all') return retailProducts;
+    return retailProducts.filter((p) => p.category === activeRetailCategory);
+  }, [activeRetailCategory]);
+
+  // L192-Style Infinite Scroll & 3-Row Progressive Release for Fresh Selections
+  // Default show 3 rows: on 6-col desktop that's 18 items (3 rows x 6 items)
+  const [homeVisibleCount, setHomeVisibleCount] = useState(18);
+  const [isHomeLoadingMore, setIsHomeLoadingMore] = useState(false);
+  const homeSentinelRef = useRef(null);
+
+  // Reset to 3 rows when category filter changes
+  useEffect(() => {
+    setHomeVisibleCount(18);
+  }, [activeRetailCategory]);
+
+  const handleLoadMoreHome = useCallback(() => {
+    if (isHomeLoadingMore) return;
+    setIsHomeLoadingMore(true);
+    setTimeout(() => {
+      setHomeVisibleCount((prev) => Math.min(prev + (screens.lg ? 12 : 6), filteredRetailProducts.length));
+      setIsHomeLoadingMore(false);
+    }, 450);
+  }, [isHomeLoadingMore, filteredRetailProducts.length, screens.lg]);
+
+  // IntersectionObserver for scroll-down auto release (L192 concept)
+  useEffect(() => {
+    const sentinel = homeSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && !isHomeLoadingMore && homeVisibleCount < filteredRetailProducts.length) {
+          handleLoadMoreHome();
+        }
+      },
+      { rootMargin: '250px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [handleLoadMoreHome, isHomeLoadingMore, homeVisibleCount, filteredRetailProducts.length]);
+
+  const discountedProducts = useMemo(() => {
+    return retailProducts.filter((p) => p.originalPrice && p.originalPrice > p.price);
+  }, []);
+
+  const handleOrderRetailProduct = (product, triggerElement) => {
+    animateAddToCart({
+      triggerElement,
+      productImage: product.image,
+    });
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      quantity: 1,
+    });
+    message.success(`${product.name} added to cart!`);
+  };
+
+  const handleShareProduct = async (product) => {
+    const shareUrl = `${window.location.origin}/products#${product.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: product.name, text: product.description, url: shareUrl });
+        return;
+      } catch (_) {}
+    }
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(shareUrl);
+      message.success(`Product link copied to clipboard!`);
+    }
+  };
 
   const handleAddToCart = (product, e) => {
     if (e) e.stopPropagation();
@@ -443,607 +578,106 @@ export default function Home() {
                   <span>$12.25</span>
                 </div>
               </div>
-
-              <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-                <Button
-                  block
-                  type="primary"
-                  onClick={() => navigate('/shop/sbc-store')}
-                  style={{
-                    height: 40,
-                    borderRadius: 12,
-                    background: publicTheme.primary,
-                    fontWeight: 700,
-                    border: 'none',
-                  }}
-                >
-                  Open SBC Coffee E-Menu
-                </Button>
-                <Button
-                  onClick={() => navigate('/shop/aura-bakery')}
-                  style={{
-                    height: 40,
-                    borderRadius: 12,
-                    background: 'white',
-                    borderColor: publicTheme.border,
-                    color: publicTheme.text,
-                    fontWeight: 600,
-                  }}
-                >
-                  Bakery Menu
-                </Button>
-              </div>
             </div>
           </Col>
         </Row>
       </div>
 
-      {/* 2. Connected Multi-Store Concept Showcase (Full Screen 4-Card Layout) */}
+      {/* 2. Connected Multi-Store Concept Showcase (Exact match to Shops Page with Visit shop button) */}
       <div style={{ width: '100%', marginBottom: screens.xs ? 28 : 40 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: screens.xs ? 'flex-start' : 'flex-end', marginBottom: screens.xs ? 12 : 20, flexDirection: screens.xs ? 'column' : 'row', gap: screens.xs ? 6 : 0 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: publicTheme.primary, textTransform: 'uppercase', marginBottom: 4 }}>
-              Multi-Concept Brands
+              Fulfillment Hubs & Specialty Stores
             </div>
             <Title level={screens.xs ? 3 : 2} style={{ margin: 0, fontWeight: 800, color: publicTheme.text }}>
-              Explore Our Shops & E-Menus
+              Explore Our Shops & Stores
             </Title>
+            <Paragraph style={{ color: publicTheme.subtext, fontSize: 13, margin: '4px 0 0' }}>
+              Direct supplier shops with instant Telegram Mini App dispatch, local inventory, and fast response times.
+            </Paragraph>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: screens.xs ? '100%' : 'auto' }}>
-            {screens.xs && (
-              <span style={{ fontSize: 11.5, color: publicTheme.subtext, fontWeight: 500 }}>
-                Swipe to explore 4 stores →
-              </span>
-            )}
-            <Button
-              type="link"
-              onClick={() => navigate('/shops')}
-              style={{ fontWeight: 700, color: publicTheme.primary, padding: 0 }}
-            >
-              All Locations <ArrowRightOutlined />
-            </Button>
-          </div>
+          <Button
+            type="link"
+            onClick={() => navigate('/shops')}
+            style={{ fontWeight: 700, color: publicTheme.primary, padding: 0 }}
+          >
+            All Shops ({shops.length}) <ArrowRightOutlined />
+          </Button>
         </div>
 
-        {screens.xs ? (
-          /* Mobile Phone App-Style Horizontal Snap-Scroll Track */
-          <div style={{ width: '100%' }}>
-            <div
-              className="shop-cards-mobile-scroll"
-              style={{
-                display: 'flex',
-                gap: 12,
-                overflowX: 'auto',
-                scrollSnapType: 'x mandatory',
-                WebkitOverflowScrolling: 'touch',
-                padding: '4px 2px 14px 2px',
-                margin: '0 -2px',
-              }}
-            >
-              {stores.map((store) => (
-                <div
-                  key={store.id}
-                  onClick={() => navigate(`/shop/${store.slug}`)}
-                  style={{
-                    flex: '0 0 min(310px, 85vw)',
-                    maxWidth: 330,
-                    scrollSnapAlign: 'start',
-                    borderRadius: 20,
-                    border: `1px solid ${publicTheme.border}`,
-                    overflow: 'hidden',
-                    background: '#ffffff',
-                    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {/* Shop Banner with Brand Logo & Floating Badges */}
-                  <div style={{ position: 'relative', height: 135, overflow: 'hidden' }}>
-                    <img
-                      src={store.banner}
-                      alt={store.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: 'linear-gradient(to top, rgba(28, 35, 51, 0.82) 0%, transparent 60%)',
-                      }}
-                    />
-                    {/* Top Status Badge */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 10,
-                        right: 10,
-                        background: 'rgba(255, 255, 255, 0.94)',
-                        padding: '3px 8px',
-                        borderRadius: 999,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: publicTheme.text,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                      }}
-                    >
-                      <span style={{ color: publicTheme.accent }}>★ {store.rating || '4.9'}</span>
-                      <span style={{ color: publicTheme.subtext, marginLeft: 4 }}>• {store.hours}</span>
-                    </div>
+        {/* 6-Card Responsive Grid matching Shops Page exactly */}
+        <Row gutter={screens.xs ? [12, 12] : screens.sm ? [14, 14] : [18, 18]} style={{ width: '100%' }}>
+          {shops.map((shop) => {
+            const shopProducts = retailProducts.filter((p) => p.shopId === shop.id);
+            const isWishlisted = wishlistedShopIds.includes(shop.id);
 
-                    {/* Logo & Store Name */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: 10,
-                        left: 12,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                      }}
-                    >
-                      <Avatar
-                        src={store.logo}
-                        size={36}
-                        style={{ border: '2px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
-                      />
-                      <div>
-                        <div style={{ color: 'white', fontWeight: 800, fontSize: 15, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-                          {store.name}
-                        </div>
-                        <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11 }}>
-                          {store.branch || 'Flagship Branch'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Shop Details & Touch Actions */}
-                  <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    <div>
-                      <p style={{ fontSize: 12.5, color: publicTheme.subtext, margin: '0 0 8px', lineHeight: 1.45 }}>
-                        {store.tagline}
-                      </p>
-
-                      <div style={{ fontSize: 11.5, color: publicTheme.primary, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, marginBottom: 12 }}>
-                        <SendOutlined style={{ fontSize: 11 }} />
-                        <span>Telegram: {store.telegram_group_name?.split(' ')[1] || 'Staff Group'}</span>
-                      </div>
-                    </div>
-
-                    <div>
-                      {/* Social Actions (Like, Follow, Share) - 36px touch targets */}
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          marginBottom: 10,
-                        }}
-                      >
-                        <Button
-                          type="text"
-                          icon={
-                            likedShops[store.id] ? (
-                              <HeartFilled style={{ color: '#ef4444' }} />
-                            ) : (
-                              <HeartOutlined style={{ color: publicTheme.subtext }} />
-                            )
-                          }
-                          onClick={(e) => handleToggleLikeShop(store.id, store.name, e)}
-                          style={{
-                            flex: 1,
-                            height: 36,
-                            borderRadius: 10,
-                            background: likedShops[store.id] ? 'rgba(239, 68, 68, 0.08)' : publicTheme.cardMuted,
-                            color: likedShops[store.id] ? '#ef4444' : publicTheme.text,
-                            fontWeight: 600,
-                            fontSize: 12,
-                          }}
-                        >
-                          {likedShops[store.id] ? 'Liked' : 'Like'} ({formatCompact((store.likes || 120) + (likedShops[store.id] ? 1 : 0))})
-                        </Button>
-
-                        <Button
-                          type="text"
-                          icon={
-                            followedShops[store.id] ? (
-                              <CheckOutlined style={{ color: '#2563eb' }} />
-                            ) : (
-                              <PlusOutlined style={{ color: publicTheme.subtext }} />
-                            )
-                          }
-                          onClick={(e) => handleToggleFollowShop(store.id, store.name, e)}
-                          style={{
-                            flex: 1,
-                            height: 36,
-                            borderRadius: 10,
-                            background: followedShops[store.id] ? 'rgba(37, 99, 235, 0.08)' : publicTheme.cardMuted,
-                            color: followedShops[store.id] ? '#2563eb' : publicTheme.text,
-                            fontWeight: 600,
-                            fontSize: 12,
-                          }}
-                        >
-                          {followedShops[store.id] ? 'Following' : 'Follow'}
-                        </Button>
-
-                        <Button
-                          type="text"
-                          icon={<ShareAltOutlined style={{ color: publicTheme.subtext, fontSize: 13 }} />}
-                          onClick={(e) => handleShareShop(store, e)}
-                          style={{
-                            width: 36,
-                            height: 36,
-                            minWidth: 36,
-                            borderRadius: 10,
-                            background: publicTheme.cardMuted,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        />
-                      </div>
-
-                      {/* Primary Store Action Button */}
-                      <Button
-                        type="primary"
-                        block
-                        onClick={() => navigate(`/shop/${store.slug}`)}
-                        style={{
-                          height: 40,
-                          borderRadius: 12,
-                          background: publicTheme.primary,
-                          border: 'none',
-                          fontWeight: 700,
-                          fontSize: 13,
-                          boxShadow: '0 4px 14px rgba(47, 111, 237, 0.22)',
-                        }}
-                      >
-                        View Menu & Catalog ↗
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          /* Desktop & Tablet 4-Card Grid */
-          <Row gutter={[20, 20]} style={{ width: '100%' }}>
-            {stores.map((store) => (
-              <Col sm={12} md={8} lg={6} key={store.id} style={{ padding: '0 10px' }}>
-                <Card
-                  hoverable
-                  onClick={() => navigate(`/shop/${store.slug}`)}
-                  style={{
-                    borderRadius: 22,
-                    border: `1px solid ${publicTheme.border}`,
-                    overflow: 'hidden',
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    background: '#ffffff',
-                    boxShadow: publicTheme.lightShadow,
-                  }}
-                  styles={{
-                    body: {
-                      padding: 16,
-                      flex: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                    },
-                  }}
-                  cover={
-                    <div style={{ position: 'relative', height: 140, overflow: 'hidden' }}>
-                      <img
-                        src={store.banner}
-                        alt={store.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          background: 'linear-gradient(to top, rgba(28, 35, 51, 0.75) 0%, transparent 60%)',
-                        }}
-                      />
-                      <div
-                        style={{
-                          position: 'absolute',
-                          bottom: 10,
-                          left: 12,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <Avatar
-                          src={store.logo}
-                          size={38}
-                          style={{ border: '2px solid white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
-                        />
-                        <span style={{ color: 'white', fontWeight: 700, fontSize: 13, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-                          {store.name}
-                        </span>
-                      </div>
-                    </div>
-                  }
-                >
-                  <div>
-                    <p style={{ fontSize: 12, color: publicTheme.subtext, margin: '0 0 6px', lineHeight: 1.35, minHeight: 36, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {store.tagline}
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: publicTheme.subtext, marginBottom: 6 }}>
-                      <span style={{ color: publicTheme.accent, fontWeight: 'bold' }}>★ {store.rating || '4.9'}</span>
-                      <span>·</span>
-                      <span>{store.hours}</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: publicTheme.primary, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <SendOutlined style={{ fontSize: 10 }} />
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        Group: {store.telegram_group_name?.split(' ')[1] || 'Staff Group'}
-                      </span>
-                    </div>
-
-                    {/* Social Concept: Like, Follow, Share */}
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        marginTop: 10,
-                        marginBottom: 4,
-                      }}
-                    >
-                      {/* Like button */}
-                      <Button
-                        size="small"
-                        type="text"
-                        icon={
-                          likedShops[store.id] ? (
-                            <HeartFilled style={{ color: '#ef4444' }} />
-                          ) : (
-                            <HeartOutlined style={{ color: publicTheme.subtext }} />
-                          )
-                        }
-                        onClick={(e) => handleToggleLikeShop(store.id, store.name, e)}
-                        style={{
-                          flex: 1,
-                          fontSize: 11,
-                          height: 28,
-                          borderRadius: 8,
-                          padding: '0 6px',
-                          background: likedShops[store.id] ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0,0,0,0.03)',
-                          color: likedShops[store.id] ? '#ef4444' : publicTheme.text,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {likedShops[store.id] ? 'Liked' : 'Like'} ({formatCompact((store.likes || 120) + (likedShops[store.id] ? 1 : 0))})
-                      </Button>
-
-                      {/* Follow button */}
-                      <Button
-                        size="small"
-                        type="text"
-                        icon={
-                          followedShops[store.id] ? (
-                            <CheckOutlined style={{ color: '#2563eb' }} />
-                          ) : (
-                            <PlusOutlined style={{ color: publicTheme.subtext }} />
-                          )
-                        }
-                        onClick={(e) => handleToggleFollowShop(store.id, store.name, e)}
-                        style={{
-                          flex: 1,
-                          fontSize: 11,
-                          height: 28,
-                          borderRadius: 8,
-                          padding: '0 6px',
-                          background: followedShops[store.id] ? 'rgba(37, 99, 235, 0.08)' : 'rgba(0,0,0,0.03)',
-                          color: followedShops[store.id] ? '#2563eb' : publicTheme.text,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {followedShops[store.id] ? 'Following' : 'Follow'}
-                      </Button>
-
-                      {/* Share button */}
-                      <Button
-                        size="small"
-                        type="text"
-                        icon={<ShareAltOutlined style={{ color: publicTheme.subtext, fontSize: 12 }} />}
-                        onClick={(e) => handleShareShop(store, e)}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 8,
-                          padding: 0,
-                          background: 'rgba(0,0,0,0.03)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                        title="Share shop"
-                      />
-                    </div>
-
-                    {/* Telegram Bot Connection Pill */}
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenTelegramModal(store);
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '7px 12px',
-                        borderRadius: 10,
-                        background: 'rgba(36, 129, 204, 0.08)',
-                        border: '1px solid rgba(36, 129, 204, 0.2)',
-                        fontSize: 11,
-                        color: '#2481cc',
-                        cursor: 'pointer',
-                        marginTop: 6,
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      <span>
-                        <SendOutlined style={{ marginRight: 5 }} />
-                        <strong>@{BOTFATHER_CONFIG.botUsername}</strong> • E-Menu
-                      </span>
-                      <span style={{ fontWeight: 700, textDecoration: 'underline' }}>
-                        Open to Telegram ↗
-                      </span>
-                    </div>
-                  </div>
-                </Card>
+            return (
+              <Col xs={24} sm={12} md={8} lg={4} key={shop.id}>
+                <RetailShopCard
+                  shop={shop}
+                  shopProducts={shopProducts}
+                  gridMode={screens.xs ? 4 : 6}
+                  onPreview={(s) => setPreviewShop(s)}
+                  onWishlist={toggleShopWishlist}
+                  isWishlisted={isWishlisted}
+                  onLike={(s) => message.success(`You liked ${s.name}!`)}
+                  onShare={handleShareShop}
+                  onOpenTelegram={(s) => handleOpenTelegramModal(s)}
+                />
               </Col>
-            ))}
-          </Row>
-        )}
-      </div>
-
-      {/* 3. Telegram Mini App Ordering Flow (Full Screen 3-Card Row) */}
-      <div
-        style={{
-          width: '100%',
-          borderRadius: 26,
-          background: 'rgba(255, 255, 255, 0.85)',
-          border: `1px solid ${publicTheme.border}`,
-          padding: screens.xs ? '24px 18px' : '36px 36px',
-          marginBottom: 40,
-          boxShadow: publicTheme.lightShadow,
-        }}
-      >
-        <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto 30px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: publicTheme.primary, textTransform: 'uppercase', marginBottom: 4 }}>
-            Contactless Ordering
-          </div>
-          <Title level={3} style={{ margin: 0, fontWeight: 800, color: publicTheme.text }}>
-            How Telegram Mini App Ordering Works
-          </Title>
-          <Paragraph style={{ color: publicTheme.subtext, fontSize: 14, marginTop: 6 }}>
-            No app store download or manual signup. Guests scan table QR or open via Telegram directly.
-          </Paragraph>
-        </div>
-
-        <Row gutter={[24, 24]}>
-          <Col xs={24} md={8}>
-            <div
-              style={{
-                background: '#ffffff',
-                borderRadius: 20,
-                padding: 24,
-                border: `1px solid ${publicTheme.softBorder}`,
-                height: '100%',
-                boxShadow: '0 4px 12px rgba(47, 111, 237, 0.05)',
-              }}
-            >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  background: 'rgba(47, 111, 237, 0.1)',
-                  color: publicTheme.primary,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 20,
-                  fontWeight: 'bold',
-                  marginBottom: 16,
-                }}
-              >
-                1
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
-                Open Mini App
-              </div>
-              <p style={{ fontSize: 13, color: publicTheme.subtext, margin: 0, lineHeight: 1.55 }}>
-                Tap the bot or scan the table QR code. The Telegram WebApp launches immediately with full catalog and pricing.
-              </p>
-            </div>
-          </Col>
-
-          <Col xs={24} md={8}>
-            <div
-              style={{
-                background: '#ffffff',
-                borderRadius: 20,
-                padding: 24,
-                border: `1px solid ${publicTheme.softBorder}`,
-                height: '100%',
-                boxShadow: '0 4px 12px rgba(47, 111, 237, 0.05)',
-              }}
-            >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  background: 'rgba(255, 122, 61, 0.1)',
-                  color: publicTheme.accent,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 20,
-                  fontWeight: 'bold',
-                  marginBottom: 16,
-                }}
-              >
-                2
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
-                Select & Customize
-              </div>
-              <p style={{ fontSize: 13, color: publicTheme.subtext, margin: 0, lineHeight: 1.55 }}>
-                Pick drinks, fresh bakery, or healthy bowls. Add your table number, dietary notes, and customer phone.
-              </p>
-            </div>
-          </Col>
-
-          <Col xs={24} md={8}>
-            <div
-              style={{
-                background: '#ffffff',
-                borderRadius: 20,
-                padding: 24,
-                border: `1px solid ${publicTheme.softBorder}`,
-                height: '100%',
-                boxShadow: '0 4px 12px rgba(47, 111, 237, 0.05)',
-              }}
-            >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  color: publicTheme.success,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 20,
-                  fontWeight: 'bold',
-                  marginBottom: 16,
-                }}
-              >
-                3
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: publicTheme.text, marginBottom: 6 }}>
-                Shop Group Dispatch
-              </div>
-              <p style={{ fontSize: 13, color: publicTheme.subtext, margin: 0, lineHeight: 1.55 }}>
-                Orders transmit directly to the shop’s Telegram kitchen group with formatted itemized tickets for immediate prep.
-              </p>
-            </div>
-          </Col>
+            );
+          })}
         </Row>
       </div>
+
+      {/* 3. New Discount Items Section directly below Multi-Store E-Menu & Shops */}
+      <div style={{ width: '100%', marginBottom: screens.xs ? 28 : 40 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 18 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: publicTheme.danger, textTransform: 'uppercase', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <FireOutlined style={{ color: publicTheme.danger }} />
+              Exclusive Price Drops
+            </div>
+            <Title level={screens.xs ? 3 : 2} style={{ margin: 0, fontWeight: 800, color: publicTheme.text }}>
+              Special Discount Items
+            </Title>
+            <Paragraph style={{ color: publicTheme.subtext, fontSize: 13, margin: '4px 0 0' }}>
+              Handpicked fulfillment equipment, packaging supply, and hardware with limited-time price reductions.
+            </Paragraph>
+          </div>
+          <Button
+            type="link"
+            onClick={() => navigate('/products')}
+            style={{ fontWeight: 700, color: publicTheme.primary, padding: 0 }}
+          >
+            All Deals ({discountedProducts.length}) <ArrowRightOutlined />
+          </Button>
+        </div>
+
+        {/* Discount Products Grid */}
+        <Row gutter={screens.xs ? [12, 12] : [18, 18]} style={{ width: '100%' }}>
+          {discountedProducts.slice(0, screens.xs ? 4 : 6).map((product) => (
+            <Col xs={24} sm={12} md={8} lg={4} key={product.id}>
+              <RetailProductCard
+                product={product}
+                onPreview={setPreviewProduct}
+                onQuickView={setPreviewProduct}
+                onOrder={handleOrderRetailProduct}
+                onAddToCart={handleOrderRetailProduct}
+                onWishlist={toggleWishlist}
+                onToggleWishlist={toggleWishlist}
+                isWishlisted={wishlist.some((item) => item.id === product.id)}
+                onLike={() => message.success(`❤️ Liked ${product.name}`)}
+                onShare={handleShareProduct}
+                onOpenTelegram={(item) => setTelegramProduct(item)}
+              />
+            </Col>
+          ))}
+        </Row>
+      </div>
+
+      
 
       {/* 4. Full-Screen Products Showcase with Category Filters */}
       <div style={{ width: '100%', marginBottom: 40 }}>
@@ -1076,29 +710,29 @@ export default function Home() {
           }}
         >
           <Button
-            onClick={() => setActiveCategory('all')}
+            onClick={() => setActiveRetailCategory('all')}
             style={{
               borderRadius: 20,
               fontWeight: 700,
               fontSize: 12,
-              background: activeCategory === 'all' ? publicTheme.primary : '#ffffff',
-              color: activeCategory === 'all' ? '#ffffff' : publicTheme.text,
-              borderColor: activeCategory === 'all' ? publicTheme.primary : publicTheme.border,
+              background: activeRetailCategory === 'all' ? publicTheme.primary : '#ffffff',
+              color: activeRetailCategory === 'all' ? '#ffffff' : publicTheme.text,
+              borderColor: activeRetailCategory === 'all' ? publicTheme.primary : publicTheme.border,
             }}
           >
-            All Products ({products.length})
+            All Products ({retailProducts.length})
           </Button>
-          {categories.map((cat) => (
+          {shopCategories.map((cat) => (
             <Button
               key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
+              onClick={() => setActiveRetailCategory(cat.id)}
               style={{
                 borderRadius: 20,
                 fontWeight: 700,
                 fontSize: 12,
-                background: activeCategory === cat.id ? publicTheme.primary : '#ffffff',
-                color: activeCategory === cat.id ? '#ffffff' : publicTheme.text,
-                borderColor: activeCategory === cat.id ? publicTheme.primary : publicTheme.border,
+                background: activeRetailCategory === cat.id ? publicTheme.primary : '#ffffff',
+                color: activeRetailCategory === cat.id ? '#ffffff' : publicTheme.text,
+                borderColor: activeRetailCategory === cat.id ? publicTheme.primary : publicTheme.border,
               }}
             >
               {cat.icon ? `${cat.icon} ` : ''}{cat.name}
@@ -1106,105 +740,101 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Full-Width Products Grid */}
-        <Row gutter={screens.xs ? [10, 10] : [18, 18]} style={{ width: '100%' }}>
-          {filteredProducts.map((product) => (
-            <Col xs={12} sm={8} md={6} lg={4} key={product.id} style={{ padding: screens.xs ? '0 5px' : '0 9px' }}>
-              <Card
-                hoverable
-                className="app-product-card retail-product-card-wrapper"
-                style={{
-                  borderRadius: screens.xs ? 16 : 20,
-                  border: `1px solid ${publicTheme.border}`,
-                  overflow: 'hidden',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  background: '#ffffff',
-                  boxShadow: publicTheme.lightShadow,
-                }}
-                styles={{
-                  body: {
-                    padding: screens.xs ? 8 : 14,
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                  },
-                }}
-                cover={
-                  <div style={{ position: 'relative', aspectRatio: '1 / 1', overflow: 'hidden', background: '#f8fafc' }}>
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                    {product.badge && (
-                      <span
-                        style={{
-                          position: 'absolute',
-                          top: screens.xs ? 5 : 8,
-                          left: screens.xs ? 5 : 8,
-                          background: 'rgba(28, 35, 51, 0.82)',
-                          backdropFilter: 'blur(4px)',
-                          color: '#ffffff',
-                          fontSize: screens.xs ? 9 : 10,
-                          fontWeight: 700,
-                          padding: screens.xs ? '2px 6px' : '3px 8px',
-                          borderRadius: 6,
-                        }}
-                      >
-                        {product.badge}
-                      </span>
-                    )}
-                  </div>
-                }
-              >
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: screens.xs ? 12 : 13, color: publicTheme.text, marginBottom: 2, lineHeight: 1.25, minHeight: screens.xs ? 30 : 'auto', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {product.name}
-                  </div>
-                  <p
-                    style={{
-                      fontSize: screens.xs ? 10 : 11,
-                      color: publicTheme.subtext,
-                      lineHeight: 1.35,
-                      margin: screens.xs ? '0 0 6px' : '0 0 10px',
-                      display: '-webkit-box',
-                      WebkitLineClamp: screens.xs ? 1 : 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {product.details || 'Fresh artisan preparation.'}
-                  </p>
-                </div>
+        {/* Count and Progress Bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, fontSize: 12, fontWeight: 700, color: publicTheme.subtext }}>
+          <span>
+            Showing <strong style={{ color: publicTheme.primary }}>{Math.min(homeVisibleCount, filteredRetailProducts.length)}</strong> of {filteredRetailProducts.length} products
+          </span>
+          <span style={{ fontSize: 11, background: 'rgba(47, 111, 237, 0.08)', color: publicTheme.primary, padding: '2px 8px', borderRadius: 999 }}>
+            ⚡ Scroll down to auto-load rows
+          </span>
+        </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: screens.xs ? 4 : 6 }}>
-                  <div style={{ fontSize: screens.xs ? 13 : 15, fontWeight: 800, color: publicTheme.text }}>
-                    ${Number(product.price).toFixed(2)}
-                  </div>
-                  <Button
-                    type="primary"
-                    size="small"
-                    onClick={(e) => handleAddToCart(product, e)}
-                    style={{
-                      borderRadius: 8,
-                      background: publicTheme.primary,
-                      borderColor: publicTheme.primary,
-                      fontWeight: 700,
-                      fontSize: screens.xs ? 10 : 11,
-                      height: screens.xs ? 26 : 30,
-                      padding: screens.xs ? '0 8px' : '0 12px',
-                    }}
-                  >
-                    + Add
-                  </Button>
-                </div>
-              </Card>
+        {/* Full-Width Products Grid matching L192 3-Row Initial Display + Infinite Scroll */}
+        <Row gutter={screens.xs ? [12, 12] : [18, 18]} style={{ width: '100%' }}>
+          {filteredRetailProducts.slice(0, homeVisibleCount).map((product) => (
+            <Col xs={24} sm={12} md={8} lg={4} key={product.id}>
+              <RetailProductCard
+                product={product}
+                onPreview={setPreviewProduct}
+                onQuickView={setPreviewProduct}
+                onOrder={handleOrderRetailProduct}
+                onAddToCart={handleOrderRetailProduct}
+                onWishlist={toggleWishlist}
+                onToggleWishlist={toggleWishlist}
+                isWishlisted={wishlist.some((item) => item.id === product.id)}
+                onLike={() => message.success(`❤️ Liked ${product.name}`)}
+                onShare={handleShareProduct}
+                onOpenTelegram={(item) => setTelegramProduct(item)}
+              />
             </Col>
           ))}
         </Row>
+
+        {/* Sentinel element to trigger scroll loading */}
+        <div ref={homeSentinelRef} style={{ height: 16, width: '100%', margin: '8px 0' }} />
+
+        {/* L192-Style Loading State and Load More Bar */}
+        {isHomeLoadingMore && (
+          <div
+            style={{
+              padding: '24px 0',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+            }}
+          >
+            <Spin indicator={<LoadingOutlined style={{ fontSize: 32, color: publicTheme.primary }} spin />} />
+            <div style={{ fontSize: 13, fontWeight: 700, color: publicTheme.text }}>
+              Loading more fresh selections...
+            </div>
+            <div style={{ fontSize: 11, color: publicTheme.subtext }}>
+              Releasing verified store inventory &amp; updated pricing
+            </div>
+          </div>
+        )}
+
+        {/* Manual Trigger Button when more items exist and not loading */}
+        {homeVisibleCount < filteredRetailProducts.length && !isHomeLoadingMore && (
+          <div style={{ textAlign: 'center', marginTop: 20 }}>
+            <Button
+              size="large"
+              icon={<SyncOutlined />}
+              onClick={handleLoadMoreHome}
+              style={{
+                borderRadius: 999,
+                height: 44,
+                paddingInline: 28,
+                fontWeight: 800,
+                fontSize: 13,
+                background: '#ffffff',
+                borderColor: publicTheme.primary,
+                color: publicTheme.primary,
+                boxShadow: '0 4px 16px rgba(47, 111, 237, 0.12)',
+              }}
+            >
+              Scroll down or tap to release next rows ({filteredRetailProducts.length - homeVisibleCount} more)
+            </Button>
+          </div>
+        )}
+
+        {/* End of Collection Notice */}
+        {homeVisibleCount >= filteredRetailProducts.length && filteredRetailProducts.length > 0 && (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '28px 0 10px',
+              color: publicTheme.subtext,
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            ✨ You've reached the end of Fresh Selections ({filteredRetailProducts.length} items loaded)
+          </div>
+        )}
       </div>
 
       {/* 5. Limited Flash Deal in Default Sunset Coral Gradient */}
@@ -1307,11 +937,33 @@ export default function Home() {
         ))}
       </Row>
 
+      {/* Product Quick View Modal */}
+      <ProductQuickViewModal
+        product={previewProduct}
+        open={Boolean(previewProduct)}
+        onClose={() => setPreviewProduct(null)}
+        onOrder={handleOrderRetailProduct}
+      />
+
+      {/* Shop Quick View Modal */}
+      <ShopQuickViewModal
+        shop={previewShop}
+        open={Boolean(previewShop)}
+        onClose={() => setPreviewShop(null)}
+        onOpenTelegram={(s) => handleOpenTelegramModal(s)}
+        shopProducts={previewShop ? retailProducts.filter((p) => p.shopId === previewShop.id) : []}
+      />
+
       {/* Telegram Mini App Gateway Modal */}
       <TelegramMiniAppModal
-        open={Boolean(telegramShop)}
-        onClose={() => setTelegramShop(null)}
+        open={Boolean(telegramShop || telegramProduct)}
+        onClose={() => {
+          setTelegramShop(null);
+          setTelegramProduct(null);
+        }}
         shop={telegramShop}
+        product={telegramProduct}
+        allProducts={retailProducts}
       />
     </div>
   );

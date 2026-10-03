@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { buildModulePath, getDefaultMenuKey } from '../../data/erpModules';
 import ErpModuleSidebar from '../../components/web/shared/ErpModuleSidebar';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
+import AuraLogo from '../../components/common/AuraLogo';
 
 const { Sider } = Layout;
 const { Title } = Typography;
@@ -15,8 +16,10 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick }) => {
 
   const searchParams = new URLSearchParams(location.search);
   
-  // Fix: Better detection of active module
+  // Active module and menu detection
   let activeModuleKey = null;
+  let activeMenuKey = null;
+
   if (location.pathname === '/admins' || location.pathname === '/admins/') {
     // Default to first module or null for dashboard
     activeModuleKey = searchParams.get('module') || null;
@@ -30,31 +33,43 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick }) => {
     activeModuleKey = 'reports';
   } else if (location.pathname.startsWith('/admins/settings')) {
     activeModuleKey = 'settings';
+  } else if (location.pathname.startsWith('/admins/modules')) {
+    activeModuleKey = 'settings';
+    activeMenuKey = 'module-settings';
+  } else if (location.pathname.startsWith('/admins/branches') || location.pathname.startsWith('/admins/settings/branches')) {
+    activeModuleKey = 'settings';
+    activeMenuKey = 'branches';
+  } else if (location.pathname.startsWith('/admins/billers') || location.pathname.startsWith('/admins/settings/billers')) {
+    activeModuleKey = 'settings';
+    activeMenuKey = 'billers';
   } else if (location.pathname.startsWith('/admins/qrcode') || location.pathname.startsWith('/admins/qr-generator')) {
     activeModuleKey = 'cms';
   }
 
-  // Fix: Better detection of active menu
-  let activeMenuKey = null;
-  if (location.pathname.startsWith('/admins/qrcode') || location.pathname.startsWith('/admins/qr-generator')) {
-    activeMenuKey = 'cms-qrcode';
-  } else if (location.pathname === '/admins' || location.pathname === '/admins/') {
-    activeMenuKey = searchParams.get('menu') || (activeModuleKey ? getDefaultMenuKey(activeModuleKey) : null);
-  } else if (location.pathname === '/admins/dashboard') {
-    activeMenuKey = searchParams.get('menu') || (activeModuleKey ? getDefaultMenuKey(activeModuleKey) : null);
-  } else if (location.pathname.startsWith('/admins/settings')) {
-    // Extract the menu key from the URL path
-    const pathParts = location.pathname.split('/');
-    const lastPart = pathParts[pathParts.length - 1];
-    // Map URL segments to menu keys
-    if (lastPart === 'categories') {
-      activeMenuKey = 'categories';
-    } else if (lastPart === 'users') {
-      activeMenuKey = 'users';
-    } else if (lastPart === 'system') {
-      activeMenuKey = 'system-settings';
-    } else {
-      activeMenuKey = 'system-settings'; // Default for settings
+  // Detect active menu if not already set
+  if (!activeMenuKey) {
+    if (location.pathname.startsWith('/admins/qrcode') || location.pathname.startsWith('/admins/qr-generator')) {
+      activeMenuKey = 'cms-qrcode';
+    } else if (location.pathname === '/admins' || location.pathname === '/admins/') {
+      activeMenuKey = searchParams.get('menu') || (activeModuleKey ? getDefaultMenuKey(activeModuleKey) : null);
+    } else if (location.pathname === '/admins/dashboard') {
+      activeMenuKey = searchParams.get('menu') || (activeModuleKey ? getDefaultMenuKey(activeModuleKey) : null);
+    } else if (location.pathname.startsWith('/admins/settings')) {
+      // Extract the menu key from the URL path
+      const pathParts = location.pathname.split('/');
+      const lastPart = pathParts[pathParts.length - 1];
+      // Map URL segments to menu keys
+      if (lastPart === 'categories') {
+        activeMenuKey = 'categories';
+      } else if (lastPart === 'users') {
+        activeMenuKey = 'users';
+      } else if (lastPart === 'system') {
+        activeMenuKey = 'system-settings';
+      } else if (lastPart === 'modules') {
+        activeMenuKey = 'module-settings';
+      } else {
+        activeMenuKey = 'system-settings'; // Default for settings
+      }
     }
   }
 
@@ -100,28 +115,12 @@ const HeaderDefault = ({ collapsed, setCollapsed, onMenuClick }) => {
         }}
         onClick={() => navigate('/admins')}
       >
-        <div
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 10,
-            background: 'linear-gradient(135deg, #f4762a, #ff9f5a)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 800,
-            fontSize: 16,
-            flexShrink: 0,
-          }}
-        >
-          A
-        </div>
-        {!collapsed && (
-          <Title level={5} style={{ color: adminTheme.text, margin: 0, letterSpacing: -0.2 }}>
-            Aura<span style={{ color: adminTheme.systemOrange }}>ERP</span>
-          </Title>
-        )}
+        <AuraLogo
+          size={32}
+          showText={!collapsed}
+          subtitle="ERP COMMAND"
+          textColor={adminTheme.text}
+        />
       </div>
 
       <div style={{ flexGrow: 1, overflowY: 'auto' }}>

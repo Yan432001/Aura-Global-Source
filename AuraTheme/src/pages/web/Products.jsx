@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Badge, Button, Card, Col, Drawer, Grid, Input, Row, Select, Slider, Space, Switch, Tag, Typography, message, notification } from 'antd';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { Badge, Button, Card, Col, Drawer, Grid, Input, Row, Select, Slider, Space, Switch, Tag, Typography, message, notification, Spin } from 'antd';
 import {
   AppstoreOutlined,
   CloseOutlined,
@@ -7,6 +7,8 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SearchOutlined,
+  LoadingOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ProductQuickViewModal from '../../components/web/shared/ProductQuickViewModal';
@@ -49,6 +51,13 @@ const Products = () => {
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [gridMode, setGridMode] = useState(4);
 
+  // L192-Style Infinite Scroll & 3-Row Progressive Release
+  // Default show 3 rows: if gridMode is 6 -> 18 items; if gridMode is 4 -> 12 items
+  const defaultInitialCount = gridMode === 6 ? 18 : 12;
+  const [visibleCount, setVisibleCount] = useState(defaultInitialCount);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sentinelRef = useRef(null);
+
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (category !== 'all') count++;
@@ -77,6 +86,39 @@ const Products = () => {
       return matchesSearch && matchesCategory && matchesBrand && matchesShop && matchesStock && matchesPrice;
     });
   }, [search, category, brand, shopId, stockOnly, priceRange]);
+
+  // Reset visibleCount to 3 rows whenever filters or gridMode change
+  useEffect(() => {
+    setVisibleCount(gridMode === 6 ? 18 : 12);
+  }, [category, brand, shopId, stockOnly, priceRange, search, gridMode]);
+
+  const handleLoadMore = useCallback(() => {
+    if (isLoadingMore) return;
+    setIsLoadingMore(true);
+    setTimeout(() => {
+      setVisibleCount((prev) => Math.min(prev + (gridMode === 6 ? 12 : 8), filteredProducts.length));
+      setIsLoadingMore(false);
+    }, 450);
+  }, [isLoadingMore, gridMode, filteredProducts.length]);
+
+  // IntersectionObserver to auto-load rows as user scrolls down to end row (L192 concept)
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && !isLoadingMore && visibleCount < filteredProducts.length) {
+          handleLoadMore();
+        }
+      },
+      { rootMargin: '250px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [handleLoadMore, isLoadingMore, visibleCount, filteredProducts.length]);
 
   const handleShare = async (product) => {
     const shareUrl = `${window.location.origin}/products#${product.id}`;
@@ -373,8 +415,18 @@ const Products = () => {
         )}
 
         <Col xs={24} lg={filtersOpen ? 18 : 24}>
+          {/* L192 Item Counter & Status */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, fontSize: 12, fontWeight: 700, color: publicTheme.subtext }}>
+            <span>
+              Showing <strong style={{ color: publicTheme.primary }}>{Math.min(visibleCount, filteredProducts.length)}</strong> of {filteredProducts.length} items
+            </span>
+            <span style={{ fontSize: 11, background: 'rgba(47, 111, 237, 0.08)', color: publicTheme.primary, padding: '2px 8px', borderRadius: 999 }}>
+              ⚡ Scroll down to reveal more rows
+            </span>
+          </div>
+
           <Row gutter={screens.xs ? [10, 10] : screens.sm ? [12, 12] : [16, 16]}>
-            {filteredProducts.map((product) => (
+            {filteredProducts.slice(0, visibleCount).map((product) => (
               <Col {...productColumnProps} key={product.id}>
                 <RetailProductCard
                   product={product}
@@ -389,6 +441,71 @@ const Products = () => {
               </Col>
             ))}
           </Row>
+
+          {/* Sentinel element to trigger scroll loading */}
+          <div ref={sentinelRef} style={{ height: 16, width: '100%', margin: '8px 0' }} />
+
+          {/* L192-Style Loading State and Load More Bar */}
+          {isLoadingMore && (
+            <div
+              style={{
+                padding: '24px 0',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+              }}
+            >
+              <Spin indicator={<LoadingOutlined style={{ fontSize: 32, color: publicTheme.primary }} spin />} />
+              <div style={{ fontSize: 13, fontWeight: 700, color: publicTheme.text }}>
+                Loading more products...
+              </div>
+              <div style={{ fontSize: 11, color: publicTheme.subtext }}>
+                Releasing verified stock and updated pricing
+              </div>
+            </div>
+          )}
+
+          {/* Manual Trigger Button when more items exist and not loading */}
+          {visibleCount < filteredProducts.length && !isLoadingMore && (
+            <div style={{ textAlign: 'center', marginTop: 20 }}>
+              <Button
+                size="large"
+                icon={<SyncOutlined />}
+                onClick={handleLoadMore}
+                style={{
+                  borderRadius: 999,
+                  height: 44,
+                  paddingInline: 28,
+                  fontWeight: 800,
+                  fontSize: 13,
+                  background: '#ffffff',
+                  borderColor: publicTheme.primary,
+                  color: publicTheme.primary,
+                  boxShadow: '0 4px 16px rgba(47, 111, 237, 0.12)',
+                }}
+              >
+                Scroll down or tap to release next rows ({filteredProducts.length - visibleCount} more)
+              </Button>
+            </div>
+          )}
+
+          {/* End of Collection Notice */}
+          {visibleCount >= filteredProducts.length && filteredProducts.length > 0 && (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '28px 0 10px',
+                color: publicTheme.subtext,
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              ✨ You've reached the end of the collection ({filteredProducts.length} items loaded)
+            </div>
+          )}
         </Col>
       </Row>
 

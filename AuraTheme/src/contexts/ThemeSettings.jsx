@@ -1,226 +1,206 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Drawer,
+  Button,
   Space,
-  Switch,
-  Divider,
   Typography,
-  Card,
+  Divider,
   Row,
   Col,
-  Button,
-  Tooltip,
-  Badge,
+  Card,
+  Switch,
   Slider,
   Select,
-  InputNumber,
+  Tooltip,
+  Badge,
   ColorPicker,
-  Form,
-  Collapse,
+  Radio,
+  Segmented,
+  Tag,
   Input,
+  message,
+  Tabs,
 } from 'antd';
 import {
   SettingOutlined,
-  BulbOutlined,
   BgColorsOutlined,
+  BulbOutlined,
   CheckOutlined,
-  MoonOutlined,
+  UndoOutlined,
   SunOutlined,
+  MoonOutlined,
   FontSizeOutlined,
-  FontColorsOutlined,
   BorderOutlined,
-  LayoutOutlined,
-  LineHeightOutlined,
-  BorderInnerOutlined,
-  PictureOutlined,
+  AppstoreOutlined,
+  EyeOutlined,
+  ThunderboltOutlined,
+  ExportOutlined,
+  ImportOutlined,
+  CheckCircleFilled,
+  FireFilled,
+  StarFilled,
 } from '@ant-design/icons';
-
 import { useTheme } from './ThemeContext';
+import { useAdminTheme } from '../hooks/useAdminTheme';
 
-const { Title, Text } = Typography;
-const { Option } = Select;
-const { Panel } = Collapse;
+const { Title, Text, Paragraph } = Typography;
 
 const ThemeSettings = () => {
   const [open, setOpen] = useState(false);
-  const [customSettings, setCustomSettings] = useState({
-    fontSize: 14,
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont',
-    borderRadius: 6,
-    lineHeight: 1.5715,
-    controlHeight: 32,
-    padding: 16,
-    margin: 16,
-    buttonBg: '#f0f2f5',
-    headerBg: '#ffffff',
-    sidebarBg: '#001529',
-  });
-  
+  const [activeTab, setActiveTab] = useState('presets');
+  const [copiedJson, setCopiedJson] = useState(false);
+
   const {
     themeMode,
+    setThemeMode,
     themePreset,
     toggleThemeMode,
     changePreset,
     themeConfigs,
+    customSettings,
     updateCustomTheme,
+    resetToDefaultTheme,
   } = useTheme();
 
-  // Available font families
-  const fontFamilies = [
-    { value: 'Inter, -apple-system, BlinkMacSystemFont', label: 'Inter (Default)' },
-    { value: "'Roboto', 'Helvetica Neue', Arial", label: 'Roboto' },
-    { value: "'Open Sans', sans-serif", label: 'Open Sans' },
-    { value: "'Poppins', sans-serif", label: 'Poppins' },
-    { value: "'Montserrat', sans-serif", label: 'Montserrat' },
-    { value: "'Nunito', sans-serif", label: 'Nunito' },
-    { value: "'Segoe UI', Tahoma, Geneva", label: 'Segoe UI' },
-    { value: "'SF Pro Display', -apple-system', BlinkMacSystemFont", label: 'SF Pro (Apple)' },
-  ];
+  const adminTheme = useAdminTheme();
 
-  // Available font sizes
-  const fontSizeOptions = [
-    { label: 'Small', value: 12 },
-    { label: 'Medium', value: 14 },
-    { label: 'Large', value: 16 },
-    { label: 'X-Large', value: 18 },
-  ];
-
-  const presetCards = [
+  // Curated Preset Palette Info
+  const presetsList = [
     {
       key: 'default',
-      name: 'Aura Blue',
-      colors: ['#2f6fed', '#22c55e', '#f0b429', '#f5484d'],
-      icon: '🔵',
-      buttonBg: '#eef3ff',
-      headerBg: '#ffffff',
-      sidebarBg: '#ffffff',
-    },
-    {
-      key: 'modernBlue',
-      name: 'Modern Blue',
-      colors: ['#1677ff', '#00b96b', '#d48806', '#ff4d4f'],
+      name: 'Aura Concept Blue',
+      desc: 'Official concept: Electric royal blue & clean slate',
+      primary: '#2F6FED',
+      palette: ['#2F6FED', '#10b981', '#f59e0b', '#ef4444'],
       icon: '💎',
-      buttonBg: '#e6f4ff',
-      headerBg: '#ffffff',
-      sidebarBg: '#001529',
+      badge: 'CONCEPT',
     },
     {
-      key: 'purple',
-      name: 'Purple',
-      colors: ['#722ed1', '#13c2c2', '#fa8c16', '#f5222d'],
-      icon: '👑',
-      buttonBg: '#f9f0ff',
-      headerBg: '#ffffff',
-      sidebarBg: '#1f1f1f',
-    },
-    {
-      key: 'green',
-      name: 'Green',
-      colors: ['#00a854', '#00a854', '#ffbf00', '#f04134'],
+      key: 'emeraldFintech',
+      name: 'Emerald Fintech',
+      desc: 'High-trust banking emerald with teal & gold',
+      primary: '#059669',
+      palette: ['#059669', '#10b981', '#d97706', '#0284c7'],
       icon: '🌿',
-      buttonBg: '#f6ffed',
-      headerBg: '#ffffff',
-      sidebarBg: '#001529',
+      badge: 'FINTECH',
     },
     {
-      key: 'darkOnly',
-      name: 'Dark Mode',
-      colors: ['#177ddc', '#49aa19', '#d89614', '#a61d24'],
-      icon: themeMode === 'dark' ? '🌙' : '☀️',
-      darkOnly: true,
-      buttonBg: '#1f1f1f',
-      headerBg: '#141414',
-      sidebarBg: '#001529',
+      key: 'violetPrestige',
+      name: 'Violet Prestige',
+      desc: 'Modern Web3 deep violet with vivid cyan',
+      primary: '#7c3aed',
+      palette: ['#7c3aed', '#10b981', '#f59e0b', '#06b6d4'],
+      icon: '👑',
+      badge: 'WEB3',
+    },
+    {
+      key: 'amberElegance',
+      name: 'Amber Elegance',
+      desc: 'Warm hospitality gold with espresso accents',
+      primary: '#d97706',
+      palette: ['#d97706', '#16a34a', '#f59e0b', '#dc2626'],
+      icon: '☕',
+      badge: 'POS & DINE',
+    },
+    {
+      key: 'roseSunset',
+      name: 'Rose Sunset',
+      desc: 'Luxury retail crimson with warm coral spark',
+      primary: '#e11d48',
+      palette: ['#e11d48', '#10b981', '#f59e0b', '#f43f5e'],
+      icon: '🌹',
+      badge: 'RETAIL',
+    },
+    {
+      key: 'slateExecutive',
+      name: 'Slate Executive',
+      desc: 'Corporate deep indigo with cool steel accents',
+      primary: '#4f46e5',
+      palette: ['#4f46e5', '#10b981', '#3b82f6', '#0f172a'],
+      icon: '🏛️',
+      badge: 'ENTERPRISE',
+    },
+    {
+      key: 'cyberCyan',
+      name: 'Cyber Cyan',
+      desc: 'Futuristic electric cyan & high-contrast neon',
+      primary: '#0891b2',
+      palette: ['#0891b2', '#10b981', '#6366f1', '#ef4444'],
+      icon: '⚡',
+      badge: 'LOGISTICS',
+    },
+    {
+      key: 'darkModern',
+      name: 'Obsidian Midnight',
+      desc: 'Deep OLED black with luminescent cobalt glow',
+      primary: '#3b82f6',
+      palette: ['#3b82f6', '#10b981', '#fbbf24', '#f87171'],
+      icon: '🌙',
+      badge: 'PRO DARK',
     },
   ];
 
-  // Load custom settings from localStorage on mount
-  useEffect(() => {
-    const savedSettings = localStorage.getItem('admin-custom-theme-settings');
-    if (savedSettings) {
-      setCustomSettings(JSON.parse(savedSettings));
-    }
-  }, []);
+  // Font family options
+  const fontFamilies = [
+    { value: '"Aptos", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', label: 'Aptos / Modern Crisp (Website Default)' },
+    { value: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', label: 'Inter (Clean SaaS Standard)' },
+    { value: '"Plus Jakarta Sans", "Inter", sans-serif', label: 'Plus Jakarta Sans (Modern Geometric)' },
+    { value: '"Poppins", "Inter", sans-serif', label: 'Poppins (Friendly & Rounded)' },
+    { value: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif', label: 'SF Pro (Apple Native)' },
+    { value: '"Roboto", "Helvetica Neue", Arial, sans-serif', label: 'Roboto (Google Material)' },
+  ];
 
-  // Save custom settings to localStorage and update theme
-  useEffect(() => {
-    localStorage.setItem('admin-custom-theme-settings', JSON.stringify(customSettings));
-    
-    // Update the theme with custom settings
-    if (updateCustomTheme) {
-      updateCustomTheme(customSettings);
-    }
-  }, [customSettings, updateCustomTheme]);
+  // Brand Color quick swatches
+  const quickColors = [
+    { hex: '#2F6FED', label: 'Aura Royal Blue' },
+    { hex: '#059669', label: 'Emerald Green' },
+    { hex: '#7c3aed', label: 'Electric Violet' },
+    { hex: '#d97706', label: 'Amber Gold' },
+    { hex: '#e11d48', label: 'Rose Crimson' },
+    { hex: '#4f46e5', label: 'Executive Indigo' },
+    { hex: '#0891b2', label: 'Cyber Cyan' },
+    { hex: '#ff7a3d', label: 'Sunset Orange' },
+  ];
 
-  const showDrawer = () => {
-    setOpen(true);
+  const handleExportJson = () => {
+    const config = {
+      themeMode,
+      themePreset,
+      customSettings,
+      exportedAt: new Date().toISOString(),
+      platform: 'Aura ERP Global',
+    };
+    navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+    setCopiedJson(true);
+    message.success('Theme JSON copied to clipboard!');
+    setTimeout(() => setCopiedJson(false), 2500);
   };
 
-  const onClose = () => {
-    setOpen(false);
+  const handleReset = () => {
+    resetToDefaultTheme();
+    message.success('Reset to Aura Concept Blue default theme!');
   };
 
-  const handleSettingChange = (key, value) => {
-    setCustomSettings(prev => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
-
-  const handlePresetChange = (presetKey) => {
-    const preset = presetCards.find(p => p.key === presetKey);
-    if (preset) {
-      changePreset(presetKey);
-      
-      // Apply preset-specific customizations
-      setCustomSettings(prev => ({
-        ...prev,
-        buttonBg: preset.buttonBg,
-        headerBg: preset.headerBg,
-        sidebarBg: preset.sidebarBg,
-        fontSize: 14,
-        borderRadius: preset.key === 'purple' ? 12 : 
-                     preset.key === 'modernBlue' ? 8 : 6,
-      }));
-    }
-  };
-
-  const resetToDefaults = () => {
-    const defaultPreset = presetCards.find(p => p.key === 'default');
-    setCustomSettings({
-      fontSize: 14,
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont',
-      borderRadius: 6,
-      lineHeight: 1.5715,
-      controlHeight: 32,
-      padding: 16,
-      margin: 16,
-      buttonBg: defaultPreset.buttonBg,
-      headerBg: defaultPreset.headerBg,
-      sidebarBg: defaultPreset.sidebarBg,
-    });
-    
-    if (themeMode === 'dark') {
-      toggleThemeMode();
-    }
-    changePreset('default');
-  };
+  const currentPresetInfo = presetsList.find((p) => p.key === themePreset) || presetsList[0];
 
   return (
     <>
-      <Tooltip title="Theme Settings">
+      <Tooltip title="Theme & Visual Appearance">
         <Badge dot={themePreset !== 'default' || themeMode !== 'light'}>
           <Button
             type="text"
-            icon={<SettingOutlined style={{ fontSize: '18px' }} />}
-            onClick={showDrawer}
+            icon={<SettingOutlined style={{ fontSize: 18 }} />}
+            onClick={() => setOpen(true)}
             style={{
               width: 40,
               height: 40,
+              borderRadius: 10,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: themeMode === 'dark' ? 'rgba(255,255,255,0.85)' : '#666',
+              color: themeMode === 'dark' ? '#f8fafc' : '#475569',
+              background: themeMode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.04)',
+              transition: 'all 0.2s ease',
             }}
           />
         </Badge>
@@ -228,560 +208,488 @@ const ThemeSettings = () => {
 
       <Drawer
         title={
-          <Space>
-            <BgColorsOutlined />
-            <span>Theme Customizer</span>
-          </Space>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingRight: 8 }}>
+            <Space align="center" size={10}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  background: 'linear-gradient(135deg, #2F6FED 0%, #ff7a3d 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 900,
+                  fontSize: 14,
+                  boxShadow: '0 4px 12px rgba(47, 111, 237, 0.3)',
+                }}
+              >
+                <BgColorsOutlined />
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: adminTheme.text, lineHeight: 1.2 }}>
+                  Theme & Style Studio
+                </div>
+                <div style={{ fontSize: 11, color: adminTheme.subtext }}>
+                  Concept website colors & interactive controls
+                </div>
+              </div>
+            </Space>
+
+            <Button
+              size="small"
+              icon={<UndoOutlined />}
+              onClick={handleReset}
+              style={{
+                borderRadius: 8,
+                fontSize: 11.5,
+                fontWeight: 600,
+              }}
+            >
+              Reset
+            </Button>
+          </div>
         }
         placement="right"
-        onClose={onClose}
+        onClose={() => setOpen(false)}
         open={open}
-        width={420}
+        width={460}
         styles={{
-          body: { padding: '16px 24px' },
-          header: { borderBottom: '1px solid #f0f0f0' },
+          body: {
+            padding: '16px 20px 32px',
+            background: themeMode === 'dark' ? '#0b0f19' : '#f8fafc',
+          },
+          header: {
+            borderBottom: `1px solid ${adminTheme.border}`,
+            padding: '14px 20px',
+            background: adminTheme.card,
+          },
         }}
       >
-        {/* Theme Mode Card */}
+        {/* ======================================================== */}
+        {/* 1. TOP LIVE THEME MODE CONTROLLER                        */}
+        {/* ======================================================== */}
         <Card
           size="small"
-          style={{ marginBottom: 16, borderRadius: 8 }}
-          styles={{ body: { padding: '16px' } }}
+          style={{
+            marginBottom: 16,
+            borderRadius: 16,
+            border: `1px solid ${adminTheme.border}`,
+            background: adminTheme.card,
+            boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+          }}
+          styles={{ body: { padding: '14px 16px' } }}
         >
-          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Space>
-                <BulbOutlined />
-                <Text strong>Theme Mode</Text>
-              </Space>
-              <Switch
-                checkedChildren={<MoonOutlined />}
-                unCheckedChildren={<SunOutlined />}
-                checked={themeMode === 'dark'}
-                onChange={toggleThemeMode}
-                style={{ background: themeMode === 'dark' ? themeConfigs[themePreset]?.token?.colorPrimary : undefined }}
-              />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div>
+              <Text strong style={{ fontSize: 13, color: adminTheme.text }}>
+                Appearance Mode
+              </Text>
+              <div style={{ fontSize: 11.5, color: adminTheme.subtext }}>
+                {themeMode === 'dark' ? 'High-contrast dark mode for low light' : 'Crisp daylight concept website mode'}
+              </div>
             </div>
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              {themeMode === 'dark' 
-                ? 'Dark mode is easier on the eyes in low-light environments' 
-                : 'Light mode provides better readability in bright conditions'}
-            </Text>
-          </Space>
+
+            <Segmented
+              value={themeMode}
+              onChange={(val) => setThemeMode(val)}
+              options={[
+                { label: 'Light', value: 'light', icon: <SunOutlined /> },
+                { label: 'Dark', value: 'dark', icon: <MoonOutlined /> },
+              ]}
+              style={{
+                borderRadius: 10,
+                background: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
+                fontWeight: 600,
+              }}
+            />
+          </div>
         </Card>
 
-        <Divider style={{ margin: '16px 0' }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>COLOR PRESETS</Text>
-        </Divider>
-
-        {/* Color Presets */}
-        <Row gutter={[12, 12]} style={{ marginBottom: 24 }}>
-          {presetCards.map((preset) => (
-            <Col span={12} key={preset.key}>
-              <Card
-                hoverable
-                onClick={() => preset.darkOnly && themeMode === 'light' ? null : handlePresetChange(preset.key)}
-                style={{
-                  borderRadius: 8,
-                  border: themePreset === preset.key 
-                    ? `2px solid ${themeConfigs[preset.key]?.token?.colorPrimary || '#1890ff'}` 
-                    : '1px solid #f0f0f0',
-                  position: 'relative',
-                  opacity: preset.darkOnly && themeMode === 'light' ? 0.5 : 1,
-                  cursor: preset.darkOnly && themeMode === 'light' ? 'not-allowed' : 'pointer',
-                }}
-                styles={{ body: { padding: '12px' } }}
-              >
-                {themePreset === preset.key && (
-                  <div style={{
-                    position: 'absolute',
-                    top: -6,
-                    right: -6,
-                    background: themeConfigs[preset.key]?.token?.colorPrimary,
-                    borderRadius: '50%',
-                    width: 20,
-                    height: 20,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    <CheckOutlined style={{ color: 'white', fontSize: 12 }} />
-                  </div>
-                )}
-                
-                <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: '18px' }}>{preset.icon}</span>
-                    <Text strong style={{ fontSize: '14px' }}>{preset.name}</Text>
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {preset.colors.map((color, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          flex: 1,
-                          height: 6,
-                          background: color,
-                          borderRadius: 2,
-                        }}
-                      />
-                    ))}
-                  </div>
-                  
-                  {/* Show background previews */}
-                  <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                    <div style={{
-                      width: 16,
-                      height: 16,
-                      background: preset.buttonBg,
-                      borderRadius: 4,
-                      border: '1px solid #f0f0f0'
-                    }} title="Button Background" />
-                    <div style={{
-                      width: 16,
-                      height: 16,
-                      background: preset.headerBg,
-                      borderRadius: 4,
-                      border: '1px solid #f0f0f0'
-                    }} title="Header Background" />
-                    <div style={{
-                      width: 16,
-                      height: 16,
-                      background: preset.sidebarBg,
-                      borderRadius: 4,
-                      border: '1px solid #f0f0f0'
-                    }} title="Sidebar Background" />
-                  </div>
-                </Space>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-
-        <Divider style={{ margin: '16px 0' }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>BACKGROUND COLORS</Text>
-        </Divider>
-
-        {/* Background Color Settings */}
-        <Collapse
-          ghost
+        {/* ======================================================== */}
+        {/* 2. LIVE INTERACTIVE PREVIEW WIDGET                       */}
+        {/* ======================================================== */}
+        <Card
           size="small"
-          defaultActiveKey={['backgrounds']}
-          style={{ marginBottom: 16 }}
+          style={{
+            marginBottom: 18,
+            borderRadius: 16,
+            border: `1px solid ${adminTheme.border}`,
+            background: adminTheme.card,
+            boxShadow: adminTheme.shadow,
+            overflow: 'hidden',
+          }}
+          styles={{ body: { padding: '14px 16px' } }}
         >
-          <Panel header={
-            <Space>
-              <PictureOutlined />
-              <Text strong>Background Colors</Text>
-            </Space>
-          } key="backgrounds">
-            <Space direction="vertical" size={12} style={{ width: '100%' }}>
-              {/* Button Background */}
-              <div>
-                <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                  Button Background
-                </Text>
-                <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
-                  <ColorPicker
-                    value={customSettings.buttonBg}
-                    onChange={(color) => handleSettingChange('buttonBg', color.toHexString())}
-                    size="small"
-                    showText
-                  />
-                  <Input
-                    value={customSettings.buttonBg}
-                    onChange={(e) => handleSettingChange('buttonBg', e.target.value)}
-                    size="small"
-                    style={{ width: 120 }}
-                  />
-                </Space>
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: adminTheme.primary }}>
+              LIVE PREVIEW • {currentPresetInfo.name}
+            </span>
+            <Tag color={themeMode === 'dark' ? 'blue' : 'processing'} style={{ margin: 0, borderRadius: 6, fontWeight: 700, fontSize: 10 }}>
+              {currentPresetInfo.badge}
+            </Tag>
+          </div>
 
-              {/* Header Background */}
-              <div>
-                <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                  Header Background
-                </Text>
-                <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
-                  <ColorPicker
-                    value={customSettings.headerBg}
-                    onChange={(color) => handleSettingChange('headerBg', color.toHexString())}
-                    size="small"
-                    showText
-                  />
-                  <Input
-                    value={customSettings.headerBg}
-                    onChange={(e) => handleSettingChange('headerBg', e.target.value)}
-                    size="small"
-                    style={{ width: 120 }}
-                  />
-                </Space>
-              </div>
-
-              {/* Sidebar Background */}
-              <div>
-                <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                  Sidebar Background
-                </Text>
-                <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
-                  <ColorPicker
-                    value={customSettings.sidebarBg}
-                    onChange={(color) => handleSettingChange('sidebarBg', color.toHexString())}
-                    size="small"
-                    showText
-                  />
-                  <Input
-                    value={customSettings.sidebarBg}
-                    onChange={(e) => handleSettingChange('sidebarBg', e.target.value)}
-                    size="small"
-                    style={{ width: 120 }}
-                  />
-                </Space>
-              </div>
-            </Space>
-          </Panel>
-        </Collapse>
-
-        <Divider style={{ margin: '16px 0' }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>TYPOGRAPHY & SPACING</Text>
-        </Divider>
-
-        {/* Font Settings */}
-        <Collapse
-          ghost
-          size="small"
-          defaultActiveKey={['1']}
-          style={{ marginBottom: 16 }}
-        >
-          <Panel header={
-            <Space>
-              <FontSizeOutlined />
-              <Text strong>Typography</Text>
-            </Space>
-          } key="1">
-            <Space direction="vertical" size={12} style={{ width: '100%' }}>
-              {/* Font Family */}
-              <div>
-                <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                  Font Family
-                </Text>
-                <Select
-                  value={customSettings.fontFamily}
-                  onChange={(value) => handleSettingChange('fontFamily', value)}
-                  style={{ width: '100%' }}
-                  size="small"
-                >
-                  {fontFamilies.map(font => (
-                    <Option key={font.value} value={font.value}>
-                      <span style={{ fontFamily: font.value.split(',')[0] }}>
-                        {font.label}
-                      </span>
-                    </Option>
-                  ))}
-                </Select>
-              </div>
-
-              {/* Font Size */}
-              <div>
-                <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                  Base Font Size
-                </Text>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <Slider
-                    min={10}
-                    max={20}
-                    step={1}
-                    value={customSettings.fontSize}
-                    onChange={(value) => handleSettingChange('fontSize', value)}
-                    style={{ flex: 1 }}
-                  />
-                  <InputNumber
-                    min={10}
-                    max={20}
-                    value={customSettings.fontSize}
-                    onChange={(value) => handleSettingChange('fontSize', value)}
-                    size="small"
-                    style={{ width: 70 }}
-                    addonAfter="px"
-                  />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                  {fontSizeOptions.map(option => (
-                    <Button
-                      key={option.value}
-                      size="small"
-                      type={customSettings.fontSize === option.value ? 'primary' : 'default'}
-                      onClick={() => handleSettingChange('fontSize', option.value)}
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Line Height */}
-              <div>
-                <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                  Line Height
-                </Text>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <Slider
-                    min={1.2}
-                    max={2.0}
-                    step={0.1}
-                    value={customSettings.lineHeight}
-                    onChange={(value) => handleSettingChange('lineHeight', value)}
-                    style={{ flex: 1 }}
-                  />
-                  <InputNumber
-                    min={1.2}
-                    max={2.0}
-                    step={0.1}
-                    value={customSettings.lineHeight}
-                    onChange={(value) => handleSettingChange('lineHeight', value)}
-                    size="small"
-                    style={{ width: 70 }}
-                  />
-                </div>
-              </div>
-            </Space>
-          </Panel>
-        </Collapse>
-
-        {/* Layout Settings */}
-        <Collapse
-          ghost
-          size="small"
-          style={{ marginBottom: 16 }}
-        >
-          <Panel header={
-            <Space>
-              <LayoutOutlined />
-              <Text strong>Layout & Spacing</Text>
-            </Space>
-          } key="2">
-            <Space direction="vertical" size={12} style={{ width: '100%' }}>
-              {/* Border Radius */}
-              <div>
-                <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                  Border Radius
-                </Text>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <Slider
-                    min={0}
-                    max={24}
-                    step={2}
-                    value={customSettings.borderRadius}
-                    onChange={(value) => handleSettingChange('borderRadius', value)}
-                    style={{ flex: 1 }}
-                  />
-                  <InputNumber
-                    min={0}
-                    max={24}
-                    value={customSettings.borderRadius}
-                    onChange={(value) => handleSettingChange('borderRadius', value)}
-                    size="small"
-                    style={{ width: 70 }}
-                    addonAfter="px"
-                  />
-                </div>
-              </div>
-
-              {/* Control Height */}
-              <div>
-                <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                  Control Height
-                </Text>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <Slider
-                    min={24}
-                    max={48}
-                    step={4}
-                    value={customSettings.controlHeight}
-                    onChange={(value) => handleSettingChange('controlHeight', value)}
-                    style={{ flex: 1 }}
-                  />
-                  <InputNumber
-                    min={24}
-                    max={48}
-                    value={customSettings.controlHeight}
-                    onChange={(value) => handleSettingChange('controlHeight', value)}
-                    size="small"
-                    style={{ width: 70 }}
-                    addonAfter="px"
-                  />
-                </div>
-              </div>
-
-              {/* Padding & Margin */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                    Base Padding
-                  </Text>
-                  <InputNumber
-                    min={8}
-                    max={32}
-                    value={customSettings.padding}
-                    onChange={(value) => handleSettingChange('padding', value)}
-                    size="small"
-                    style={{ width: '100%' }}
-                    addonAfter="px"
-                  />
-                </div>
-                <div>
-                  <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-                    Base Margin
-                  </Text>
-                  <InputNumber
-                    min={8}
-                    max={32}
-                    value={customSettings.margin}
-                    onChange={(value) => handleSettingChange('margin', value)}
-                    size="small"
-                    style={{ width: '100%' }}
-                    addonAfter="px"
-                  />
-                </div>
-              </div>
-            </Space>
-          </Panel>
-        </Collapse>
-
-        <Divider style={{ margin: '16px 0' }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>PREVIEW</Text>
-        </Divider>
-
-        {/* Live Preview */}
-        <div style={{
-          background: themeConfigs[themePreset]?.token?.colorBgBase,
-          borderRadius: customSettings.borderRadius,
-          padding: customSettings.padding,
-          border: '1px solid #f0f0f0',
-          fontFamily: customSettings.fontFamily,
-          fontSize: customSettings.fontSize,
-          lineHeight: customSettings.lineHeight,
-        }}>
-          <Space direction="vertical" size={12} style={{ width: '100%' }}>
-            <div style={{
+          {/* Mini Mock Dashboard Widget */}
+          <div
+            style={{
+              padding: 12,
+              borderRadius: customSettings.borderRadius,
+              background: themeMode === 'dark' ? '#141d2e' : '#f8fafc',
+              border: `1px solid ${adminTheme.border}`,
               display: 'flex',
-              gap: 8,
-              alignItems: 'center',
-            }}>
-              <div style={{
-                width: customSettings.controlHeight,
-                height: customSettings.controlHeight,
-                borderRadius: customSettings.borderRadius,
-                background: themeConfigs[themePreset]?.token?.colorPrimary,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: Math.max(12, customSettings.fontSize - 2),
-              }}>
-                A
-              </div>
-              <Text strong style={{ 
-                color: themeConfigs[themePreset]?.token?.colorTextBase,
-              }}>
-                Admin Panel Preview
-              </Text>
-            </div>
-            
-            <Text type="secondary" style={{ fontSize: Math.max(12, customSettings.fontSize - 2) }}>
-              Current settings applied: {fontFamilies.find(f => f.value === customSettings.fontFamily)?.label}, 
-              Font Size: {customSettings.fontSize}px, 
-              Border Radius: {customSettings.borderRadius}px
-            </Text>
-            
-            <div style={{
-              display: 'flex',
-              gap: customSettings.margin / 2,
-              flexWrap: 'wrap',
-            }}>
-              <div style={{
-                padding: `${customSettings.padding / 2}px ${customSettings.padding}px`,
-                background: themeConfigs[themePreset]?.token?.colorPrimary,
-                color: 'white',
-                borderRadius: customSettings.borderRadius / 2,
-                fontSize: Math.max(12, customSettings.fontSize - 2),
-                height: customSettings.controlHeight,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                Primary Button
-              </div>
-              <div style={{
-                padding: `${customSettings.padding / 2}px ${customSettings.padding}px`,
-                background: customSettings.buttonBg,
-                color: themeConfigs[themePreset]?.token?.colorTextBase,
-                borderRadius: customSettings.borderRadius / 2,
-                fontSize: Math.max(12, customSettings.fontSize - 2),
-                height: customSettings.controlHeight,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px solid #f0f0f0',
-              }}>
-                Button Bg: {customSettings.buttonBg}
-              </div>
-            </div>
-            
-            {/* Background preview */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
-              gap: customSettings.margin / 2,
-              marginTop: 8,
-            }}>
-              <div style={{
-                background: customSettings.headerBg,
-                padding: 8,
-                borderRadius: 4,
-                fontSize: 10,
-                textAlign: 'center',
-                border: '1px solid #f0f0f0',
-              }}>
-                Header
-              </div>
-              <div style={{
-                background: customSettings.sidebarBg,
-                padding: 8,
-                borderRadius: 4,
-                fontSize: 10,
-                textAlign: 'center',
-                color: 'white',
-                border: '1px solid #f0f0f0',
-              }}>
-                Sidebar
-              </div>
-              <div style={{
-                background: customSettings.buttonBg,
-                padding: 8,
-                borderRadius: 4,
-                fontSize: 10,
-                textAlign: 'center',
-                border: '1px solid #f0f0f0',
-              }}>
-                Buttons
-              </div>
-            </div>
-          </Space>
-        </div>
-
-        {/* Reset Button */}
-        <div style={{ marginTop: 24, textAlign: 'center' }}>
-          <Button
-            type="default"
-            onClick={resetToDefaults}
-            style={{ width: '100%' }}
+              flexDirection: 'column',
+              gap: 10,
+            }}
           >
-            Reset All to Defaults
-          </Button>
-        </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 11, color: adminTheme.subtext, fontWeight: 600 }}>Active Catalog Revenue</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: adminTheme.text }}>$148,920.00</div>
+              </div>
+              <div
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 999,
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  color: '#10b981',
+                  fontWeight: 800,
+                  fontSize: 11,
+                }}
+              >
+                +24.6% ↑
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Button type="primary" size="small" style={{ borderRadius: customSettings.borderRadius, fontWeight: 700 }}>
+                Primary Action
+              </Button>
+              <Button size="small" style={{ borderRadius: customSettings.borderRadius }}>
+                Secondary
+              </Button>
+              <Switch checked size="small" style={{ marginLeft: 'auto' }} />
+            </div>
+          </div>
+        </Card>
+
+        {/* ======================================================== */}
+        {/* 3. SETTINGS TABS: PRESETS, STYLING, TYPOGRAPHY, EXPORT   */}
+        {/* ======================================================== */}
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'presets',
+              label: 'Color Themes',
+              children: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ fontSize: 12, color: adminTheme.subtext }}>
+                    Choose from modern color systems matched to the concept storefront:
+                  </div>
+
+                  <Row gutter={[10, 10]}>
+                    {presetsList.map((preset) => {
+                      const isSelected = themePreset === preset.key;
+                      return (
+                        <Col span={12} key={preset.key}>
+                          <div
+                            onClick={() => changePreset(preset.key)}
+                            style={{
+                              padding: '12px 14px',
+                              borderRadius: 14,
+                              background: adminTheme.card,
+                              border: isSelected
+                                ? `2px solid ${preset.primary}`
+                                : `1px solid ${adminTheme.border}`,
+                              cursor: 'pointer',
+                              position: 'relative',
+                              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                              boxShadow: isSelected
+                                ? `0 8px 24px -4px ${preset.primary}33`
+                                : '0 2px 6px rgba(0,0,0,0.02)',
+                              transform: isSelected ? 'scale(1.02)' : 'none',
+                            }}
+                          >
+                            {isSelected && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  top: -6,
+                                  right: -6,
+                                  width: 20,
+                                  height: 20,
+                                  borderRadius: '50%',
+                                  background: preset.primary,
+                                  color: '#ffffff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                                }}
+                              >
+                                <CheckOutlined style={{ fontSize: 11 }} />
+                              </div>
+                            )}
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                              <span style={{ fontSize: 14 }}>{preset.icon}</span>
+                              <span style={{ fontWeight: 800, fontSize: 12.5, color: adminTheme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {preset.name}
+                              </span>
+                            </div>
+
+                            <div style={{ fontSize: 10, color: adminTheme.subtext, marginBottom: 8, height: 26, overflow: 'hidden', lineHeight: 1.3 }}>
+                              {preset.desc}
+                            </div>
+
+                            {/* Color Palette Swatch Strip */}
+                            <div style={{ display: 'flex', height: 6, borderRadius: 999, overflow: 'hidden', gap: 2 }}>
+                              {preset.palette.map((color, idx) => (
+                                <div key={idx} style={{ flex: 1, background: color }} />
+                              ))}
+                            </div>
+                          </div>
+                        </Col>
+                      );
+                    })}
+                  </Row>
+
+                  <Divider style={{ margin: '14px 0 8px' }} />
+
+                  {/* Quick Custom Primary Color */}
+                  <div>
+                    <Text strong style={{ fontSize: 12.5, color: adminTheme.text, display: 'block', marginBottom: 8 }}>
+                      Custom Primary Accent
+                    </Text>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                      {quickColors.map((item) => (
+                        <div
+                          key={item.hex}
+                          onClick={() => {
+                            updateCustomTheme({ buttonBg: item.hex + '18' });
+                          }}
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            background: item.hex,
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                            transition: 'transform 0.15s ease',
+                          }}
+                          className="hover:scale-110 active:scale-95"
+                          title={item.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: 'layout',
+              label: 'Style & Density',
+              children: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  {/* UI Density Selector */}
+                  <Card
+                    size="small"
+                    style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}`, background: adminTheme.card }}
+                    styles={{ body: { padding: 14 } }}
+                  >
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: adminTheme.text, marginBottom: 4 }}>
+                      Interface Density
+                    </div>
+                    <div style={{ fontSize: 11, color: adminTheme.subtext, marginBottom: 10 }}>
+                      Adjust padding and component heights for data density vs spacious reading:
+                    </div>
+                    <Radio.Group
+                      value={customSettings.density || 'comfortable'}
+                      onChange={(e) => updateCustomTheme({ density: e.target.value })}
+                      style={{ width: '100%', display: 'flex' }}
+                    >
+                      <Radio.Button value="compact" style={{ flex: 1, textAlign: 'center', fontSize: 12 }}>
+                        Compact
+                      </Radio.Button>
+                      <Radio.Button value="comfortable" style={{ flex: 1, textAlign: 'center', fontSize: 12 }}>
+                        Comfortable
+                      </Radio.Button>
+                      <Radio.Button value="spacious" style={{ flex: 1, textAlign: 'center', fontSize: 12 }}>
+                        Spacious
+                      </Radio.Button>
+                    </Radio.Group>
+                  </Card>
+
+                  {/* Corner Curvature / Border Radius */}
+                  <Card
+                    size="small"
+                    style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}`, background: adminTheme.card }}
+                    styles={{ body: { padding: 14 } }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: adminTheme.text }}>
+                        Corner Curvature ({customSettings.borderRadius || 12}px)
+                      </span>
+                      <Tag style={{ margin: 0, borderRadius: 6, fontWeight: 700, fontSize: 10.5 }}>
+                        {customSettings.borderRadius <= 6 ? 'Sharp' : customSettings.borderRadius <= 12 ? 'Modern' : 'Organic'}
+                      </Tag>
+                    </div>
+                    <Slider
+                      min={4}
+                      max={22}
+                      step={2}
+                      value={customSettings.borderRadius || 12}
+                      onChange={(val) => updateCustomTheme({ borderRadius: val })}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: adminTheme.subtext }}>
+                      <span>Square (4px)</span>
+                      <span>Concept (12px)</span>
+                      <span>Pill (22px)</span>
+                    </div>
+                  </Card>
+
+                  {/* Surface Customization */}
+                  <Card
+                    size="small"
+                    style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}`, background: adminTheme.card }}
+                    styles={{ body: { padding: 14 } }}
+                  >
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: adminTheme.text, marginBottom: 12 }}>
+                      Surface Colors
+                    </div>
+
+                    <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, color: adminTheme.text }}>Sidebar Background</span>
+                        <ColorPicker
+                          value={customSettings.sidebarBg || (themeMode === 'dark' ? '#0f172a' : '#ffffff')}
+                          onChange={(color) => updateCustomTheme({ sidebarBg: color.toHexString() })}
+                          size="small"
+                          showText
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, color: adminTheme.text }}>Header Background</span>
+                        <ColorPicker
+                          value={customSettings.headerBg || (themeMode === 'dark' ? '#0f172a' : '#ffffff')}
+                          onChange={(color) => updateCustomTheme({ headerBg: color.toHexString() })}
+                          size="small"
+                          showText
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, color: adminTheme.text }}>Card Canvas Background</span>
+                        <ColorPicker
+                          value={customSettings.cardBg || (themeMode === 'dark' ? '#161f30' : '#ffffff')}
+                          onChange={(color) => updateCustomTheme({ cardBg: color.toHexString() })}
+                          size="small"
+                          showText
+                        />
+                      </div>
+                    </Space>
+                  </Card>
+                </div>
+              ),
+            },
+            {
+              key: 'typography',
+              label: 'Typography',
+              children: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <Card
+                    size="small"
+                    style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}`, background: adminTheme.card }}
+                    styles={{ body: { padding: 14 } }}
+                  >
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: adminTheme.text, marginBottom: 6 }}>
+                      Primary Typeface
+                    </div>
+                    <Select
+                      style={{ width: '100%', marginBottom: 12 }}
+                      value={customSettings.fontFamily}
+                      onChange={(font) => updateCustomTheme({ fontFamily: font })}
+                      options={fontFamilies}
+                    />
+
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: adminTheme.text, marginBottom: 4 }}>
+                      Base Font Size ({customSettings.fontSize || 14}px)
+                    </div>
+                    <Slider
+                      min={12}
+                      max={18}
+                      step={1}
+                      value={customSettings.fontSize || 14}
+                      onChange={(val) => updateCustomTheme({ fontSize: val })}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: adminTheme.subtext }}>
+                      <span>12px (Dense)</span>
+                      <span>14px (Standard)</span>
+                      <span>18px (Large)</span>
+                    </div>
+                  </Card>
+                </div>
+              ),
+            },
+            {
+              key: 'export',
+              label: 'Backup & JSON',
+              children: (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <Card
+                    size="small"
+                    style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}`, background: adminTheme.card }}
+                    styles={{ body: { padding: 14 } }}
+                  >
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: adminTheme.text, marginBottom: 4 }}>
+                      Export Theme Profile
+                    </div>
+                    <div style={{ fontSize: 11, color: adminTheme.subtext, marginBottom: 12 }}>
+                      Copy your active theme configuration to share across instances or backup:
+                    </div>
+
+                    <Button
+                      block
+                      type="primary"
+                      icon={copiedJson ? <CheckOutlined /> : <ExportOutlined />}
+                      onClick={handleExportJson}
+                      style={{ borderRadius: 10, fontWeight: 700 }}
+                    >
+                      {copiedJson ? 'Copied to Clipboard! ✓' : 'Copy Theme JSON'}
+                    </Button>
+                  </Card>
+
+                  <Card
+                    size="small"
+                    style={{ borderRadius: 14, border: `1px solid ${adminTheme.border}`, background: adminTheme.card }}
+                    styles={{ body: { padding: 14 } }}
+                  >
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: adminTheme.text, marginBottom: 4 }}>
+                      Reset All Customizations
+                    </div>
+                    <div style={{ fontSize: 11, color: adminTheme.subtext, marginBottom: 12 }}>
+                      Revert all typography, colors, and layout metrics back to the default concept website theme:
+                    </div>
+
+                    <Button
+                      block
+                      danger
+                      icon={<UndoOutlined />}
+                      onClick={handleReset}
+                      style={{ borderRadius: 10, fontWeight: 700 }}
+                    >
+                      Reset to Official Aura Concept
+                    </Button>
+                  </Card>
+                </div>
+              ),
+            },
+          ]}
+        />
       </Drawer>
     </>
   );

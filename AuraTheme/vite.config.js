@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import fs from 'fs';
 
@@ -13,23 +14,25 @@ function resolveOptionalPackage(pkgName, fallbackRelativePath) {
 }
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@logos': path.resolve(__dirname, './public/logos'),
-      '@AdCat': path.resolve(__dirname, './src/assets/styles'),
-      '@ant-design/v5-patch-for-react-19': path.resolve(__dirname, './src/utils/antdPatch.js'),
-      'jspdf': resolveOptionalPackage('jspdf', './src/utils/jspdfStub.js'),
-      'jsqr': resolveOptionalPackage('jsqr', './src/utils/jsqrStub.js'),
-      'data/simpleData': path.resolve(__dirname, '../data/simpleData.js'),
-    },
+    alias: [
+      { find: /.*\/data\/simpleData(\.js)?$/, replacement: path.resolve(__dirname, '../data/simpleData.esm.js') },
+      { find: 'data/simpleData', replacement: path.resolve(__dirname, '../data/simpleData.esm.js') },
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      { find: '@logos', replacement: path.resolve(__dirname, './public/logos') },
+      { find: '@AdCat', replacement: path.resolve(__dirname, './src/assets/styles') },
+      { find: '@ant-design/v5-patch-for-react-19', replacement: path.resolve(__dirname, './src/utils/antdPatch.js') },
+      { find: 'jspdf', replacement: resolveOptionalPackage('jspdf', './src/utils/jspdfStub.js') },
+      { find: 'jsqr', replacement: resolveOptionalPackage('jsqr', './src/utils/jsqrStub.js') },
+    ],
   },
   server: {
     host: '0.0.0.0',
     port: 3000,
     strictPort: true,
     allowedHosts: true,
+    hmr: false,
     fs: {
       allow: ['..'],
     },

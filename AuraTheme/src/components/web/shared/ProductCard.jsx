@@ -228,15 +228,6 @@ const ProductCard = ({
             {product.name}
           </Title>
 
-          {!isCompact && (
-            <Paragraph
-              ellipsis={{ rows: 2 }}
-              style={{ color: publicTheme.subtext, marginBottom: 10, minHeight: 40, fontSize: 13 }}
-            >
-              {product.description}
-            </Paragraph>
-          )}
-
           {/* Sourcing Metrics */}
           {isPhone ? (
             <div

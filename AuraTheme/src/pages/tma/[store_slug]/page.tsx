@@ -65,10 +65,45 @@ export default function StoreFront() {
   const [products, setProducts] = useState<any[]>([]);
   const [loadingStore, setLoadingStore] = useState(true);
 
-  // Navigation View: 'home' | 'menu' | 'cart' | 'checkout' | 'confirm' | 'success' | 'orders' | 'wishlist'
+  // Navigation View: 'home' | 'menu' | 'cart' | 'checkout' | 'confirm' | 'success' | 'orders' | 'wishlist' | 'cms' | 'kitchen'
   const [viewMode, setViewMode] = useState<
-    'home' | 'menu' | 'cart' | 'checkout' | 'confirm' | 'success' | 'orders' | 'wishlist'
+    'home' | 'menu' | 'cart' | 'checkout' | 'confirm' | 'success' | 'orders' | 'wishlist' | 'cms' | 'kitchen'
   >('home');
+
+  // CMS & Inquiry state
+  const [inquiryName, setInquiryName] = useState('');
+  const [inquiryEmail, setInquiryEmail] = useState('');
+  const [inquiryMessage, setInquiryMessage] = useState('');
+  const [inquirySent, setInquirySent] = useState(false);
+
+  const handleUpdateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      await axios.post(`/api/tma/orders/${orderId}/status`, { status });
+      message.success(`Order marked as ${status}`);
+      fetchPastOrders(true);
+    } catch (e: any) {
+      message.error(e.response?.data?.error || 'Failed to update order');
+    }
+  };
+
+  const handleSendInquiry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await axios.post('/api/cms/inquiries', {
+        name: inquiryName,
+        email: inquiryEmail,
+        message: inquiryMessage
+      });
+      setInquirySent(true);
+      message.success('Inquiry submitted!');
+      setInquiryName('');
+      setInquiryEmail('');
+      setInquiryMessage('');
+      setTimeout(() => setInquirySent(false), 4000);
+    } catch (e: any) {
+      message.error('Failed to send inquiry');
+    }
+  };
 
   // Fast food category filter matching image.png: 'all' | 'burger' | 'pizza' | 'chicken' | 'snacks' | 'drinks'
   const [selectedFastFoodCat, setSelectedFastFoodCat] = useState<string>('all');
@@ -701,8 +736,8 @@ export default function StoreFront() {
           </div>
         </div>
 
-        {/* Top Right Actions: Search, Notifications, Profile / QR */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Top Right Actions: Search, Kitchen, Story, Profile / QR */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={() => setIsSearchOpen(!isSearchOpen)}
@@ -719,6 +754,32 @@ export default function StoreFront() {
             title="Scan Table or Counter QR Code"
           >
             <ScanOutlined style={{ fontSize: 13 }} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode(viewMode === 'kitchen' ? 'home' : 'kitchen')}
+            className={`px-2 py-1 rounded-xl text-[10px] font-black shadow-2xs active:scale-95 transition-all cursor-pointer ${
+              viewMode === 'kitchen'
+                ? 'bg-slate-900 text-white'
+                : 'bg-white border border-orange-100 text-slate-700 hover:text-slate-900'
+            }`}
+            title="Kitchen Stream"
+          >
+            👨‍🍳 Kitchen
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode(viewMode === 'cms' ? 'home' : 'cms')}
+            className={`px-2 py-1 rounded-xl text-[10px] font-black shadow-2xs active:scale-95 transition-all cursor-pointer ${
+              viewMode === 'cms'
+                ? 'bg-amber-600 text-white'
+                : 'bg-white border border-orange-100 text-slate-700 hover:text-amber-600'
+            }`}
+            title="Brand Story & CMS"
+          >
+            ✨ Story
           </button>
 
           <button
@@ -1533,6 +1594,170 @@ export default function StoreFront() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* SCREEN: KITCHEN & TELEGRAM DISPATCH STREAM               */}
+        {/* ======================================================== */}
+        {viewMode === 'kitchen' && (
+          <div className="space-y-4 animate-fadeIn">
+            <div className="flex items-center justify-between pb-2 border-b border-orange-100">
+              <div>
+                <h2 className="text-base font-black text-slate-900">👨‍🍳 Kitchen Station & Telegram Dispatch</h2>
+                <p className="text-[11px] text-slate-500">Live order fulfillment stream & Telegram bot status</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchPastOrders(false)}
+                className="px-2.5 py-1 rounded-xl bg-orange-100 text-orange-700 text-xs font-bold hover:bg-orange-200"
+              >
+                🔄 Refresh
+              </button>
+            </div>
+
+            {pastOrders.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-3xl border border-orange-100 text-slate-400 text-xs">
+                No orders active in kitchen station.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {pastOrders.map((ord: any) => {
+                  const statusColors: any = {
+                    Pending: 'bg-amber-100 text-amber-800 border-amber-300',
+                    Confirmed: 'bg-blue-100 text-blue-800 border-blue-300',
+                    Preparing: 'bg-purple-100 text-purple-800 border-purple-300',
+                    Ready: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+                    Completed: 'bg-slate-100 text-slate-800 border-slate-300'
+                  };
+                  const nextStatusMap: any = {
+                    Pending: 'Confirmed',
+                    Confirmed: 'Preparing',
+                    Preparing: 'Ready',
+                    Ready: 'Completed'
+                  };
+                  const nextStatus = nextStatusMap[ord.status];
+
+                  return (
+                    <div key={ord.id || ord.referenceNo} className="bg-white rounded-3xl p-4 border border-orange-100 shadow-2xs space-y-3 text-xs">
+                      <div className="flex items-center justify-between pb-2 border-b border-orange-50">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-black text-slate-900">{ord.referenceNo}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusColors[ord.status] || 'bg-slate-100'}`}>
+                            {ord.status}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                          Telegram: {ord.store_notification || 'Sent'}
+                        </span>
+                      </div>
+
+                      <div className="text-slate-600 space-y-1">
+                        <div className="font-bold text-slate-800">{ord.customer?.name} ({ord.customer?.username || '@guest'})</div>
+                        <div className="text-[11px] text-slate-400">{ord.customer?.address || 'Dine-In'}</div>
+                        <div className="space-y-0.5 pt-1">
+                          {(ord.items || []).map((it: any, idx: number) => (
+                            <div key={idx} className="flex justify-between text-[11px]">
+                              <span>{it.quantity}x {it.name}</span>
+                              <span className="font-mono">${Number(it.subtotal || it.price * it.quantity).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-orange-50">
+                        <span className="font-black text-slate-900">Total: ${Number(ord.grandTotal || ord.totalAmount || 0).toFixed(2)}</span>
+                        {nextStatus ? (
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateOrderStatus(ord.id, nextStatus)}
+                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs active:scale-95"
+                          >
+                            Mark as {nextStatus} →
+                          </button>
+                        ) : (
+                          <span className="text-emerald-600 font-bold">✓ Fulfilled</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* SCREEN: BRAND STORY & CMS SHOWCASE                       */}
+        {/* ======================================================== */}
+        {viewMode === 'cms' && (
+          <div className="space-y-5 animate-fadeIn">
+            <div className="relative rounded-3xl overflow-hidden bg-slate-950 text-white p-6 shadow-xl">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-500/20 text-orange-300 border border-orange-500/30">
+                Aura Heritage 2026
+              </span>
+              <h2 className="text-xl font-black mt-2 leading-tight">Artisan Highland Beans & European Viennoiserie</h2>
+              <p className="text-xs text-slate-300 mt-1">Single-origin beans ethically harvested from Mondulkiri and Vietnam highlands.</p>
+            </div>
+
+            {/* Team Members */}
+            <div className="space-y-2">
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Meet Our Artisans</h3>
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { name: 'Sophea Kim', role: 'Head of Roasting', img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80' },
+                  { name: 'Dara Chan', role: 'Master Viennoisier', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80' }
+                ].map((m) => (
+                  <div key={m.name} className="bg-white p-3 rounded-2xl border border-orange-100 text-center space-y-1.5 shadow-2xs">
+                    <img src={m.img} alt="" className="w-12 h-12 rounded-full mx-auto object-cover ring-2 ring-orange-500/20" />
+                    <div>
+                      <h4 className="font-extrabold text-xs text-slate-900">{m.name}</h4>
+                      <p className="text-[10px] text-orange-600 font-bold">{m.role}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Contact Inquiry */}
+            <div className="bg-white p-4 rounded-3xl border border-orange-100 space-y-2.5 shadow-2xs">
+              <h3 className="font-black text-xs text-slate-900">Send an Inquiry or Booking</h3>
+              <form onSubmit={handleSendInquiry} className="space-y-2">
+                <input
+                  type="text"
+                  required
+                  value={inquiryName}
+                  onChange={(e) => setInquiryName(e.target.value)}
+                  placeholder="Your Name"
+                  className="w-full bg-[#FAF6F0] border border-orange-100 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-orange-500"
+                />
+                <input
+                  type="email"
+                  required
+                  value={inquiryEmail}
+                  onChange={(e) => setInquiryEmail(e.target.value)}
+                  placeholder="Your Email"
+                  className="w-full bg-[#FAF6F0] border border-orange-100 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-orange-500"
+                />
+                <textarea
+                  required
+                  rows={2}
+                  value={inquiryMessage}
+                  onChange={(e) => setInquiryMessage(e.target.value)}
+                  placeholder="Inquiry message or catering request..."
+                  className="w-full bg-[#FAF6F0] border border-orange-100 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-orange-500"
+                />
+                <button
+                  type="submit"
+                  className="w-full py-2 bg-slate-900 text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition"
+                >
+                  Submit Inquiry
+                </button>
+                {inquirySent && (
+                  <p className="text-center text-[11px] font-bold text-emerald-600 pt-0.5">✓ Inquiry sent successfully!</p>
+                )}
+              </form>
+            </div>
           </div>
         )}
       </main>

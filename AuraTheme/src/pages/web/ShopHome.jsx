@@ -106,12 +106,6 @@ const MarketplaceTile = ({ product, compact = false }) => {
         <Title level={5} style={{ margin: 0, color: publicTheme.text, fontSize: compact ? 15 : 16, lineHeight: 1.35 }}>
           {product.name}
         </Title>
-        <Paragraph
-          ellipsis={{ rows: compact ? 2 : 3 }}
-          style={{ margin: 0, color: publicTheme.subtext, minHeight: compact ? 38 : 54 }}
-        >
-          {product.description}
-        </Paragraph>
         <Flex justify="space-between" align="end" gap={10}>
           <div>
             <Text strong style={{ display: 'block', color: shopTheme.primary, fontSize: compact ? 22 : 24 }}>
