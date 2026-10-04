@@ -558,20 +558,25 @@ export const erpModules = [
     ],
     menus: [
       // In the settings module menus
-      // In the settings module menus
+      group('settings-organization', 'Branches', 'Multi-shop and branch location controls.', [
+        leaf('branches', 'Branches & Shops', 'Control multi-branch shop locations, registers, and operations.', { 
+          route: '/admins/settings/branches' 
+        }),
+      ]),
       group('settings-system', 'System', 'Core ERP configuration.', [
         leaf('system-settings', 'System Settings', 'Open global ERP policies and configuration.', { 
           route: '/admins?module=settings&menu=system-settings' 
         }),
-        leaf('module-settings', 'Modules', 'Review and update module-level controller switches.'),
+        leaf('module-settings', 'Modules Switchboard', 'Open or close ERP modules and toggle visibility.', {
+          route: '/admins/modules'
+        }),
         leaf('pos-settings', 'POS Settings', 'Manage cashier and POS-specific defaults.'),
       ]),
-      // ... rest of the settings module
       group('settings-product-master', 'Product Master', 'Shared master data menus.', [
         leaf('categories', 'Categories', 'Maintain the category tree used by storefront and ERP.', { route: '/admins/settings/categories' }),
         leaf('brands', 'Brands', 'Maintain brand master data.'),
         leaf('units', 'Units', 'Maintain item unit definitions.'),
-        leaf('warehouses', 'Warehouses', 'Maintain warehouse and location records.'),
+        leaf('warehouses', 'Warehouses & Branches', 'Maintain warehouse and location records.', { route: '/admins/settings/branches' }),
       ]),
       group('settings-access', 'Access & Recovery', 'Users, roles, and backups.', [
         leaf('user-groups', 'User Groups', 'Define role permissions and access boundaries.'),
@@ -603,11 +608,10 @@ export const erpModules = [
       'Control SMS configuration, outbound messaging, and logs.',
     ],
     menus: [
-      group('frontend-shop', 'Front Office', 'Customer-facing website settings.', [
-        leaf('shop-settings', 'Shop Settings', 'Maintain live storefront settings and layout defaults.'),
-        leaf('slider-settings', 'Slider Settings', 'Manage hero slider content and image sequencing.'),
-        leaf('list-pages', 'List Pages', 'Review and edit static front-office pages.'),
-        leaf('add-page', 'Add Page', 'Create a new public-facing content page.'),
+      group('frontend-shop', 'Website & Storefront', 'Customer-facing website and multi-store settings.', [
+        leaf('shop-settings', 'Storefront Controller', 'Control all store displays, branding, themes, and products.', { route: '/admins?module=front-end&menu=shop-settings' }),
+        leaf('slider-settings', 'Hero Banners & Visuals', 'Manage website hero slides and image sequencing.', { route: '/admins?module=front-end&menu=slider-settings' }),
+        leaf('list-pages', 'Store Products Display', 'Control which products are shown on public storefronts.', { route: '/admins?module=front-end&menu=shop-settings' }),
       ]),
       group('frontend-sms', 'SMS', 'Messaging settings and logs.', [
         leaf('sms-settings', 'SMS Settings', 'Configure outbound SMS provider and templates.'),

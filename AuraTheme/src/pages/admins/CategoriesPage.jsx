@@ -448,7 +448,7 @@ const CategoriesPage = () => {
     <div style={{ padding: isMobile ? '8px' : '0' }}>
       {/* Header Card with Search and Actions */}
       <Card 
-        bordered={false}
+        variant="borderless"
         style={{ 
           marginBottom: 16,
           boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
@@ -565,7 +565,7 @@ const CategoriesPage = () => {
       {/* Desktop/Tablet Table View */}
       {!isMobile && (
         <Card 
-          bordered={false}
+          variant="borderless"
           style={{ 
             boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
             borderRadius: 16,
@@ -600,7 +600,7 @@ const CategoriesPage = () => {
       {/* Mobile List View */}
       {isMobile && (
         <Card 
-          bordered={false}
+          variant="borderless"
           style={{ 
             borderRadius: 16,
             boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
@@ -696,6 +696,7 @@ const CategoriesPage = () => {
 
       {/* Add/Edit Modal */}
       <Modal
+        forceRender
         open={modalVisible}
         title={
           <Title level={4} style={{ margin: 0 }}>

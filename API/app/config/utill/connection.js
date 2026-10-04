@@ -138,7 +138,32 @@ async function handleMockQuery(sql, params = []) {
     return [{ insertId: mockStore.sale_items.length, affectedRows: 1 }, []];
   }
 
-  // 6. Generic Fallback
+  // 6. Permissions & System
+  if (queryStr.includes('aura_permissions')) {
+    return [[{ id: 1, group_id: 1, 'products-index': 1, 'products-add': 1, 'products-edit': 1, 'products-delete': 1, 'users-index': 1 }], []];
+  }
+
+  if (queryStr.includes('information_schema')) {
+    return [[{ COLUMN_NAME: 'products-index' }, { COLUMN_NAME: 'products-add' }, { COLUMN_NAME: 'users-index' }], []];
+  }
+
+  if (queryStr.includes('aura_groups')) {
+    return [[{ id: 1, name: 'admin', description: 'Administrator' }, { id: 2, name: 'staff', description: 'Staff' }], []];
+  }
+
+  if (queryStr.includes('aura_settings')) {
+    return [[{ id: 1, site_name: 'Aura Global', currency: 'USD' }], []];
+  }
+
+  if (queryStr.includes('1 + 1')) {
+    return [[{ result: 2 }], []];
+  }
+
+  if (queryStr.includes('insert into') || queryStr.includes('update ') || queryStr.includes('delete from')) {
+    return [{ affectedRows: 1, insertId: Date.now() }, []];
+  }
+
+  // 7. Generic Fallback
   return [[], []];
 }
 

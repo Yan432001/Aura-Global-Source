@@ -1,8 +1,25 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTelegram } from '../hooks/useTelegram';
-import { products } from '../data/shopData';
 import simpleData from '../../../data/simpleData';
+
+const SELLER_SLUG_MAP = {
+  'seller-1': 'sbc-store',
+  'seller-2': 'aura-bakery',
+  'seller-3': 'aura-lounge',
+  'seller-4': 'aura-bistro',
+  'seller-5': 'aura-tech',
+  'seller-6': 'sbc-store',
+};
+
+const resolveStoreSlug = (raw) => {
+  if (!raw) return 'sbc-store';
+  if (SELLER_SLUG_MAP[raw]) return SELLER_SLUG_MAP[raw];
+  const found = (simpleData.stores || []).find(
+    (s) => s.slug === raw || String(s.id) === String(raw) || s.name?.toLowerCase() === raw?.toLowerCase()
+  );
+  return found?.slug || raw;
+};
 
 export default function TelegramEntry() {
   const { startParam } = useTelegram();
@@ -10,18 +27,34 @@ export default function TelegramEntry() {
   const location = useLocation();
 
   useEffect(() => {
-    if (!startParam) {
-      if (location.pathname === '/menu') {
-        navigate('/shop/aura-bakery', { replace: true });
-        return;
-      }
+    // Robust param extraction: check startParam hook, then URL search & hash directly
+    let param = startParam;
+    if (!param && typeof window !== 'undefined') {
+      const search = new URLSearchParams(window.location.search);
+      const hashString = (window.location.hash || '').replace(/^#/, '');
+      const hash = new URLSearchParams(hashString);
+
+      param =
+        search.get('startapp') ||
+        search.get('tgWebAppStartParam') ||
+        search.get('start_param') ||
+        hash.get('tgWebAppStartParam') ||
+        hash.get('startapp') ||
+        hash.get('start_param') ||
+        search.get('store') ||
+        search.get('store_slug') ||
+        search.get('biller_id') ||
+        search.get('item');
+    }
+
+    if (!param) {
       navigate('/shop/sbc-store', { replace: true });
       return;
     }
 
-    // 1. Deep link format: item_<id>
-    if (startParam.startsWith('item_')) {
-      const productId = startParam.replace('item_', '');
+    // 1. Direct item link: item_<id>
+    if (param.startsWith('item_')) {
+      const productId = param.replace('item_', '');
       const simpleProd = (simpleData.products || []).find((p) => String(p.id) === String(productId));
       if (simpleProd) {
         const store = (simpleData.stores || []).find((s) => s.id === simpleProd.biller_id);
@@ -33,37 +66,42 @@ export default function TelegramEntry() {
       return;
     }
 
-    // 2. Deep link format: shop_<shopId>_item_<productId>
-    if (startParam.startsWith('shop_') && startParam.includes('_item_')) {
-      const withoutPrefix = startParam.replace('shop_', '');
+    // 2. Combined shop & item: shop_<shopId>_item_<productId>
+    if (param.startsWith('shop_') && param.includes('_item_')) {
+      const withoutPrefix = param.replace('shop_', '');
       const [shopSlug, productId] = withoutPrefix.split('_item_');
-      navigate(`/shop/${shopSlug}?item=${productId}`, { replace: true });
+      const resolvedSlug = resolveStoreSlug(shopSlug);
+      navigate(`/shop/${resolvedSlug}?item=${productId}`, { replace: true });
       return;
     }
 
-    // 3. Deep link format: shop_<shopId>
-    if (startParam.startsWith('shop_')) {
-      const shopSlug = startParam.replace('shop_', '');
-      navigate(`/shop/${shopSlug}`, { replace: true });
+    // 3. Shop deep link: shop_<shopId>
+    if (param.startsWith('shop_')) {
+      const shopSlug = param.replace('shop_', '');
+      const resolvedSlug = resolveStoreSlug(shopSlug);
+      navigate(`/shop/${resolvedSlug}`, { replace: true });
       return;
     }
 
-    // 4. Biller & Store legacy deep links
-    if (startParam.startsWith('biller_')) {
-      const billerId = startParam.replace('biller_', '');
+    // 4. Biller deep links: biller_<id>
+    if (param.startsWith('biller_')) {
+      const billerId = param.replace('biller_', '');
       const store = (simpleData.stores || []).find((s) => String(s.id) === String(billerId));
       navigate(`/shop/${store?.slug || 'sbc-store'}`, { replace: true });
       return;
     }
 
-    if (startParam.startsWith('store_')) {
-      const storeSlug = startParam.replace('store_', '');
-      navigate(`/shop/${storeSlug}`, { replace: true });
+    // 5. Store slug prefix: store_<slug>
+    if (param.startsWith('store_')) {
+      const storeSlug = param.replace('store_', '');
+      const resolvedSlug = resolveStoreSlug(storeSlug);
+      navigate(`/shop/${resolvedSlug}`, { replace: true });
       return;
     }
 
-    // 5. Direct raw param fallback
-    navigate(`/shop/${startParam}`, { replace: true });
+    // 6. Direct slug or fallback
+    const resolvedSlug = resolveStoreSlug(param);
+    navigate(`/shop/${resolvedSlug}`, { replace: true });
   }, [startParam, navigate, location.pathname, location.search]);
 
   return (
@@ -72,10 +110,9 @@ export default function TelegramEntry() {
         ✈️
       </div>
       <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-500 mb-3" />
-      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-        Connecting to Telegram Mini App (@aura_emenu_order_bot)...
+      <p className="text-xs font-bold text-slate-700 tracking-wide">
+        Connecting to Telegram E-Menu...
       </p>
-      <p className="text-xs text-slate-400 mt-1">Routing to shop &amp; item catalog</p>
     </div>
   );
 }

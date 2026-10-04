@@ -1,24 +1,10 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 
-export default function EMenuLayout({ themeColor = '#2481cc' }) {
+export default function EMenuLayout() {
   return (
-    <div
-      style={{
-        '--theme-accent': themeColor,
-        minHeight: '100vh',
-        backgroundColor: 'var(--tg-theme-bg-color, #f4f4f5)',
-        color: 'var(--tg-theme-text-color, #18181b)'
-      }}
-      className="flex justify-center w-full"
-    >
-      <main
-        style={{
-          paddingTop: 'env(safe-area-inset-top)',
-          paddingBottom: 'env(safe-area-inset-bottom)'
-        }}
-        className="w-full max-w-[480px] min-h-screen bg-white dark:bg-zinc-900 shadow-md flex flex-col relative"
-      >
+    <div className="min-h-screen w-full flex flex-col bg-slate-900 text-slate-100 antialiased selection:bg-amber-500 selection:text-white">
+      <main className="w-full flex-1 flex flex-col">
         <Outlet />
       </main>
     </div>

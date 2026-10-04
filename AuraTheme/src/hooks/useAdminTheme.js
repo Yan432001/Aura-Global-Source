@@ -5,6 +5,6 @@ import { useAdminThemeTokens } from '../utils/uiTheme';
 // `adminTheme` object, so their colors follow both the light/dark toggle
 // and the color preset chosen in the Theme Customizer.
 export const useAdminTheme = () => {
-  const { themeMode, currentTheme } = useTheme();
-  return useAdminThemeTokens(themeMode, currentTheme?.token?.colorPrimary);
+  const { themeMode, currentTheme, customSettings } = useTheme();
+  return useAdminThemeTokens(themeMode, currentTheme?.token?.colorPrimary, customSettings);
 };

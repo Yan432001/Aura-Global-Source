@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   --admin-font-family: 'Aptos', 'Segoe UI', 'Trebuchet MS', sans-serif;
   --admin-font-size: 14px;

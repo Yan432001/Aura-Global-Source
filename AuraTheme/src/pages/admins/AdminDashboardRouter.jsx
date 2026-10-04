@@ -6,6 +6,14 @@ import SystemSettings from './SystemSettings';
 import Patients from './Patients';
 import AdminCmsManager from './cms/AdminCmsManager';
 import AdminSimpleDataManager from './AdminSimpleDataManager';
+import AdminProductsManager from './AdminProductsManager';
+import AdminModulesManager from './AdminModulesManager';
+import AdminBranchesManager from './AdminBranchesManager';
+import AdminFrontEndController from './AdminFrontEndController';
+import { useAdminModules } from '../../hooks/useAdminModules';
+import { Result, Button } from 'antd';
+import { LockOutlined, ControlOutlined } from '@ant-design/icons';
+import { getModuleByKey } from '../../data/erpModules';
 
 const AdminDashboardRouter = () => {
   const location = useLocation();
@@ -14,6 +22,77 @@ const AdminDashboardRouter = () => {
   const moduleKey = searchParams.get('module');
   const menuKey = searchParams.get('menu');
   const hasSection = searchParams.has('section');
+  const { isModuleOpen, toggleModule } = useAdminModules();
+
+  // If module is 'modules' or menu is 'module-settings', render AdminModulesManager
+  if (moduleKey === 'modules' || menuKey === 'module-settings' || menuKey === 'modules') {
+    return <AdminModulesManager />;
+  }
+
+  // If module is 'branches' or menu is 'branches' / 'billers', render AdminBranchesManager
+  if (
+    moduleKey === 'branches' ||
+    moduleKey === 'billers' ||
+    menuKey === 'branches' ||
+    menuKey === 'billers' ||
+    menuKey === 'shops' ||
+    (moduleKey === 'settings' && (menuKey === 'branches' || menuKey === 'billers' || menuKey === 'warehouses'))
+  ) {
+    return <AdminBranchesManager />;
+  }
+
+  // If module is 'front-end' or menu is 'shop-settings', render AdminFrontEndController
+  if (
+    moduleKey === 'front-end' ||
+    moduleKey === 'frontend' ||
+    menuKey === 'shop-settings' ||
+    menuKey === 'slider-settings' ||
+    menuKey === 'storefront' ||
+    (menuKey && menuKey.startsWith('frontend-'))
+  ) {
+    return <AdminFrontEndController />;
+  }
+
+  // Guard for closed modules
+  if (moduleKey && !isModuleOpen(moduleKey)) {
+    const modConfig = getModuleByKey(moduleKey);
+    return (
+      <div style={{ padding: '40px 24px' }}>
+        <Result
+          status="warning"
+          icon={<LockOutlined style={{ color: '#ea580c' }} />}
+          title={`Module "${modConfig?.label || moduleKey}" is Currently Closed`}
+          subTitle={`This module has been deactivated in the ERP Modules Switchboard. Its sidebar menu and dashboard widgets are hidden.`}
+          extra={[
+            <Button
+              type="primary"
+              key="enable"
+              style={{ background: '#16a34a', borderColor: '#16a34a' }}
+              onClick={() => toggleModule(moduleKey, true)}
+            >
+              Re-open {modConfig?.label || moduleKey} Module
+            </Button>,
+            <Button
+              key="manage"
+              icon={<ControlOutlined />}
+              onClick={() => {
+                const params = new URLSearchParams(location.search);
+                params.set('module', 'modules');
+                window.location.search = params.toString();
+              }}
+            >
+              Open Module Switchboard
+            </Button>,
+          ]}
+        />
+      </div>
+    );
+  }
+
+  // If menu is 'products' or inventory products, render AdminProductsManager
+  if (menuKey === 'products' || (moduleKey === 'inventory' && menuKey === 'products')) {
+    return <AdminProductsManager />;
+  }
 
   // If module is 'data' or has 'section', render the Simple Data Management UI
   if (moduleKey === 'data' || hasSection || menuKey === 'simple-data' || menuKey === 'data-manager') {

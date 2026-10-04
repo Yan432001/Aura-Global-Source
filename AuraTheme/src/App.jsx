@@ -13,7 +13,7 @@ import Home from './pages/web/Home';
 import Shops from './pages/web/Shops';
 import ShopDetail from './pages/web/ShopDetail';
 import Products from './pages/web/Products';
-import Service from './pages/web/Community';
+import Service from './pages/web/Service';
 import Learn from './pages/web/Learn';
 import Profile from './pages/web/Profile';
 import Cart from './pages/web/Cart';
@@ -34,10 +34,14 @@ import SalesReport from './pages/admins/SalesReport';
 import InventoryReport from './pages/admins/InventoryReport';
 import UserManagement from './pages/admins/UserManagement';
 import AdminQrCodeGeneratorPage from './pages/admins/AdminQrCodeGeneratorPage';
+import AdminModulesManager from './pages/admins/AdminModulesManager';
+import AdminBranchesManager from './pages/admins/AdminBranchesManager';
+import { AdminModulesProvider } from './contexts/AdminModulesContext';
 
 // E-Menu Telegram Mini App Layout & Views
 import EMenuLayout from './pages/emenu/EMenuLayout';
 import EMenuPage from './views/EMenuPage';
+import WebEMenuPage from './views/WebEMenuPage';
 import TelegramEntry from './views/TelegramEntry';
 import StoreNotFound from './views/StoreNotFound';
 import StoreFront from './pages/tma/[store_slug]/page';
@@ -63,7 +67,9 @@ const AdminThemeWrapper = ({ children }) => {
 const ThemedAdminLayout = () => (
   <ThemeProvider>
     <AdminThemeWrapper>
-      <AdminLayout />
+      <AdminModulesProvider>
+        <AdminLayout />
+      </AdminModulesProvider>
     </AdminThemeWrapper>
   </ThemeProvider>
 );
@@ -74,6 +80,10 @@ const AppContent = () => {
       {/* 1. Telegram Deep-Link Entry */}
       <Route path="/tg" element={<TelegramEntry />} />
       <Route path="/menu" element={<TelegramEntry />} />
+
+      {/* Dedicated Website E-Menu Routes (Design matched to Our Tasty Foods mockup) */}
+      <Route path="/shop/menu" element={<WebEMenuPage />} />
+      <Route path="/shop/menu/:storeSlug" element={<WebEMenuPage />} />
 
       {/* 2. Isolated Multi-Store E-Menu Routes (No Base Header/Footer) */}
       <Route path="/shop" element={<EMenuLayout />}>
@@ -119,6 +129,12 @@ const AppContent = () => {
         <Route path="reports/inventory" element={<InventoryReport />} />
         <Route path="settings/categories" element={<CategoriesPage />} />
         <Route path="settings/users" element={<UserManagement />} />
+        <Route path="modules" element={<AdminModulesManager />} />
+        <Route path="settings/modules" element={<AdminModulesManager />} />
+        <Route path="branches" element={<AdminBranchesManager />} />
+        <Route path="settings/branches" element={<AdminBranchesManager />} />
+        <Route path="billers" element={<AdminBranchesManager />} />
+        <Route path="settings/billers" element={<AdminBranchesManager />} />
       </Route>
 
       {/* 5. Catch-All Route */}

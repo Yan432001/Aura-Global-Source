@@ -2,6 +2,7 @@ import React from 'react';
 import { Row, Col, Typography, Space } from 'antd';
 import { Link } from 'react-router-dom';
 import { publicTheme } from '../../../utils/webTheme';
+import AuraLogo from '../../common/AuraLogo';
 
 const { Text, Title } = Typography;
 
@@ -48,10 +49,8 @@ const Footer = () => (
         >
           <Row gutter={[24, 24]}>
             <Col xs={24} lg={9}>
-              <Space direction="vertical" size={10}>
-                <Title level={3} style={{ margin: 0, color: 'white' }}>
-                  Aura Supply Platform
-                </Title>
+              <Space direction="vertical" size={14}>
+                <AuraLogo size={42} showText={true} subtitle="B2B SUPPLY & GLOBAL E-COMMERCE" textColor="#ffffff" />
                 <Text style={{ color: 'rgba(219,232,228,0.78)' }}>
                   A clearer business website with shops, retail products, service support, and business learning.
                 </Text>

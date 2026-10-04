@@ -1,9 +1,8 @@
 /**
- * Aura Global - Master Mock & Simple Data Catalog
- * Expanded multi-store isolated catalog covering 15 diverse businesses & 71 realistic products
+ * Aura Global - Master Mock & Simple Data Catalog (ESM Export)
  */
 
-const stores = [
+export const stores = [
   {
     "id": 1,
     "biller_id": 1,
@@ -366,7 +365,7 @@ const stores = [
   }
 ];
 
-const categories = [
+export const categories = [
   {
     "id": 1,
     "code": "CAT-HOT",
@@ -481,7 +480,7 @@ const categories = [
   }
 ];
 
-const products = [
+export const products = [
   {
     "id": 1,
     "biller_id": 1,
@@ -2646,7 +2645,7 @@ const products = [
   }
 ];
 
-module.exports = {
+export default {
   stores,
   categories,
   products

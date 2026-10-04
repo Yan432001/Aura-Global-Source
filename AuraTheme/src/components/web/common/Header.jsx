@@ -38,17 +38,19 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { products, shops } from '../../../data/shopData';
 import { formatCurrency, publicTheme } from '../../../utils/webTheme';
 import OfflineWarningBanner from '../../common/OfflineWarningBanner';
+import AuraLogo from '../../common/AuraLogo';
 
 const { useBreakpoint } = Grid;
 const { Text, Title } = Typography;
 
 // Universal website service topics
 const serviceItems = [
-  { id: 'srv-1', title: 'Preventive Maintenance & Calibration', description: 'Scheduled uptime checks, sensor calibration, and mechanical inspections.', tag: 'Maintenance', path: '/service' },
-  { id: 'srv-2', title: '24/7 Remote Diagnostics & SLA', description: 'Real-time telemetry monitoring, automated alert routing, and tier-1 engineering.', tag: 'Diagnostics', path: '/service' },
-  { id: 'srv-3', title: 'Emergency On-Site Field Dispatch', description: 'Certified technicians dispatched within 2 hours for fulfillment disruptions.', tag: 'Field Support', path: '/service' },
-  { id: 'srv-4', title: 'Automated Warehouse Commissioning', description: 'Turnkey setup and testing of conveyor scanners, barcode gates, and RFID stations.', tag: 'Commissioning', path: '/service' },
-  { id: 'srv-5', title: 'Operator Safety & Compliance Certifications', description: 'OSHA-aligned machinery operation courses, hazard assessments, and audits.', tag: 'Compliance', path: '/service' },
+  { id: 'srv-1', title: 'Telegram Mini App & E-Menu Deployment', description: 'Turnkey digital menu with table QR ordering and automated Telegram kitchen dispatch.', tag: 'E-Menu', path: '/service' },
+  { id: 'srv-2', title: 'Specialty Coffee Wholesale & Roastery', description: 'Direct-trade single-origin beans, custom espresso roasting, and barista training.', tag: 'Roastery', path: '/service' },
+  { id: 'srv-3', title: 'Artisan Bakery & Viennoiserie Supply', description: 'Daily fresh supply of 72-hour sourdough loaves and French butter croissants.', tag: 'Bakery', path: '/service' },
+  { id: 'srv-4', title: 'Kitchen Display System & POS Integration', description: 'Real-time order ticket routing, kitchen status stepper, and offline sync.', tag: 'POS / KDS', path: '/service' },
+  { id: 'srv-5', title: 'Private Catering & Mobile Espresso Bars', description: 'Pop-up coffee carts and bespoke pastry grazing tables for corporate events.', tag: 'Catering', path: '/service' },
+  { id: 'srv-6', title: 'Franchise & Partner Onboarding', description: 'End-to-end store setup, digital catalog digitization, and 24/7 technical SLA.', tag: 'Onboarding', path: '/service' },
 ];
 
 // Universal website learning tracks
@@ -65,11 +67,12 @@ const websitePages = [
   { id: 'pg-1', title: 'Home', path: '/', description: 'Aura Supply portal overview, featured shops and highlights' },
   { id: 'pg-2', title: 'Shops Directory', path: '/shops', description: 'Directory of all verified shops, warehouse systems, and packaging suppliers' },
   { id: 'pg-3', title: 'Products Catalog', path: '/products', description: 'Browse and filter all available equipment, spare parts, and supplies' },
-  { id: 'pg-4', title: 'Service & Support', path: '/service', description: 'Field maintenance, equipment commissioning, and emergency repair requests' },
+  { id: 'pg-4', title: 'Services & Solutions', path: '/service', description: 'Digital E-Menu setup, wholesale coffee/bakery supply, POS integration, and event catering' },
   { id: 'pg-5', title: 'Learning Academy', path: '/learn', description: 'Courses, onboarding tracks, and operational playbooks' },
   { id: 'pg-6', title: 'Operations Portal', path: '/admins/dashboard', description: 'Management dashboard for sales, inventory, and system settings' },
-  { id: 'pg-7', title: 'Wishlist', path: '/wishlist', description: 'Your saved products and bookmarked equipment' },
-  { id: 'pg-8', title: 'Cart & Orders', path: '/cart', description: 'Review your items and proceed to order fulfillment' },
+  { id: 'pg-7', title: 'Web E-Menu (Our Tasty Foods)', path: '/shop/menu/aura-bakery', description: 'Interactive website contactless digital e-menu with table ordering' },
+  { id: 'pg-8', title: 'Wishlist', path: '/wishlist', description: 'Your saved products and bookmarked equipment' },
+  { id: 'pg-9', title: 'Cart & Orders', path: '/cart', description: 'Review your items and proceed to order fulfillment' },
 ];
 
 const Header = ({ currentPage }) => {
@@ -622,28 +625,8 @@ const Header = ({ currentPage }) => {
             }}
           >
             {/* 1. Logo on the left */}
-            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', flexShrink: 0 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 10,
-                  background: publicTheme.ribbon,
-                  boxShadow: '0 4px 12px rgba(47, 111, 237, 0.25)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 800,
-                  fontSize: 13,
-                  flexShrink: 0,
-                }}
-              >
-                AS
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 800, color: publicTheme.text, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>
-                Aura
-              </span>
+            <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
+              <AuraLogo size={28} showText={true} subtitle="MARKET" textColor={publicTheme.text} />
             </Link>
 
             {/* 2. Search Box in the middle */}
@@ -737,32 +720,8 @@ const Header = ({ currentPage }) => {
           >
             {/* Row 1: Tablet Top Bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0, textDecoration: 'none', flexShrink: 0 }}>
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 9,
-                    background: publicTheme.ribbon,
-                    boxShadow: '0 6px 16px rgba(47, 111, 237, 0.22)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: 800,
-                    fontSize: 13,
-                  }}
-                >
-                  AS
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 800, color: publicTheme.text, lineHeight: 1.2 }}>
-                    Aura Supply
-                  </div>
-                  <div style={{ fontSize: 10.5, color: publicTheme.subtext, lineHeight: 1 }}>
-                    B2B Marketplace
-                  </div>
-                </div>
+              <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
+                <AuraLogo size={32} showText={true} subtitle="B2B MARKET" textColor={publicTheme.text} />
               </Link>
 
               <div ref={searchContainerRef} style={{ position: 'relative', flex: 1, maxWidth: 340, marginLeft: 6, marginRight: 6 }}>
@@ -939,33 +898,9 @@ const Header = ({ currentPage }) => {
             }}
           >
             <Row align="middle" justify="space-between" gutter={[12, 12]}>
-              <Col xs={14} md={6} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 14,
-                      background: publicTheme.ribbon,
-                      boxShadow: '0 10px 24px rgba(47, 111, 237, 0.24)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 700,
-                      fontSize: 15,
-                    }}
-                  >
-                    AS
-                  </div>
-                  <div>
-                    <Title level={5} style={{ margin: 0, color: publicTheme.text, fontFamily: '"Aptos", "Segoe UI", sans-serif' }}>
-                      Aura Supply
-                    </Title>
-                    <Text style={{ fontSize: 11.5, color: publicTheme.subtext }}>
-                      B2B sourcing, service, and learning
-                    </Text>
-                  </div>
+              <Col xs={14} md={6} style={{ display: 'flex', alignItems: 'center' }}>
+                <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+                  <AuraLogo size={38} showText={true} subtitle="B2B SOURCING" textColor={publicTheme.text} />
                 </Link>
               </Col>
 
