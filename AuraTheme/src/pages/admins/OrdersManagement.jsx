@@ -18,6 +18,7 @@ import {
   Rate,
   Input,
   Divider,
+  Dropdown,
 } from 'antd';
 import {
   ResponsiveContainer,
@@ -47,6 +48,11 @@ import {
   CommentOutlined,
   CheckOutlined,
   PrinterOutlined,
+  SoundOutlined,
+  MutedOutlined,
+  FireOutlined,
+  BellOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -86,6 +92,177 @@ const OrdersManagement = () => {
   const [receiptModalOrder, setReceiptModalOrder] = useState(null);
   const [retryingId, setRetryingId] = useState(null);
   const [chartView, setChartView] = useState('30days'); // '30days' | 'monthly'
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Tracks previous order statuses: { [orderId]: 'pending' | 'preparing' | 'ready' | ... }
+  const prevOrdersRef = useRef(new Map());
+
+  // Web Audio chime synthesis for kitchen and ready alerts
+  const playChime = (type = 'preparing') => {
+    if (!soundEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (type === 'ready') {
+        // High double chime for ready status (D5 -> A5)
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.55);
+      } else {
+        // Warm two-tone chime for preparing (A4 -> E5)
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.5);
+      }
+    } catch {
+      // Audio autoplay policy
+    }
+  };
+
+  // Toast Notification System: Triggers whenever status changes from 'pending' to 'preparing' or 'ready'
+  const triggerOrderStatusToast = (order, oldStatus, newStatus) => {
+    const oldS = (oldStatus || '').toLowerCase();
+    const newS = (newStatus || '').toLowerCase();
+
+    const isPendingToPreparing = oldS === 'pending' && newS === 'preparing';
+    const isToReady = (oldS === 'pending' || oldS === 'preparing') && newS === 'ready';
+
+    if (!isPendingToPreparing && !isToReady) return;
+
+    const orderRef = order.referenceNo || order.id || 'ORDER';
+    const custName = order.customer_name || order.customer?.name || 'Valued Guest';
+    const storeName = order.store_name || order.storeName || 'Aura Partner Shop';
+    const tableInfo = order.table_number || order.deliveryInfo?.tableNumber || '';
+    const totalDisplay = formatCurrency(order.grandTotal || order.total || 0);
+
+    if (isPendingToPreparing) {
+      playChime('preparing');
+      message.loading({
+        content: `🍳 Order #${orderRef} moved to PREPARING`,
+        duration: 3,
+        key: `prep-${orderRef}`
+      });
+
+      notification.open({
+        key: `toast-order-${orderRef}-${newS}`,
+        message: (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ fontWeight: 800, fontSize: 14, color: '#0e7490' }}>
+              🍳 Order Now Preparing!
+            </span>
+            <Tag color="cyan" style={{ borderRadius: 6, fontWeight: 700, margin: 0 }}>
+              PENDING ➔ PREPARING
+            </Tag>
+          </div>
+        ),
+        description: (
+          <div style={{ marginTop: 4 }}>
+            <p style={{ margin: '0 0 6px', fontSize: 13, color: '#334155', lineHeight: 1.4 }}>
+              Order <b>#{orderRef}</b> for <b>{custName}</b> is now cooking / brewing in the kitchen!
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 6, borderTop: '1px dashed #e2e8f0' }}>
+              <span style={{ fontSize: 11.5, color: '#64748b' }}>
+                {storeName} {tableInfo ? `• Table #${tableInfo}` : ''} • <b>{totalDisplay}</b>
+              </span>
+              <Button
+                size="small"
+                type="primary"
+                ghost
+                style={{ borderRadius: 6, height: 26, fontSize: 11.5, fontWeight: 700 }}
+                onClick={() => {
+                  setSelectedOrder(order);
+                  setDetailModalOpen(true);
+                  notification.destroy(`toast-order-${orderRef}-${newS}`);
+                }}
+              >
+                View Order
+              </Button>
+            </div>
+          </div>
+        ),
+        duration: 5.5,
+        placement: 'topRight',
+        style: {
+          borderRadius: 14,
+          borderLeft: '5px solid #06b6d4',
+          boxShadow: '0 12px 32px rgba(6, 182, 212, 0.18)',
+        },
+      });
+    } else if (isToReady) {
+      playChime('ready');
+      message.success({
+        content: `🔔 Order #${orderRef} is READY for serving!`,
+        duration: 3.5,
+        key: `ready-${orderRef}`
+      });
+
+      notification.open({
+        key: `toast-order-${orderRef}-${newS}`,
+        message: (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ fontWeight: 800, fontSize: 14, color: '#6b21a8' }}>
+              🔔 Order Ready for Pickup / Serving!
+            </span>
+            <Tag color="purple" style={{ borderRadius: 6, fontWeight: 700, margin: 0 }}>
+              ➔ READY
+            </Tag>
+          </div>
+        ),
+        description: (
+          <div style={{ marginTop: 4 }}>
+            <p style={{ margin: '0 0 6px', fontSize: 13, color: '#334155', lineHeight: 1.4 }}>
+              Order <b>#{orderRef}</b> for <b>{custName}</b> is prepared and waiting for pickup or table delivery.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 6, borderTop: '1px dashed #e2e8f0' }}>
+              <span style={{ fontSize: 11.5, color: '#64748b' }}>
+                {storeName} {tableInfo ? `• Table #${tableInfo}` : ''} • <b>{totalDisplay}</b>
+              </span>
+              <Button
+                size="small"
+                type="primary"
+                style={{
+                  borderRadius: 6,
+                  height: 26,
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  background: '#7c3aed',
+                  borderColor: '#7c3aed',
+                }}
+                onClick={() => {
+                  setSelectedOrder(order);
+                  setDetailModalOpen(true);
+                  notification.destroy(`toast-order-${orderRef}-${newS}`);
+                }}
+              >
+                View Order
+              </Button>
+            </div>
+          </div>
+        ),
+        duration: 6,
+        placement: 'topRight',
+        style: {
+          borderRadius: 14,
+          borderLeft: '5px solid #8b5cf6',
+          boxShadow: '0 12px 32px rgba(139, 92, 246, 0.2)',
+        },
+      });
+    }
+  };
 
   // Customer Reviews Storage State
   const REVIEWS_STORAGE_KEY = 'aura_customer_order_reviews';
@@ -136,8 +313,8 @@ const OrdersManagement = () => {
     message.success('Customer rating & review saved successfully! ★');
   };
 
-  const fetchOrders = async () => {
-    setLoading(true);
+  const fetchOrders = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       let url = '/api/tma/orders';
       const params = {};
@@ -146,13 +323,36 @@ const OrdersManagement = () => {
 
       const res = await axios.get(url, { params });
       if (res.data?.status) {
-        setOrders(res.data.orders || res.data.data || []);
+        const fetchedOrders = res.data.orders || res.data.data || [];
+
+        // Check for real-time status transitions if previous snapshot exists
+        if (prevOrdersRef.current.size > 0) {
+          fetchedOrders.forEach((o) => {
+            const orderId = String(o.referenceNo || o.id);
+            const prevStatus = prevOrdersRef.current.get(orderId);
+            const curStatus = (o.status || '').toLowerCase();
+            if (prevStatus && prevStatus !== curStatus) {
+              triggerOrderStatusToast(o, prevStatus, curStatus);
+            }
+          });
+        }
+
+        // Update tracking snapshot
+        const newMap = new Map();
+        fetchedOrders.forEach((o) => {
+          newMap.set(String(o.referenceNo || o.id), (o.status || '').toLowerCase());
+        });
+        prevOrdersRef.current = newMap;
+
+        setOrders(fetchedOrders);
       }
     } catch (err) {
-      console.error('Fetch orders error:', err);
-      message.error('Failed to load live orders');
+      if (!isSilent) {
+        console.error('Fetch orders error:', err);
+        message.error('Failed to load live orders');
+      }
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -175,25 +375,30 @@ const OrdersManagement = () => {
     fetchOrders();
   }, [selectedStore, selectedStatus]);
 
-  const handleUpdateStatus = async (orderId, newStatus) => {
+  // Periodic background poll every 5s to catch status changes across kitchen stations
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      fetchOrders(true);
+    }, 5000);
+    return () => clearInterval(pollInterval);
+  }, [selectedStore, selectedStatus]);
+
+  const handleUpdateStatus = async (orderId, newStatus, currentStatus) => {
     try {
+      const currentOrder = orders.find(
+        (o) => String(o.id) === String(orderId) || o.referenceNo === orderId
+      );
+      const prevStatus = currentStatus || currentOrder?.status || 'Pending';
+
       const res = await axios.put(`/api/tma/orders/${orderId}/status`, { status: newStatus });
       if (res.data?.status) {
-        message.success(`Order ${orderId} marked as ${newStatus}`);
-        
-        // Notify Me feature for order status change to 'ready'
-        if (newStatus.toLowerCase() === 'ready') {
-          notification.success({
-            message: 'Order Ready for Serving / Pickup! 🔔',
-            description: `Order #${orderId} is now marked READY. Customer notification alert and Telegram dispatch sent.`,
-            placement: 'topRight',
-            duration: 5,
-          });
-        }
+        // Trigger Toast Notification System on transition
+        const targetOrder = currentOrder ? { ...currentOrder, status: newStatus } : { referenceNo: orderId, id: orderId, status: newStatus };
+        triggerOrderStatusToast(targetOrder, prevStatus, newStatus);
 
-        fetchOrders();
+        fetchOrders(true);
         if (selectedOrder && selectedOrder.referenceNo === orderId) {
-          setSelectedOrder(res.data.data);
+          setSelectedOrder(res.data.data || { ...selectedOrder, status: newStatus });
         }
       }
     } catch (err) {
@@ -350,7 +555,7 @@ const OrdersManagement = () => {
       render: (status, record) => (
         <Select
           value={status || 'Pending'}
-          onChange={(val) => handleUpdateStatus(record.referenceNo || record.id, val)}
+          onChange={(val) => handleUpdateStatus(record.referenceNo || record.id, val, status || 'Pending')}
           style={{ width: 125 }}
           size="small"
           options={[
@@ -534,6 +739,81 @@ const OrdersManagement = () => {
           >
             Export History PDF
           </Button>
+
+          {/* Sound Alert Toggle */}
+          <Button
+            icon={soundEnabled ? <SoundOutlined style={{ color: '#16a34a' }} /> : <MutedOutlined style={{ color: '#94a3b8' }} />}
+            onClick={() => {
+              setSoundEnabled(!soundEnabled);
+              message.info(`Order alert chimes ${!soundEnabled ? 'ENABLED 🔔' : 'MUTED 🔕'}`);
+            }}
+            style={{
+              borderColor: soundEnabled ? '#86efac' : '#cbd5e1',
+              background: soundEnabled ? '#f0fdf4' : '#f8fafc',
+              color: soundEnabled ? '#166534' : '#64748b',
+              fontWeight: 600,
+            }}
+          >
+            {soundEnabled ? 'Alert Chime: ON' : 'Alert Chime: OFF'}
+          </Button>
+
+          {/* Quick Toast Notification Tester */}
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'test-prep',
+                  icon: <FireOutlined style={{ color: '#0891b2' }} />,
+                  label: 'Test Pending ➔ Preparing Toast',
+                  onClick: () => {
+                    triggerOrderStatusToast(
+                      {
+                        referenceNo: 'ORD-DEMO-01',
+                        id: 'ORD-DEMO-01',
+                        customer_name: 'Alex Rivera (Table #4)',
+                        store_name: 'Aura Specialty Coffee Bar',
+                        table_number: '4',
+                        grandTotal: 18.5,
+                      },
+                      'Pending',
+                      'Preparing'
+                    );
+                  },
+                },
+                {
+                  key: 'test-ready',
+                  icon: <BellOutlined style={{ color: '#7c3aed' }} />,
+                  label: 'Test Pending / Prep ➔ Ready Toast',
+                  onClick: () => {
+                    triggerOrderStatusToast(
+                      {
+                        referenceNo: 'ORD-DEMO-02',
+                        id: 'ORD-DEMO-02',
+                        customer_name: 'Elena Rostova (Takeaway)',
+                        store_name: 'Aura Artisan Bakery',
+                        table_number: 'Takeaway',
+                        grandTotal: 24.0,
+                      },
+                      'Preparing',
+                      'Ready'
+                    );
+                  },
+                },
+              ],
+            }}
+          >
+            <Button
+              icon={<ExperimentOutlined style={{ color: '#0284c7' }} />}
+              style={{
+                borderColor: '#bae6fd',
+                color: '#0284c7',
+                background: '#f0f9ff',
+                fontWeight: 600,
+              }}
+            >
+              Test Toasts ▾
+            </Button>
+          </Dropdown>
         </Space>
       </div>
 
@@ -709,6 +989,36 @@ const OrdersManagement = () => {
           <Button key="close" onClick={() => setDetailModalOpen(false)}>
             Close
           </Button>,
+          (selectedOrder?.status || '').toLowerCase() === 'pending' && (
+            <Button
+              key="prep"
+              icon={<FireOutlined />}
+              onClick={() => handleUpdateStatus(selectedOrder?.referenceNo || selectedOrder?.id, 'Preparing', selectedOrder?.status)}
+              style={{
+                borderColor: '#06b6d4',
+                color: '#0891b2',
+                background: '#ecfeff',
+                fontWeight: 600,
+              }}
+            >
+              Start Preparing 🍳
+            </Button>
+          ),
+          ['pending', 'preparing'].includes((selectedOrder?.status || '').toLowerCase()) && (
+            <Button
+              key="ready"
+              type="primary"
+              icon={<BellOutlined />}
+              onClick={() => handleUpdateStatus(selectedOrder?.referenceNo || selectedOrder?.id, 'Ready', selectedOrder?.status)}
+              style={{
+                background: '#7c3aed',
+                borderColor: '#7c3aed',
+                fontWeight: 600,
+              }}
+            >
+              Mark Ready 🔔
+            </Button>
+          ),
           <Button
             key="receipt"
             icon={<PrinterOutlined style={{ color: '#0d9488' }} />}
