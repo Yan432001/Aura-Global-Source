@@ -18,6 +18,8 @@ import Learn from './pages/web/Learn';
 import Profile from './pages/web/Profile';
 import Cart from './pages/web/Cart';
 import Wishlist from './pages/web/Wishlist';
+import Login from './pages/web/Login';
+import Register from './pages/web/Register';
 
 // Admin Layout & Pages
 import AdminLayout from './layouts/AdminLayout';
@@ -110,7 +112,16 @@ const AppContent = () => {
         <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="cart" element={<Cart />} />
         <Route path="wishlist" element={<Wishlist />} />
+        <Route path="login" element={<Login />} />
+        <Route path="register" element={<Register />} />
+        <Route path="signup" element={<Navigate to="/register" replace />} />
       </Route>
+
+      {/* Standalone Auth Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/signup" element={<Navigate to="/register" replace />} />
+      <Route path="/admins/login" element={<Login />} />
 
       {/* 4. Admin Management Routes */}
       <Route path="/admins/" element={<ThemedAdminLayout />}>

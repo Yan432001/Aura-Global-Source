@@ -18,6 +18,8 @@ import {
   QrcodeOutlined,
   ArrowRightOutlined,
   CheckOutlined,
+  GlobalOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -212,6 +214,74 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
     }
   };
 
+  // Direct Website & Storefront Quick Navigation Links
+  const websiteLinksMenu = [
+    {
+      key: 'portal-home',
+      icon: <GlobalOutlined style={{ color: '#2563eb', fontSize: 15 }} />,
+      label: (
+        <a href="/" target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, fontSize: 13, color: adminTheme.text }}>
+          Front-End Home Portal (/)
+        </a>
+      ),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'stores-header',
+      type: 'group',
+      label: 'Live Customer Storefronts',
+      children: [
+        {
+          key: 'sbc',
+          label: (
+            <a href="/shop/sbc-store" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <span>☕</span>
+              <span>Aura Specialty Coffee Bar</span>
+            </a>
+          ),
+        },
+        {
+          key: 'bakery',
+          label: (
+            <a href="/shop/aura-bakery" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <span>🥐</span>
+              <span>Aura Artisan Bakery</span>
+            </a>
+          ),
+        },
+        {
+          key: 'bistro',
+          label: (
+            <a href="/shop/aura-bistro" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <span>🥗</span>
+              <span>Aura Bistro Kitchen</span>
+            </a>
+          ),
+        },
+        {
+          key: 'lounge',
+          label: (
+            <a href="/shop/aura-lounge" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <span>🍵</span>
+              <span>Aura Botanical Lounge</span>
+            </a>
+          ),
+        },
+        {
+          key: 'tech',
+          label: (
+            <a href="/shop/aura-tech" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <span>⚡</span>
+              <span>Aura Tech Store</span>
+            </a>
+          ),
+        },
+      ],
+    },
+  ];
+
   return (
     <>
       <OfflineWarningBanner />
@@ -305,6 +375,36 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
               style={iconButtonStyle}
             />
           </Tooltip>
+
+          {/* Direct Link to Live Website */}
+          <Dropdown menu={{ items: websiteLinksMenu }} placement="bottomRight" trigger={['hover', 'click']}>
+            <Tooltip title="Direct Link: View Live Website & Customer Storefronts">
+              <Button
+                type="text"
+                icon={<GlobalOutlined style={{ fontSize: 17, color: '#2563eb' }} />}
+                onClick={() => window.open('/', '_blank')}
+                style={{
+                  ...iconButtonStyle,
+                  background: adminTheme.cardMuted,
+                  border: `1px solid ${adminTheme.border}`,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: !isMobile ? 'auto' : 40,
+                  padding: !isMobile ? '0 12px' : 0,
+                  gap: 6,
+                }}
+                className="hover:border-blue-400 transition-all cursor-pointer shadow-xs"
+              >
+                {!isMobile && (
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: adminTheme.text }}>
+                    Website
+                  </span>
+                )}
+                {!isMobile && <ExportOutlined style={{ fontSize: 11, color: adminTheme.subtext }} />}
+              </Button>
+            </Tooltip>
+          </Dropdown>
 
           <ThemeSettings />
 

@@ -88,7 +88,7 @@ async function startServer() {
   // Telegram Bot Polling (Non-blocking & conflict resilient)
   try {
     const bot = require('./API/app/services/telegramBot.service');
-    if (bot && process.env.TELEGRAM_BOT_TOKEN) {
+    if (bot) {
       bot.start({
         onStart: (botInfo) => {
           console.log(`[Telegram Bot] Started polling as @${botInfo.username}`);

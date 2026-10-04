@@ -209,4 +209,6 @@ const poolWrapper = {
   }
 };
 
+poolWrapper.mockStore = mockStore;
+
 module.exports = poolWrapper;
