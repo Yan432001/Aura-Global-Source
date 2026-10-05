@@ -10,83 +10,22 @@
     <!-- Telegram Mini App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
-      // Mock Vite HMR WebSocket in cloud sandbox / preview environment where HMR WebSocket is not supported
-      (function() {
-        var OriginalWebSocket = window.WebSocket;
-        if (OriginalWebSocket) {
-          function MockViteWebSocket(url, protocols) {
-            var isVite = (protocols === 'vite-hmr') ||
-                         (Array.isArray(protocols) && protocols.indexOf('vite-hmr') !== -1) ||
-                         (typeof url === 'string' && (url.indexOf('token=') !== -1 || url.indexOf('vite-hmr') !== -1));
-            if (isVite) {
-              this.url = url;
-              this.readyState = 0; // CONNECTING
-              this.listeners = { open: [], message: [], close: [], error: [] };
-              var self = this;
-              setTimeout(function() {
-                self.readyState = 1; // OPEN
-                if (typeof self.onopen === 'function') {
-                  try { self.onopen({ type: 'open' }); } catch (e) {}
-                }
-                (self.listeners.open || []).forEach(function(fn) {
-                  try { fn({ type: 'open' }); } catch (e) {}
-                });
-              }, 20);
-            } else {
-              return new OriginalWebSocket(url, protocols);
-            }
-          }
-
-          MockViteWebSocket.prototype.addEventListener = function(type, fn) {
-            if (!this.listeners) this.listeners = {};
-            if (!this.listeners[type]) this.listeners[type] = [];
-            this.listeners[type].push(fn);
-          };
-
-          MockViteWebSocket.prototype.removeEventListener = function(type, fn) {
-            if (!this.listeners || !this.listeners[type]) return;
-            this.listeners[type] = this.listeners[type].filter(function(h) { return h !== fn; });
-          };
-
-          MockViteWebSocket.prototype.send = function() {};
-          MockViteWebSocket.prototype.close = function() {
-            this.readyState = 3; // CLOSED
-          };
-
-          MockViteWebSocket.CONNECTING = 0;
-          MockViteWebSocket.OPEN = 1;
-          MockViteWebSocket.CLOSING = 2;
-          MockViteWebSocket.CLOSED = 3;
-
-          window.WebSocket = MockViteWebSocket;
+      // Suppress Vite HMR WebSocket connection errors in sandbox/preview iframe
+      window.addEventListener('unhandledrejection', function (event) {
+        var reason = event && event.reason;
+        var msg = (reason && (reason.message || String(reason))) || '';
+        if (msg.includes('WebSocket') || msg.includes('closed without opened') || msg.includes('[vite]')) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
         }
-
-        // Suppress Vite HMR console errors
-        var origError = console.error;
-        console.error = function() {
-          var str = Array.prototype.join.call(arguments, ' ');
-          if (str.indexOf('WebSocket') !== -1 || str.indexOf('closed without opened') !== -1 || str.indexOf('failed to connect to websocket') !== -1 || str.indexOf('[vite]') !== -1) {
-            return;
-          }
-          return origError.apply(console, arguments);
-        };
-
-        window.addEventListener('unhandledrejection', function(event) {
-          var reason = event && event.reason;
-          var msg = (reason && (reason.message || String(reason))) || '';
-          if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('closed without opened') !== -1 || msg.indexOf('[vite]') !== -1) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-          }
-        });
-        window.addEventListener('error', function(event) {
-          var msg = (event && event.message) || '';
-          if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('closed without opened') !== -1 || msg.indexOf('[vite]') !== -1) {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-          }
-        });
-      })();
+      });
+      window.addEventListener('error', function (event) {
+        var msg = (event && event.message) || '';
+        if (msg.includes('WebSocket') || msg.includes('closed without opened') || msg.includes('[vite]')) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      });
     </script>
   </head>
   <body>

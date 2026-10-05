@@ -608,10 +608,11 @@ export const erpModules = [
       'Control SMS configuration, outbound messaging, and logs.',
     ],
     menus: [
-      group('frontend-shop', 'Website & Storefront', 'Customer-facing website and multi-store settings.', [
-        leaf('shop-settings', 'Storefront Controller', 'Control all store displays, branding, themes, and products.', { route: '/admins?module=front-end&menu=shop-settings' }),
-        leaf('slider-settings', 'Hero Banners & Visuals', 'Manage website hero slides and image sequencing.', { route: '/admins?module=front-end&menu=slider-settings' }),
-        leaf('list-pages', 'Store Products Display', 'Control which products are shown on public storefronts.', { route: '/admins?module=front-end&menu=shop-settings' }),
+      group('frontend-shop', 'Front Office', 'Customer-facing website settings.', [
+        leaf('shop-settings', 'Shop Settings', 'Maintain live storefront settings and layout defaults.'),
+        leaf('slider-settings', 'Slider Settings', 'Manage hero slider content and image sequencing.'),
+        leaf('list-pages', 'List Pages', 'Review and edit static front-office pages.'),
+        leaf('add-page', 'Add Page', 'Create a new public-facing content page.'),
       ]),
       group('frontend-sms', 'SMS', 'Messaging settings and logs.', [
         leaf('sms-settings', 'SMS Settings', 'Configure outbound SMS provider and templates.'),

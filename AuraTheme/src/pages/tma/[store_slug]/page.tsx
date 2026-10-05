@@ -44,14 +44,12 @@ import {
 } from '@ant-design/icons';
 import { useTelegram } from '../../../hooks/useTelegram';
 import { useStoreCart } from '../../../hooks/useStoreCart';
-import OrderReceiptModal from '../../../components/common/OrderReceiptModal';
 
 export default function StoreFront() {
   const params = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { tg, user, initData, startParam, triggerHaptic } = useTelegram();
-  const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<any>(null);
 
   // Active store slug from param, deep link, or default
   const routeSlug = (params.storeSlug as string) || (params.store_slug as string) || startParam || '';
@@ -1548,12 +1546,11 @@ export default function StoreFront() {
                   return (
                     <div
                       key={ord.id}
-                      onClick={() => setSelectedReceiptOrder(ord)}
-                      className="bg-white rounded-3xl p-4 border border-orange-100 shadow-2xs space-y-3 cursor-pointer hover:border-orange-300 hover:shadow-md transition-all active:scale-[0.99] group"
+                      className="bg-white rounded-3xl p-4 border border-orange-100 shadow-2xs space-y-3"
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="font-extrabold text-xs text-slate-900 block group-hover:text-[#FF5722] transition-colors">
+                          <span className="font-extrabold text-xs text-slate-900 block">
                             {ord.referenceNo || `ORD-${ord.id}`}
                           </span>
                           <span className="text-[10px] text-slate-400">
@@ -1585,11 +1582,11 @@ export default function StoreFront() {
                       </div>
 
                       <div className="flex items-center justify-between text-xs pt-1 border-t border-orange-100">
-                        <span className="text-[#FF5722] text-[11px] font-bold flex items-center gap-1 group-hover:underline">
-                          🧾 View Order Receipt &rarr;
+                        <span className="text-slate-400">
+                          {ord.customer?.address || 'Baker Street'}
                         </span>
                         <span className="font-black text-sm text-[#FF5722]">
-                          ${Number(ord.totalAmount || ord.grandTotal || 0).toFixed(2)}
+                          ${Number(ord.totalAmount || 0).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -1599,14 +1596,6 @@ export default function StoreFront() {
             )}
           </div>
         )}
-
-        {/* Customer Order Receipt Modal */}
-        <OrderReceiptModal
-          order={selectedReceiptOrder}
-          open={Boolean(selectedReceiptOrder)}
-          onClose={() => setSelectedReceiptOrder(null)}
-          storeInfo={currentStore}
-        />
 
         {/* ======================================================== */}
         {/* SCREEN: KITCHEN & TELEGRAM DISPATCH STREAM               */}

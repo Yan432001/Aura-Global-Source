@@ -2,14 +2,10 @@ const express = require('express');
 const router = express.Router();
 const StoreController = require('../../controller/tma/store.controller');
 const OrderController = require('../../controller/tma/order.controller');
-const TelegramAuthController = require('../../controller/tma/telegramAuth.controller');
 const { verifyTelegramWebAppData } = require('../../middleware/telegramAuth.middleware');
 
-// Telegram user authentication & bot registration
+// Telegram user authentication
 router.post('/auth', OrderController.authTelegramUser);
-router.post('/telegram-auth/init', TelegramAuthController.initSession);
-router.get('/telegram-auth/check', TelegramAuthController.checkSession);
-router.post('/telegram-auth/direct-register', TelegramAuthController.directRegister);
 
 // Store selection endpoints
 router.get('/stores', StoreController.getStores);
