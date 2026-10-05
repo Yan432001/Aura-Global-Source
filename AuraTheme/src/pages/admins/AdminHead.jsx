@@ -14,6 +14,8 @@ import {
   ShopOutlined,
   DownOutlined,
   CheckOutlined,
+  GlobalOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -163,6 +165,30 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
         )}
 
         <Flex align="center" gap={8} wrap="wrap">
+          {/* Direct Link to Base URL Website */}
+          <Tooltip title="Open Website (Base URL)">
+            <Button
+              type="primary"
+              icon={<GlobalOutlined style={{ fontSize: 15 }} />}
+              onClick={() => window.open('/', '_blank')}
+              style={{
+                height: 40,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: isMobile ? '0 10px' : '0 14px',
+                fontWeight: 600,
+                boxShadow: '0 2px 8px rgba(16,185,129,0.25)',
+              }}
+            >
+              {!isMobile && <span>Website</span>}
+              <ExportOutlined style={{ fontSize: 11, opacity: 0.85 }} />
+            </Button>
+          </Tooltip>
+
           {/* Active Branch / Multiple Biller Context Dropdown */}
           <Dropdown menu={{ items: branchMenuItems }} trigger={['click']} placement="bottomRight">
             <Button

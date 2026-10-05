@@ -27,7 +27,8 @@ import {
   StarFilled,
 } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { branches, products, shops } from '../../data/shopData';
+import { branches, products, shops as defaultShops } from '../../data/shopData';
+import { getLiveStores } from '../../data/frontEndControlStore';
 import { publicTheme } from '../../utils/webTheme';
 import TelegramMiniAppModal, { BOTFATHER_CONFIG } from '../../components/web/shared/TelegramMiniAppModal';
 import RetailShopCard from '../../components/web/shared/RetailShopCard';
@@ -48,6 +49,13 @@ const Shops = () => {
   const [branch, setBranch] = useState('all');
   const [minRating, setMinRating] = useState('all');
   const [fastReplyOnly, setFastReplyOnly] = useState(false);
+  const [shops, setShops] = useState(getLiveStores);
+
+  useEffect(() => {
+    const handleUpdate = (e) => setShops(e.detail);
+    window.addEventListener('aura_frontend_stores_updated', handleUpdate);
+    return () => window.removeEventListener('aura_frontend_stores_updated', handleUpdate);
+  }, []);
 
   // Modals & Panels State
   const [previewShop, setPreviewShop] = useState(null);
@@ -130,6 +138,8 @@ const Shops = () => {
     const query = search.toLowerCase().trim();
 
     return shops.filter((shop) => {
+      if (shop.activeOnWebsite === false) return false;
+
       const matchesSearch =
         !query ||
         shop.name.toLowerCase().includes(query) ||

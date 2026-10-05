@@ -9,6 +9,7 @@ import AdminSimpleDataManager from './AdminSimpleDataManager';
 import AdminProductsManager from './AdminProductsManager';
 import AdminModulesManager from './AdminModulesManager';
 import AdminBranchesManager from './AdminBranchesManager';
+import AdminFrontEndManager from './AdminFrontEndManager';
 import { useAdminModules } from '../../hooks/useAdminModules';
 import { Result, Button } from 'antd';
 import { LockOutlined, ControlOutlined } from '@ant-design/icons';
@@ -38,6 +39,24 @@ const AdminDashboardRouter = () => {
     (moduleKey === 'settings' && (menuKey === 'branches' || menuKey === 'billers' || menuKey === 'warehouses'))
   ) {
     return <AdminBranchesManager />;
+  }
+
+  // If module is 'front-end' or 'frontend' or any front-office menu, render AdminFrontEndManager
+  if (
+    moduleKey === 'front-end' ||
+    moduleKey === 'frontend' ||
+    menuKey === 'shop-control' ||
+    menuKey === 'store-products' ||
+    menuKey === 'website-display' ||
+    menuKey === 'slider-settings' ||
+    menuKey === 'list-pages' ||
+    menuKey === 'preview-website' ||
+    menuKey === 'shop-settings' ||
+    menuKey === 'frontend-overview' ||
+    menuKey === 'telegram-groups' ||
+    menuKey === 'telegram'
+  ) {
+    return <AdminFrontEndManager initialTab={menuKey} />;
   }
 
   // Guard for closed modules

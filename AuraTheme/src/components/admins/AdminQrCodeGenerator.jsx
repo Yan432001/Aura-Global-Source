@@ -119,6 +119,10 @@ export default function AdminQrCodeGenerator() {
       return `https://t.me/aura_emenu_order_bot/menu?startapp=shop_${storeSlug}`;
     }
 
+    if (destinationType === 'tma_web') {
+      return `${origin}/tma/${storeSlug}?${locationType}=${numParam}`;
+    }
+
     if (destinationType === 'tma_item') {
       return `https://t.me/aura_emenu_order_bot/menu?startapp=item_${targetItemId || 1}`;
     }
@@ -456,9 +460,10 @@ export default function AdminQrCodeGenerator() {
                               onChange={(val) => setDestinationType(val)}
                               style={{ width: '100%' }}
                             >
-                              <Option value="tma">Telegram Mini App Store (shop_{activeStore?.slug})</Option>
+                              <Option value="tma">Telegram Bot App Link (t.me/...startapp=shop_{activeStore?.slug})</Option>
+                              <Option value="tma_web">Telegram Mini App Direct (/tma/{activeStore?.slug})</Option>
+                              <Option value="emenu">Web E-Menu (/shop/{activeStore?.slug})</Option>
                               <Option value="tma_item">Telegram Direct Product Item (item_ID)</Option>
-                              <Option value="emenu">Web E-Menu (/shop/...)</Option>
                               <Option value="custom">Custom URL</Option>
                             </Select>
                           </Form.Item>

@@ -36,6 +36,7 @@ import UserManagement from './pages/admins/UserManagement';
 import AdminQrCodeGeneratorPage from './pages/admins/AdminQrCodeGeneratorPage';
 import AdminModulesManager from './pages/admins/AdminModulesManager';
 import AdminBranchesManager from './pages/admins/AdminBranchesManager';
+import AdminFrontEndManager from './pages/admins/AdminFrontEndManager';
 import { AdminModulesProvider } from './contexts/AdminModulesContext';
 
 // E-Menu Telegram Mini App Layout & Views
@@ -135,6 +136,8 @@ const AppContent = () => {
         <Route path="settings/branches" element={<AdminBranchesManager />} />
         <Route path="billers" element={<AdminBranchesManager />} />
         <Route path="settings/billers" element={<AdminBranchesManager />} />
+        <Route path="frontend" element={<AdminFrontEndManager />} />
+        <Route path="storefront" element={<AdminFrontEndManager />} />
       </Route>
 
       {/* 5. Catch-All Route */}

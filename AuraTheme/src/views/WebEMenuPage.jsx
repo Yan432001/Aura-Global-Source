@@ -23,6 +23,8 @@ import { message, Modal, Drawer, notification } from 'antd';
 import simpleData from '../../../data/simpleData';
 import { useCart } from '../contexts/CartContext';
 import { publicTheme } from '../utils/webTheme';
+import TelegramStoreGroupModal from '../components/emenu/TelegramStoreGroupModal';
+import { routeOrderToTelegramGroup } from '../data/telegramStoreGroupManager';
 
 // Master Multi-Business Catalog covering Breakfast, Bakery, Coffee, Bistro, Mobile Phones, Computers, and Fashion
 const MOCK_WEB_FOODS = [
@@ -570,6 +572,7 @@ export default function WebEMenuPage() {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [tableNumber, setTableNumber] = useState('Table #06');
   const [diningOption, setDiningOption] = useState('Dine-In');
+  const [isTelegramGroupModalOpen, setIsTelegramGroupModalOpen] = useState(false);
 
   // Local cart state
   const [localCart, setLocalCart] = useState(() => {
@@ -761,6 +764,17 @@ export default function WebEMenuPage() {
               </button>
             ))}
           </div>
+
+          {/* Telegram Multi-Store Group Management & Bot Permissions */}
+          <button
+            type="button"
+            onClick={() => setIsTelegramGroupModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-[#2F6FED] hover:bg-blue-100 border border-blue-200 text-xs font-bold transition active:scale-95 cursor-pointer shadow-2xs"
+            title="Yin: Multi-Store Telegram Group & Bot Management"
+          >
+            <span className="text-sm">✈️</span>
+            <span className="hidden sm:inline">Telegram Groups</span>
+          </button>
 
           {/* Cart Button */}
           <button
@@ -1122,7 +1136,14 @@ export default function WebEMenuPage() {
               <button
                 type="button"
                 onClick={() => {
-                  message.success(`Order for ${tableNumber} placed successfully! 🎉`);
+                  const refNo = `ORD-${Date.now().toString().slice(-4)}`;
+                  routeOrderToTelegramGroup(currentSlug, {
+                    referenceNo: refNo,
+                    items: localCart,
+                    grandTotal: parseFloat(cartTotalAmount),
+                    customer: { name: 'Dine-In Customer', address: tableNumber },
+                  });
+                  message.success(`Order #${refNo} for ${tableNumber} placed & routed to Telegram Kitchen Group! 🎉`);
                   setLocalCart([]);
                   setCartDrawerOpen(false);
                 }}
@@ -1134,6 +1155,20 @@ export default function WebEMenuPage() {
           )}
         </div>
       </Drawer>
+
+      {/* Telegram Mini App: Multi-Store Group Management & Bot Permissions Modal */}
+      <TelegramStoreGroupModal
+        open={isTelegramGroupModalOpen}
+        onClose={() => setIsTelegramGroupModalOpen(false)}
+        currentStoreSlug={currentSlug}
+        onSwitchStore={(newSlug) => {
+          setIsTelegramGroupModalOpen(false);
+          if (newSlug !== currentSlug) {
+            navigate(`/shop/menu/${newSlug}`);
+            message.success(`Switched store to ${newSlug.replace(/-/g, ' ').toUpperCase()}`);
+          }
+        }}
+      />
     </div>
   );
 }

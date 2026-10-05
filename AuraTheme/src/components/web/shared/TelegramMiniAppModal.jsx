@@ -476,7 +476,7 @@ export default function TelegramMiniAppModal({
                 style={{
                   height: 44,
                   borderRadius: 14,
-                  background: '#2481cc',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                   border: 'none',
                   fontWeight: 800,
                   fontSize: 14,
@@ -487,36 +487,50 @@ export default function TelegramMiniAppModal({
                   gap: 8,
                 }}
               >
-                Open in Telegram App
+                Launch Telegram Mini App (@{BOTFATHER_CONFIG.botUsername})
               </Button>
 
-              <Button
-                size="large"
-                onClick={() => {
-                  onClose?.();
-                  if (product) {
-                    navigate(`/shop/${targetShop?.slug || 'sbc-store'}?item=${product.id}`);
-                  } else {
-                    navigate(`/shop/${targetShop?.slug || 'sbc-store'}`);
-                  }
-                }}
-                style={{
-                  height: 42,
-                  borderRadius: 14,
-                  background: '#2F6FED',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontWeight: 800,
-                  fontSize: 13,
-                  boxShadow: '0 4px 14px rgba(47, 111, 237, 0.25)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}
-              >
-                <span>🍔 Open E-Menu Page ({targetShop?.name || 'SBC Store'})</span>
-              </Button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <Button
+                  onClick={() => {
+                    onClose?.();
+                    window.open(`/tma/${targetShop?.slug || 'sbc-store'}`, '_blank');
+                  }}
+                  style={{
+                    height: 38,
+                    borderRadius: 12,
+                    borderColor: '#38bdf8',
+                    color: '#0284c7',
+                    fontWeight: 700,
+                    fontSize: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  📱 TMA Web View
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    onClose?.();
+                    window.open(`/shop/${targetShop?.slug || 'sbc-store'}`, '_blank');
+                  }}
+                  style={{
+                    height: 38,
+                    borderRadius: 12,
+                    borderColor: '#cbd5e1',
+                    color: '#334155',
+                    fontWeight: 700,
+                    fontSize: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  🌐 Web E-Menu
+                </Button>
+              </div>
 
               <Button
                 icon={<CopyOutlined />}

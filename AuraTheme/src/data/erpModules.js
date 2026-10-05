@@ -598,31 +598,35 @@ export const erpModules = [
     accent: '#a855f7',
     enabled: true,
     health: 'stable',
-    kpiLabel: 'Live Pages',
-    kpiValue: '22',
-    description: 'Website-facing shop settings, sliders, pages, and SMS tools.',
-    statusNote: 'Customer-facing page and slider content are in sync.',
+    kpiLabel: 'Live Stores & SKUs',
+    kpiValue: '8 Stores / 120 SKUs',
+    description: 'Master owner control room for public website display, multi-store channels, catalog visibility, and hero slider content.',
+    statusNote: 'Real-time synchronization between Admin changes and public customer website.',
     detailBullets: [
-      'Manage storefront settings and front-office pages.',
-      'Maintain slider content and static pages from a single group.',
-      'Control SMS configuration, outbound messaging, and logs.',
+      'Control storefront appearance, homepage layout, announcements, and featured stores.',
+      'Control all stores: website visibility, featured status, operating hours, and ordering options.',
+      'Control products of each store: storefront visibility, store assignment, badge, pricing, and stock status.',
+      'Manage hero sliders, promo banners, and static pages with instant live preview.',
     ],
     menus: [
-      group('frontend-shop', 'Front Office', 'Customer-facing website settings.', [
-        leaf('shop-settings', 'Shop Settings', 'Maintain live storefront settings and layout defaults.'),
-        leaf('slider-settings', 'Slider Settings', 'Manage hero slider content and image sequencing.'),
-        leaf('list-pages', 'List Pages', 'Review and edit static front-office pages.'),
-        leaf('add-page', 'Add Page', 'Create a new public-facing content page.'),
+      group('frontend-channels', 'Stores & Catalog', 'Manage store channels and products.', [
+        leaf('shop-control', 'Stores Controller', 'Control all stores displayed on the website, ordering, and featured tags.', { route: '/admins?module=front-end&menu=shop-control' }),
+        leaf('store-products', 'Products of Store', 'Control products per store, visibility, price overrides, and featured tags.', { route: '/admins?module=front-end&menu=store-products' }),
+        leaf('telegram-groups', 'Telegram Groups & Bots', 'Multi-store group management, bot permissions & group ID setup.', { route: '/admins?module=front-end&menu=telegram-groups' }),
       ]),
-      group('frontend-sms', 'SMS', 'Messaging settings and logs.', [
-        leaf('sms-settings', 'SMS Settings', 'Configure outbound SMS provider and templates.'),
-        leaf('send-sms', 'Send SMS', 'Compose and send SMS messages.'),
-        leaf('sms-log', 'SMS Log', 'Review sent SMS history and delivery states.'),
+      group('frontend-display', 'Website Display', 'Storefront presentation, themes, and banners.', [
+        leaf('website-display', 'Website Display & Theme', 'Homepage layout, announcement bar, themes, and branding.', { route: '/admins?module=front-end&menu=website-display' }),
+        leaf('slider-settings', 'Hero Sliders & Banners', 'Manage hero slider slides, images, promo banners, and links.', { route: '/admins?module=front-end&menu=slider-settings' }),
+        leaf('list-pages', 'Website Pages', 'Review and edit public storefront information and policy pages.', { route: '/admins?module=front-end&menu=list-pages' }),
+      ]),
+      group('frontend-preview', 'Live Launch', 'Preview and test customer storefronts.', [
+        leaf('preview-website', 'Preview Website', 'Interactive device preview of customer website and stores.', { route: '/admins?module=front-end&menu=preview-website' }),
       ]),
     ],
     submodules: [
-      { key: 'frontend-slider-toggle', label: 'Slider', enabled: true, description: 'Enable slider content controls.' },
-      { key: 'frontend-sms-toggle', label: 'SMS', enabled: true, description: 'Enable outbound SMS actions and logs.' },
+      { key: 'frontend-stores-toggle', label: 'Stores Controller', enabled: true, description: 'Control store visibility on website.' },
+      { key: 'frontend-products-toggle', label: 'Store Products', enabled: true, description: 'Control products per store.' },
+      { key: 'frontend-slider-toggle', label: 'Slider & Banners', enabled: true, description: 'Enable slider content controls.' },
     ],
   },
 ];

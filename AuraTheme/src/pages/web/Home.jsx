@@ -33,7 +33,8 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import simpleData from '../../../../data/simpleData';
-import { shops, products as retailProducts, shopCategories } from '../../data/shopData';
+import { shops as defaultShops, products as defaultRetailProducts, shopCategories, getLiveProducts } from '../../data/shopData';
+import { getLiveStores, getStorefrontSettings } from '../../data/frontEndControlStore';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { publicTheme, formatCurrency, formatCompact } from '../../utils/webTheme';
@@ -77,6 +78,27 @@ export default function Home() {
   const [previewShop, setPreviewShop] = useState(null);
   const [previewProduct, setPreviewProduct] = useState(null);
   const [telegramProduct, setTelegramProduct] = useState(null);
+
+  // Live Front End sync state
+  const [shops, setShops] = useState(getLiveStores);
+  const [retailProducts, setRetailProducts] = useState(getLiveProducts);
+  const [storefrontSettings, setStorefrontSettings] = useState(getStorefrontSettings);
+
+  useEffect(() => {
+    const handleStoresUpdated = (e) => setShops(e.detail);
+    const handleProductsUpdated = (e) => setRetailProducts(e.detail);
+    const handleSettingsUpdated = (e) => setStorefrontSettings(e.detail);
+
+    window.addEventListener('aura_frontend_stores_updated', handleStoresUpdated);
+    window.addEventListener('aura_live_products_updated', handleProductsUpdated);
+    window.addEventListener('aura_frontend_settings_updated', handleSettingsUpdated);
+
+    return () => {
+      window.removeEventListener('aura_frontend_stores_updated', handleStoresUpdated);
+      window.removeEventListener('aura_live_products_updated', handleProductsUpdated);
+      window.removeEventListener('aura_frontend_settings_updated', handleSettingsUpdated);
+    };
+  }, []);
 
   // Shop favorites & wishlist
   const [wishlistedShopIds, setWishlistedShopIds] = useState(() => {
@@ -230,9 +252,10 @@ export default function Home() {
   }, [products, activeCategory]);
 
   const filteredRetailProducts = useMemo(() => {
-    if (activeRetailCategory === 'all') return retailProducts;
-    return retailProducts.filter((p) => p.category === activeRetailCategory);
-  }, [activeRetailCategory]);
+    const visibleOnly = retailProducts.filter((p) => p.visibleOnWebsite !== false);
+    if (activeRetailCategory === 'all') return visibleOnly;
+    return visibleOnly.filter((p) => p.category === activeRetailCategory);
+  }, [retailProducts, activeRetailCategory]);
 
   // L192-Style Infinite Scroll & 3-Row Progressive Release for Fresh Selections
   // Default show 3 rows: on 6-col desktop that's 18 items (3 rows x 6 items)

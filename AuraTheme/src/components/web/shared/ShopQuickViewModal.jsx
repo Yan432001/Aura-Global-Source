@@ -133,7 +133,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
       width={isMobile ? '100vw' : 1160}
       centered={!isMobile}
       destroyOnHidden
-      zIndex={10050}
+      zIndex={1300}
       style={
         isMobile
           ? {

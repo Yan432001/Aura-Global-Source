@@ -9,9 +9,12 @@ import {
   ReadOutlined, TeamOutlined, CommentOutlined, QuestionCircleOutlined,
   ApartmentOutlined, MailOutlined, UserAddOutlined, DatabaseOutlined,
   PlusOutlined, EditOutlined, DeleteOutlined, SaveOutlined, ReloadOutlined,
-  DownloadOutlined, CheckCircleOutlined, CopyOutlined, EyeOutlined
+  DownloadOutlined, CheckCircleOutlined, CopyOutlined, EyeOutlined,
+  ShopOutlined, QrcodeOutlined, MobileOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
+import AdminFrontEndController from '../AdminFrontEndController';
+import AdminQrCodeGenerator from '../../../components/admins/AdminQrCodeGenerator';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -21,9 +24,20 @@ export default function AdminCmsManager() {
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(location.search);
-  const initialMenu = searchParams.get('menu') || 'cms-settings';
 
-  const [activeTab, setActiveTab] = useState(initialMenu);
+  // Map aliases between legacy front-end and cms module menus
+  const resolveInitialMenu = () => {
+    const m = searchParams.get('menu');
+    const mod = searchParams.get('module');
+    if (m === 'shop-settings' || m === 'storefront' || m === 'list-pages' || mod === 'front-end' || mod === 'frontend') {
+      return 'shop-settings';
+    }
+    if (m === 'slider-settings') return 'cms-hero';
+    if (m === 'cms-qrcode' || m === 'qrcode') return 'cms-qrcode';
+    return m || 'shop-settings';
+  };
+
+  const [activeTab, setActiveTab] = useState(resolveInitialMenu);
   const [loading, setLoading] = useState(false);
 
   // CMS State Stores
@@ -1258,17 +1272,20 @@ export default function AdminCmsManager() {
         <div>
           <Title level={3} style={{ margin: 0, color: '#0f172a' }}>
             <GlobalOutlined style={{ marginRight: 10, color: '#2563eb' }} />
-            Website Content Management System (CMS)
+            Website CMS &amp; Front-End Command Center
           </Title>
           <Text type="secondary">
-            Manage every piece of content on your live public website with zero hardcoded text. Bilingual (EN/KM) & MySQL Ready.
+            Integrated digital control for multi-store concepts, live customer channels (Web E-Menu &amp; TMA), site branding, hero banners, pages, and media assets.
           </Text>
         </div>
-        <Space>
+        <Space wrap>
           <Button icon={<ReloadOutlined />} onClick={fetchAllCmsData} loading={loading}>
             Refresh
           </Button>
-          <Button type="primary" href="/" target="_blank" icon={<EyeOutlined />}>
+          <Button href="/tma/sbc-store" target="_blank" icon={<MobileOutlined style={{ color: '#0284c7' }} />}>
+            Open Telegram App
+          </Button>
+          <Button type="primary" href="/" target="_blank" icon={<EyeOutlined />} style={{ background: '#2563eb' }}>
             View Public Website
           </Button>
         </Space>
@@ -1280,11 +1297,24 @@ export default function AdminCmsManager() {
         type="card"
         tabBarStyle={{ marginBottom: 16 }}
         items={[
-          { key: 'cms-settings', label: <span><GlobalOutlined /> Site Settings</span>, children: renderSettingsTab() },
+          {
+            key: 'shop-settings',
+            label: (
+              <span style={{ fontWeight: 700 }}>
+                <ShopOutlined /> Storefront Concepts &amp; Channels
+              </span>
+            ),
+            children: (
+              <div style={{ marginTop: 8 }}>
+                <AdminFrontEndController embedded={true} />
+              </div>
+            ),
+          },
+          { key: 'cms-settings', label: <span><GlobalOutlined /> Site Settings &amp; Branding</span>, children: renderSettingsTab() },
+          { key: 'cms-hero', label: <span><PictureOutlined /> Hero Banners &amp; Sliders</span>, children: renderHeroTab() },
           { key: 'cms-menus', label: <span><MenuOutlined /> Navigation Menus</span>, children: renderMenusTab() },
-          { key: 'cms-hero', label: <span><PictureOutlined /> Hero Banners</span>, children: renderHeroTab() },
           { key: 'cms-pages', label: <span><FileTextOutlined /> Custom Pages</span>, children: renderPagesTab() },
-          { key: 'cms-blog', label: <span><ReadOutlined /> Blog & Articles</span>, children: renderPostsTab() },
+          { key: 'cms-blog', label: <span><ReadOutlined /> Blog &amp; Articles</span>, children: renderPostsTab() },
           { key: 'cms-team', label: <span><TeamOutlined /> Team Members</span>, children: renderTeamTab() },
           { key: 'cms-testimonials', label: <span><CommentOutlined /> Testimonials</span>, children: renderTestimonialsTab() },
           { key: 'cms-faqs', label: <span><QuestionCircleOutlined /> FAQs</span>, children: renderFaqsTab() },
@@ -1302,8 +1332,17 @@ export default function AdminCmsManager() {
             children: renderInquiriesTab(),
           },
           { key: 'cms-subscribers', label: <span><UserAddOutlined /> Subscribers</span>, children: renderSubscribersTab() },
+          {
+            key: 'cms-qrcode',
+            label: <span><QrcodeOutlined /> Store QR Codes</span>,
+            children: (
+              <div style={{ marginTop: 8 }}>
+                <AdminQrCodeGenerator />
+              </div>
+            ),
+          },
           { key: 'cms-media', label: <span><PictureOutlined /> Media Assets</span>, children: renderMediaTab() },
-          { key: 'cms-database', label: <span><DatabaseOutlined /> Database & Migration</span>, children: renderDatabaseTab() },
+          { key: 'cms-database', label: <span><DatabaseOutlined /> Database &amp; Migration</span>, children: renderDatabaseTab() },
         ]}
       />
 

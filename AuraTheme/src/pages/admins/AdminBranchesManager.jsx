@@ -927,7 +927,7 @@ const AdminBranchesManager = () => {
         okText={editingBranch ? 'Save Changes' : 'Create Branch'}
         width={680}
         forceRender
-        destroyOnClose={false}
+        destroyOnHidden={false}
       >
         <Form form={branchForm} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={16}>
@@ -1064,7 +1064,7 @@ const AdminBranchesManager = () => {
         okText={editingBiller ? 'Save Biller' : 'Create Biller'}
         width={680}
         forceRender
-        destroyOnClose={false}
+        destroyOnHidden={false}
       >
         <Form form={billerForm} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={16}>
