@@ -45,7 +45,6 @@ import EMenuPage from './views/EMenuPage';
 import WebEMenuPage from './views/WebEMenuPage';
 import TelegramEntry from './views/TelegramEntry';
 import StoreNotFound from './views/StoreNotFound';
-import StoreFront from './pages/tma/[store_slug]/page';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -94,9 +93,9 @@ const AppContent = () => {
         <Route path=":storeSlug" element={<EMenuPage />} />
       </Route>
 
-      {/* 2b. Telegram Mini App StoreFront Routes */}
-      <Route path="/tma" element={<StoreFront />} />
-      <Route path="/tma/:storeSlug" element={<StoreFront />} />
+      {/* 2b. Redirect legacy /tma routes directly to official E-Menu */}
+      <Route path="/tma" element={<Navigate to="/shop" replace />} />
+      <Route path="/tma/:storeSlug" element={<EMenuPage />} />
 
       {/* 3. Base Customer-Facing Website Routes */}
       <Route path="/" element={<MainLayout />}>

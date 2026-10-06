@@ -24,6 +24,8 @@ import simpleData from '../../../data/simpleData';
 import { useCart } from '../contexts/CartContext';
 import { publicTheme } from '../utils/webTheme';
 import TelegramStoreGroupModal from '../components/emenu/TelegramStoreGroupModal';
+import MenuSearchBar from '../components/emenu/MenuSearchBar';
+import { useFavorites } from '../hooks/useFavorites';
 import { routeOrderToTelegramGroup } from '../data/telegramStoreGroupManager';
 
 // Master Multi-Business Catalog covering Breakfast, Bakery, Coffee, Bistro, Mobile Phones, Computers, and Fashion
@@ -558,14 +560,15 @@ export default function WebEMenuPage() {
     }
   }, [storeCategories]);
 
-  // Favorites state
-  const [favorites, setFavorites] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('aura_web_menu_favs') || '{}');
-    } catch {
-      return {};
-    }
-  });
+  // Persistent Favorites state via useFavorites hook
+  const { isFavorite, toggleFavorite, favoritesCount } = useFavorites();
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  // Total favorites count for current store items
+  const currentStoreFavoritesCount = useMemo(() => {
+    const list = MOCK_WEB_FOODS.filter((f) => f.storeSlug === currentSlug);
+    return (list.length ? list : MOCK_WEB_FOODS).filter((f) => isFavorite(f.id)).length;
+  }, [currentSlug, isFavorite]);
 
   // Modal & Cart Drawer State
   const [quickViewItem, setQuickViewItem] = useState(null);
@@ -588,20 +591,6 @@ export default function WebEMenuPage() {
       localStorage.setItem('aura_web_emenu_cart', JSON.stringify(localCart));
     } catch (_) {}
   }, [localCart]);
-
-  const toggleFavorite = (itemId, e) => {
-    if (e) e.stopPropagation();
-    setFavorites((prev) => {
-      const next = { ...prev, [itemId]: !prev[itemId] };
-      localStorage.setItem('aura_web_menu_favs', JSON.stringify(next));
-      if (next[itemId]) {
-        message.success('Added to favorites! ❤️');
-      } else {
-        message.info('Removed from favorites');
-      }
-      return next;
-    });
-  };
 
   const handleAddToCart = (item, quantity = 1) => {
     setLocalCart((prev) => {
@@ -685,30 +674,39 @@ export default function WebEMenuPage() {
     return localCart.reduce((sum, i) => sum + i.price * i.quantity, 0).toFixed(2);
   }, [localCart]);
 
-  // Filter foods based on store, category, and search query
+  // Total foods count for active store
+  const storeTotalFoodsCount = useMemo(() => {
+    const list = MOCK_WEB_FOODS.filter((f) => f.storeSlug === currentSlug);
+    return list.length || MOCK_WEB_FOODS.length;
+  }, [currentSlug]);
+
+  // Filter foods based on store, category, favorites, and real-time search query
   const displayedFoods = useMemo(() => {
     let list = MOCK_WEB_FOODS.filter((f) => f.storeSlug === currentSlug);
 
-    // If store has no items in mock, show all matching category
+    // If store has no items in mock, show all
     if (list.length === 0) {
       list = MOCK_WEB_FOODS;
     }
 
-    if (activeCategory) {
-      list = list.filter((f) => f.category === activeCategory);
+    if (showFavoritesOnly) {
+      list = list.filter((f) => isFavorite(f.id));
     }
 
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
       list = list.filter(
         (f) =>
-          f.name.toLowerCase().includes(q) ||
-          f.description.toLowerCase().includes(q)
+          (f.name || '').toLowerCase().includes(q) ||
+          (f.category || '').toLowerCase().includes(q) ||
+          (f.description || '').toLowerCase().includes(q)
       );
+    } else if (activeCategory && !showFavoritesOnly) {
+      list = list.filter((f) => f.category === activeCategory);
     }
 
     return list;
-  }, [currentSlug, activeCategory, searchQuery]);
+  }, [currentSlug, activeCategory, searchQuery, showFavoritesOnly, isFavorite]);
 
   return (
     <div className="bg-[#FAF9F6] min-h-screen text-slate-800 font-sans pb-28 antialiased selection:bg-[#A31D1D] selection:text-white">
@@ -804,9 +802,25 @@ export default function WebEMenuPage() {
           </div>
 
           {/* Large Bold Crimson Red Header (matches image.png 'BREAKFAST') */}
-          <h1 className="text-3xl sm:text-5xl font-black text-[#A31D1D] tracking-wider uppercase mb-5 font-sans">
-            {activeCategory.toUpperCase()}
+          <h1 className="text-3xl sm:text-5xl font-black text-[#A31D1D] tracking-wider uppercase mb-4 font-sans">
+            {searchQuery ? `SEARCH: ${searchQuery.toUpperCase()}` : activeCategory.toUpperCase()}
           </h1>
+
+          {/* ======================================================== */}
+          {/* REAL-TIME SEARCH BAR COMPONENT                           */}
+          {/* Filters current store items by name or category in real-time */}
+          {/* ======================================================== */}
+          <div className="max-w-xl mx-auto mb-5 px-2">
+            <MenuSearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onClear={() => setSearchQuery('')}
+              placeholder={`Search ${currentStore?.name || 'store'} by name or category...`}
+              totalMatches={displayedFoods.length}
+              totalItems={storeTotalFoodsCount}
+              accentColor="#A31D1D"
+            />
+          </div>
 
           {/* ======================================================== */}
           {/* 3. CATEGORY PILLS BAR (EXACT MATCH TO image.png)         */}
@@ -814,13 +828,32 @@ export default function WebEMenuPage() {
           {/* Inactive pills: Soft gray text with rounded hover        */}
           {/* ======================================================== */}
           <div className="flex items-center justify-center flex-wrap gap-2 sm:gap-3 py-2">
+            {/* Favorites Filter Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowFavoritesOnly(!showFavoritesOnly);
+                if (!showFavoritesOnly) setSearchQuery('');
+              }}
+              className={`text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 px-4 sm:px-5 py-2 rounded-full ${
+                showFavoritesOnly
+                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/25 font-black scale-102'
+                  : 'text-rose-600 bg-rose-50/80 hover:bg-rose-100/80 border border-rose-200/80 font-bold'
+              }`}
+              title="Show bookmarked favorites"
+            >
+              <HeartFilled className={showFavoritesOnly ? 'text-white' : 'text-rose-500'} />
+              <span>Favorites ({currentStoreFavoritesCount})</span>
+            </button>
+
             {storeCategories.map((cat) => {
-              const isActive = activeCategory === cat;
+              const isActive = !showFavoritesOnly && !searchQuery && activeCategory === cat;
               return (
                 <button
                   key={cat}
                   type="button"
                   onClick={() => {
+                    setShowFavoritesOnly(false);
                     setActiveCategory(cat);
                     setSearchQuery('');
                   }}
@@ -863,27 +896,38 @@ export default function WebEMenuPage() {
         {/* Top round plate disc + Heart top right + Name + Time + Description + Price & Add button */}
         {/* ======================================================== */}
         {displayedFoods.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 max-w-md mx-auto shadow-sm">
-            <span className="text-4xl block mb-2">🍽️</span>
-            <h3 className="font-bold text-slate-800">No items found</h3>
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 max-w-md mx-auto shadow-sm px-6">
+            <span className="text-4xl block mb-2">{showFavoritesOnly ? '❤️' : '🔍'}</span>
+            <h3 className="font-bold text-slate-800">
+              {showFavoritesOnly
+                ? 'No favorites bookmarked yet'
+                : searchQuery
+                ? `No items found for "${searchQuery}"`
+                : 'No items found'}
+            </h3>
             <p className="text-xs text-slate-400 mt-1">
-              Select another category above to view available choices.
+              {showFavoritesOnly
+                ? 'Click the heart icon on any food card to bookmark it to your persistent favorites list.'
+                : searchQuery
+                ? 'Try searching by a different product name, keyword, or category.'
+                : 'Select another category above to view available choices.'}
             </p>
             <button
               type="button"
               onClick={() => {
+                setShowFavoritesOnly(false);
                 setActiveCategory(storeCategories[0]);
                 setSearchQuery('');
               }}
               className="mt-4 px-5 py-2 rounded-full bg-[#A31D1D] hover:bg-[#831616] text-white text-xs font-bold transition cursor-pointer"
             >
-              Reset Category
+              {showFavoritesOnly ? 'Browse All Menu Items' : searchQuery ? 'Clear Search' : 'Reset Category'}
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {displayedFoods.map((item) => {
-              const isFav = favorites[item.id];
+              const isFav = isFavorite(item.id);
               return (
                 <div
                   key={item.id}
@@ -893,14 +937,19 @@ export default function WebEMenuPage() {
                   <div className="flex justify-end mb-1">
                     <button
                       type="button"
-                      onClick={(e) => toggleFavorite(item.id, e)}
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-[#A31D1D] transition cursor-pointer z-10"
-                      title="Add to favorites"
+                      onClick={(e) => toggleFavorite(item.id, item.name, e)}
+                      aria-label={isFav ? `Remove ${item.name} from favorites` : `Bookmark ${item.name} to favorites`}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer z-10 ${
+                        isFav
+                          ? 'bg-rose-50 text-rose-600 scale-110 shadow-xs'
+                          : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50/50'
+                      }`}
+                      title={isFav ? 'Bookmarked in Favorites (Click to remove)' : 'Bookmark to Favorites'}
                     >
                       {isFav ? (
-                        <HeartFilled className="text-[#A31D1D] text-base" />
+                        <HeartFilled className="text-rose-600 text-base" />
                       ) : (
-                        <HeartOutlined className="text-slate-300 hover:text-[#A31D1D] text-base" />
+                        <HeartOutlined className="text-slate-300 hover:text-rose-500 text-base" />
                       )}
                     </button>
                   </div>

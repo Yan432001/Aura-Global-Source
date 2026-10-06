@@ -13,10 +13,14 @@ import {
   BellOutlined,
   BellFilled,
   StarFilled,
+  HeartOutlined,
+  HeartFilled,
 } from '@ant-design/icons';
 import { useTelegram } from '../hooks/useTelegram';
+import { useFavorites } from '../hooks/useFavorites';
 import simpleData from '../../../data/simpleData';
 import TelegramStoreGroupModal from '../components/emenu/TelegramStoreGroupModal';
+import MenuSearchBar from '../components/emenu/MenuSearchBar';
 import { routeOrderToTelegramGroup, getStoreTelegramConfig } from '../data/telegramStoreGroupManager';
 
 // Website Default Theme aligned with Aura publicTheme
@@ -140,7 +144,12 @@ export default function EMenuPage() {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Favorites Persistence
+  const { isFavorite, toggleFavorite, favoritesCount } = useFavorites();
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Cart State
   const [cart, setCart] = useState(() => {
@@ -284,11 +293,40 @@ export default function EMenuPage() {
     }
   }, [location.search, products]);
 
-  // Filter products by selected category
+  // Map category ID to category name for fast category-based search
+  const categoryMap = useMemo(() => {
+    const map = {};
+    categories.forEach((c) => {
+      map[c.id] = c.name || '';
+    });
+    return map;
+  }, [categories]);
+
+  // Total favorites count for current store items
+  const currentStoreFavoritesCount = useMemo(() => {
+    return products.filter((p) => isFavorite(p.id)).length;
+  }, [products, isFavorite]);
+
+  // Filter products by selected category, favorites bookmark filter, and real-time search query
   const filteredProducts = useMemo(() => {
-    if (selectedCategory === null) return products;
-    return products.filter((p) => p.category_id === selectedCategory);
-  }, [products, selectedCategory]);
+    let list = products;
+    if (showFavoritesOnly) {
+      list = list.filter((p) => isFavorite(p.id));
+    } else if (selectedCategory !== null) {
+      list = list.filter((p) => p.category_id === selectedCategory);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter((p) => {
+        const nameMatches = (p.name || '').toLowerCase().includes(q);
+        const detailsMatches = (p.details || '').toLowerCase().includes(q);
+        const catName = (categoryMap[p.category_id] || '').toLowerCase();
+        const catMatches = catName.includes(q);
+        return nameMatches || detailsMatches || catMatches;
+      });
+    }
+    return list;
+  }, [products, selectedCategory, searchQuery, categoryMap, showFavoritesOnly, isFavorite]);
 
   // Open Customization Modal
   const openCustomizer = (product) => {
@@ -639,7 +677,22 @@ export default function EMenuPage() {
       )}
 
       {/* ======================================================== */}
-      {/* 2. CATEGORY HORIZONTAL SCROLL BAR (AURA BLUE PILLS)     */}
+      {/* 2. REAL-TIME SEARCH BAR COMPONENT AT TOP OF MENU         */}
+      {/* ======================================================== */}
+      <div className="px-3 sm:px-4 pt-3 pb-2 bg-white/95 backdrop-blur-md border-b border-slate-100">
+        <MenuSearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onClear={() => setSearchQuery('')}
+          placeholder={`Search ${currentStore?.name || 'store'} items or category...`}
+          totalMatches={filteredProducts.length}
+          totalItems={products.length}
+          accentColor={activeTheme.accent || '#2F6FED'}
+        />
+      </div>
+
+      {/* ======================================================== */}
+      {/* 3. CATEGORY HORIZONTAL SCROLL BAR (AURA BLUE PILLS)     */}
       {/* ======================================================== */}
       <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-none sticky top-[57px] z-20 bg-white/95 backdrop-blur-md border-b border-slate-200/80">
         {/* All Items Pill */}
@@ -647,10 +700,11 @@ export default function EMenuPage() {
           type="button"
           onClick={() => {
             triggerHaptic?.('light');
+            setShowFavoritesOnly(false);
             setSelectedCategory(null);
           }}
           className={`px-4 py-1.5 rounded-2xl text-xs font-bold transition whitespace-nowrap cursor-pointer active:scale-95 shrink-0 ${
-            selectedCategory === null
+            !showFavoritesOnly && selectedCategory === null
               ? activeTheme.pillActive
               : activeTheme.pillInactive
           }`}
@@ -658,15 +712,35 @@ export default function EMenuPage() {
           All ({products.length})
         </button>
 
+        {/* Favorites Filter Pill */}
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic?.('light');
+            setShowFavoritesOnly(!showFavoritesOnly);
+            setSelectedCategory(null);
+          }}
+          className={`px-3.5 py-1.5 rounded-2xl text-xs font-bold transition whitespace-nowrap cursor-pointer active:scale-95 shrink-0 flex items-center gap-1.5 ${
+            showFavoritesOnly
+              ? 'bg-rose-500 text-white shadow-md shadow-rose-500/25 border-none'
+              : 'bg-rose-50/80 text-rose-600 border border-rose-200/90 hover:bg-rose-100/80 font-bold'
+          }`}
+          title="Filter bookmarked favorites"
+        >
+          <HeartFilled className={showFavoritesOnly ? 'text-white' : 'text-rose-500'} />
+          <span>Favorites ({currentStoreFavoritesCount})</span>
+        </button>
+
         {/* Category Pills */}
         {categories.map((cat) => {
-          const isSelected = selectedCategory === cat.id;
+          const isSelected = !showFavoritesOnly && selectedCategory === cat.id;
           return (
             <button
               key={cat.id}
               type="button"
               onClick={() => {
                 triggerHaptic?.('light');
+                setShowFavoritesOnly(false);
                 setSelectedCategory(cat.id);
               }}
               className={`px-4 py-1.5 rounded-2xl text-xs font-bold transition whitespace-nowrap cursor-pointer active:scale-95 shrink-0 ${
@@ -682,7 +756,7 @@ export default function EMenuPage() {
       </div>
 
       {/* ======================================================== */}
-      {/* 3. 2-COLUMN PRODUCT GRID (LIGHT WHITE CARDS + BLUE TAGS) */}
+      {/* 4. 2-COLUMN PRODUCT GRID (LIGHT WHITE CARDS + BLUE TAGS) */}
       {/* ======================================================== */}
       <main className="px-3 py-3 flex-1 bg-slate-50/50">
         {loading ? (
@@ -692,8 +766,33 @@ export default function EMenuPage() {
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="py-20 text-center text-slate-500 text-xs space-y-2">
-            <p className="font-bold text-slate-700">No items found</p>
-            <p>Select another category above.</p>
+            <span className="text-3xl block mb-1">{showFavoritesOnly ? '❤️' : '🔍'}</span>
+            <p className="font-bold text-slate-700">
+              {showFavoritesOnly
+                ? 'No favorites bookmarked yet'
+                : searchQuery
+                ? `No items matching "${searchQuery}"`
+                : 'No items found'}
+            </p>
+            <p className="text-slate-400">
+              {showFavoritesOnly
+                ? 'Tap the heart icon on any product card to bookmark it in your persistent favorites list.'
+                : searchQuery
+                ? 'Try searching by a different product name or category.'
+                : 'Select another category above.'}
+            </p>
+            {(searchQuery || showFavoritesOnly) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setShowFavoritesOnly(false);
+                }}
+                className="mt-3 px-4 py-1.5 rounded-full bg-[#2F6FED] hover:bg-[#255bc2] text-white text-xs font-bold transition cursor-pointer"
+              >
+                {showFavoritesOnly ? 'Browse All Menu Items' : 'Clear Search'}
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
@@ -703,7 +802,7 @@ export default function EMenuPage() {
                 id={`product-${prod.id}`}
                 className="bg-white rounded-2xl border border-slate-200/80 p-2.5 flex flex-col justify-between space-y-2.5 transition shadow-xs hover:shadow-md hover:border-[#2F6FED]/40"
               >
-                {/* Product Image with Price Badge */}
+                {/* Product Image with Price Badge & Bookmark Toggle */}
                 <div
                   role="button"
                   tabIndex={0}
@@ -721,6 +820,30 @@ export default function EMenuPage() {
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                     loading="lazy"
                   />
+
+                  {/* Bookmark Favorites Toggle Button (Top Right) */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerHaptic?.('light');
+                      toggleFavorite(prod.id, prod.name, e);
+                    }}
+                    aria-label={isFavorite(prod.id) ? `Remove ${prod.name} from favorites` : `Bookmark ${prod.name} to favorites`}
+                    className={`absolute top-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 z-10 cursor-pointer shadow-sm active:scale-90 ${
+                      isFavorite(prod.id)
+                        ? 'bg-rose-50 text-rose-500 border border-rose-200 shadow-rose-200/50 scale-105'
+                        : 'bg-white/90 backdrop-blur-md text-slate-400 hover:text-rose-500 hover:bg-white border border-slate-200/80'
+                    }`}
+                    title={isFavorite(prod.id) ? 'Bookmarked in Favorites (Click to remove)' : 'Bookmark to Favorites'}
+                  >
+                    {isFavorite(prod.id) ? (
+                      <HeartFilled className="text-rose-500 text-xs" />
+                    ) : (
+                      <HeartOutlined className="text-xs" />
+                    )}
+                  </button>
+
                   {/* Floating Price Tag Badge (Bottom Right) */}
                   <div className="absolute bottom-1.5 right-1.5 px-2.5 py-0.5 rounded-lg bg-white/95 backdrop-blur-md font-mono font-black text-[#2F6FED] text-[12px] shadow-sm border border-blue-100/60">
                     ${Number(prod.price).toFixed(2)}
@@ -918,13 +1041,34 @@ export default function EMenuPage() {
           <div className="w-full max-w-[460px] rounded-3xl p-5 space-y-4 bg-white border border-slate-200 shadow-2xl max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="font-extrabold text-sm text-slate-900">Customize Item</h3>
-              <button
-                type="button"
-                onClick={() => setCustomizingProduct(null)}
-                className="p-1 text-slate-400 hover:text-slate-700"
-              >
-                <CloseOutlined />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    triggerHaptic?.('light');
+                    toggleFavorite(customizingProduct.id, customizingProduct.name, e);
+                  }}
+                  className={`p-1.5 rounded-full flex items-center justify-center transition cursor-pointer ${
+                    isFavorite(customizingProduct.id)
+                      ? 'text-rose-500 bg-rose-50'
+                      : 'text-slate-400 hover:text-rose-500 hover:bg-slate-100'
+                  }`}
+                  title={isFavorite(customizingProduct.id) ? 'Bookmarked in Favorites' : 'Bookmark to Favorites'}
+                >
+                  {isFavorite(customizingProduct.id) ? (
+                    <HeartFilled className="text-rose-500 text-sm" />
+                  ) : (
+                    <HeartOutlined className="text-sm" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomizingProduct(null)}
+                  className="p-1 text-slate-400 hover:text-slate-700"
+                >
+                  <CloseOutlined />
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">

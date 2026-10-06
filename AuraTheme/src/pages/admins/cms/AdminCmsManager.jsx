@@ -1282,8 +1282,8 @@ export default function AdminCmsManager() {
           <Button icon={<ReloadOutlined />} onClick={fetchAllCmsData} loading={loading}>
             Refresh
           </Button>
-          <Button href="/tma/sbc-store" target="_blank" icon={<MobileOutlined style={{ color: '#0284c7' }} />}>
-            Open Telegram App
+          <Button href="/shop/sbc-store" target="_blank" icon={<MobileOutlined style={{ color: '#0284c7' }} />}>
+            Open E-Menu
           </Button>
           <Button type="primary" href="/" target="_blank" icon={<EyeOutlined />} style={{ background: '#2563eb' }}>
             View Public Website

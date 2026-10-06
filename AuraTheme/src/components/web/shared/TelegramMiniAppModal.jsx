@@ -490,47 +490,26 @@ export default function TelegramMiniAppModal({
                 Launch Telegram Mini App (@{BOTFATHER_CONFIG.botUsername})
               </Button>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <Button
-                  onClick={() => {
-                    onClose?.();
-                    window.open(`/tma/${targetShop?.slug || 'sbc-store'}`, '_blank');
-                  }}
-                  style={{
-                    height: 38,
-                    borderRadius: 12,
-                    borderColor: '#38bdf8',
-                    color: '#0284c7',
-                    fontWeight: 700,
-                    fontSize: 12,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  📱 TMA Web View
-                </Button>
-
-                <Button
-                  onClick={() => {
-                    onClose?.();
-                    window.open(`/shop/${targetShop?.slug || 'sbc-store'}`, '_blank');
-                  }}
-                  style={{
-                    height: 38,
-                    borderRadius: 12,
-                    borderColor: '#cbd5e1',
-                    color: '#334155',
-                    fontWeight: 700,
-                    fontSize: 12,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  🌐 Web E-Menu
-                </Button>
-              </div>
+              <Button
+                onClick={() => {
+                  onClose?.();
+                  window.open(`/shop/${targetShop?.slug || 'sbc-store'}`, '_blank');
+                }}
+                style={{
+                  height: 40,
+                  borderRadius: 12,
+                  borderColor: '#cbd5e1',
+                  color: '#1e293b',
+                  fontWeight: 700,
+                  fontSize: 13,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: '#f8fafc',
+                }}
+              >
+                🌐 Open Web E-Menu
+              </Button>
 
               <Button
                 icon={<CopyOutlined />}

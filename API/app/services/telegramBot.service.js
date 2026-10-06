@@ -15,6 +15,41 @@ let bot = null;
 if (botToken) {
   bot = new Bot(botToken);
 
+  // Automatically enforce clean official bot description and remove any unauthorized spam
+  (async () => {
+    try {
+      await bot.api.setMyDescription(
+        'Official Aura Global E-Menu & Ordering Bot. Browse menus, order food & beverages, and receive real-time kitchen updates.'
+      );
+      await bot.api.setMyShortDescription(
+        'Aura Global E-Menu & Instant Telegram Ordering'
+      );
+    } catch (_) {}
+  })();
+
+  // Anti-Spam Middleware: Automatically drop & delete any spam links/phrases
+  bot.use(async (ctx, next) => {
+    const text = ctx.message?.text || ctx.message?.caption || '';
+    if (text) {
+      const lower = text.toLowerCase();
+      if (
+        lower.includes('xaitool') ||
+        lower.includes('generai.org') ||
+        lower.includes('undress') ||
+        lower.includes('ref_c39') ||
+        lower.includes('porn')
+      ) {
+        try {
+          if (ctx.chat && ctx.message?.message_id) {
+            await ctx.api.deleteMessage(ctx.chat.id, ctx.message.message_id);
+          }
+        } catch (_) {}
+        return; // Halt processing spam messages
+      }
+    }
+    return next();
+  });
+
   // Helper to register user and send credentials directly to their personal chat
   async function registerAndSendCredentials(ctx, token = 'auth_telegram') {
     try {
@@ -86,20 +121,17 @@ if (botToken) {
     if (targetStoreSlug) {
       const store = await EMenuModel.getStoreBySlug(targetStoreSlug);
       const storeName = store ? (store.name || store.company) : targetStoreSlug;
-      const tmaUrl = `${webAppBaseUrl}/tma/${targetStoreSlug}`;
       const webMenuUrl = `${webAppBaseUrl}/shop/${targetStoreSlug}`;
 
       const keyboard = new InlineKeyboard()
-        .webApp(`🛍️ Open ${storeName} (Mini App)`, tmaUrl)
+        .webApp(`🛍️ Open ${storeName}`, webMenuUrl)
         .row()
-        .webApp('🌐 Open Web E-Menu', webMenuUrl)
-        .row()
-        .webApp('📋 My Orders & Receipts', `${webAppBaseUrl}/tma/${targetStoreSlug}`);
+        .webApp('📋 My Orders & Receipts', `${webAppBaseUrl}/shop/${targetStoreSlug}`);
 
       return ctx.reply(
         `👋 Welcome to *${storeName}*!\n\n` +
         `Browse our full catalog, customize your order, and submit it directly to our kitchen staff with real-time Telegram notifications.\n\n` +
-        `Tap below to launch the Telegram Mini App:`,
+        `Tap below to launch the Telegram E-Menu:`,
         { reply_markup: keyboard, parse_mode: 'Markdown' }
       );
     }
@@ -112,11 +144,11 @@ if (botToken) {
     const keyboard = new InlineKeyboard();
 
     flagshipStores.forEach((s) => {
-      keyboard.webApp(`☕ ${s.name}`, `${webAppBaseUrl}/tma/${s.slug}`).row();
+      keyboard.webApp(`☕ ${s.name}`, `${webAppBaseUrl}/shop/${s.slug}`).row();
     });
 
     keyboard
-      .webApp('📋 My Orders & Receipts', `${webAppBaseUrl}/tma/sbc-store`)
+      .webApp('📋 My Orders & Receipts', `${webAppBaseUrl}/shop/sbc-store`)
       .row()
       .webApp('🌐 Browse Global Website', `${webAppBaseUrl}/`);
 
@@ -138,7 +170,7 @@ if (botToken) {
     const keyboard = new InlineKeyboard();
 
     flagshipStores.forEach((s) => {
-      keyboard.webApp(`🛍️ ${s.name} (TMA)`, `${webAppBaseUrl}/tma/${s.slug}`).row();
+      keyboard.webApp(`🛍️ ${s.name}`, `${webAppBaseUrl}/shop/${s.slug}`).row();
     });
 
     await ctx.reply(
@@ -153,7 +185,7 @@ if (botToken) {
   bot.command('orders', async (ctx) => {
     const keyboard = new InlineKeyboard().webApp(
       '📋 View My Past Orders',
-      `${webAppBaseUrl}/tma/sbc-store`
+      `${webAppBaseUrl}/shop/sbc-store`
     );
 
     await ctx.reply(

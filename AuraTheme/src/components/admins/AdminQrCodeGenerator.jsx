@@ -461,7 +461,6 @@ export default function AdminQrCodeGenerator() {
                               style={{ width: '100%' }}
                             >
                               <Option value="tma">Telegram Bot App Link (t.me/...startapp=shop_{activeStore?.slug})</Option>
-                              <Option value="tma_web">Telegram Mini App Direct (/tma/{activeStore?.slug})</Option>
                               <Option value="emenu">Web E-Menu (/shop/{activeStore?.slug})</Option>
                               <Option value="tma_item">Telegram Direct Product Item (item_ID)</Option>
                               <Option value="custom">Custom URL</Option>

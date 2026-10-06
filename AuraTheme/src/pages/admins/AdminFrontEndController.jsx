@@ -597,25 +597,14 @@ export default function AdminFrontEndController({ embedded = false }) {
                     Web E-Menu (/shop/...)
                   </Button>
                 </Tooltip>
-                <Tooltip title="Telegram Mini App (TMA) with Telegram theme colors, bottom tabs & haptics">
-                  <Button
-                    block
-                    size="small"
-                    icon={<MobileOutlined style={{ color: '#0284c7' }} />}
-                    onClick={() => window.open(`/tma/${currentStore.slug}`, '_blank')}
-                    style={{ borderRadius: 8, borderColor: '#38bdf8', color: '#0369a1', fontWeight: 600 }}
-                  >
-                    Telegram Mini App (/tma/...)
-                  </Button>
-                </Tooltip>
                 <Button
                   block
                   size="small"
                   icon={<CopyOutlined />}
-                  onClick={() => copyStoreLink(`${window.location.origin}/tma/${currentStore.slug}`)}
+                  onClick={() => copyStoreLink(`${window.location.origin}/shop/${currentStore.slug}`)}
                   style={{ borderRadius: 8 }}
                 >
-                  Copy TMA Direct Link
+                  Copy E-Menu Direct Link
                 </Button>
               </Space>
             </Card>
