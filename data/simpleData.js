@@ -2643,6 +2643,62 @@ const products = [
         ]
       }
     ]
+  },
+  {
+    "id": 73,
+    "biller_id": 6,
+    "category_id": 7,
+    "code": "PRD-PHO-07",
+    "name": "DJI Osmo Pocket 3 Creator Combo (4K 120fps Gimbal)",
+    "price": 669,
+    "unit": 1,
+    "image": "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=600&q=80",
+    "details": "Ultra-compact 1-inch CMOS pocket gimbal camera with 4K/120fps video, 2-inch rotatable OLED touchscreen, 3-axis stabilization, and wireless mic transmitter combo.",
+    "options": [
+      {
+        "name": "Combo Package",
+        "choices": [
+          {
+            "label": "Creator Combo with DJI Mic 2",
+            "priceDelta": 0
+          },
+          {
+            "label": "Standard Edition",
+            "priceDelta": -120
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 74,
+    "biller_id": 6,
+    "category_id": 7,
+    "code": "PRD-PHO-08",
+    "name": "Apple Watch Ultra 2 (Black Titanium Ocean Band)",
+    "price": 799,
+    "unit": 1,
+    "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80",
+    "details": "Rugged black titanium GPS + Cellular adventure smartwatch with precision dual-frequency GPS, 3000 nits brightest display, and 36-hour battery life.",
+    "options": [
+      {
+        "name": "Band Style",
+        "choices": [
+          {
+            "label": "Ocean Band (Black)",
+            "priceDelta": 0
+          },
+          {
+            "label": "Trail Loop (Dark Gray)",
+            "priceDelta": 0
+          },
+          {
+            "label": "Alpine Loop (Olive)",
+            "priceDelta": 0
+          }
+        ]
+      }
+    ]
   }
 ];
 

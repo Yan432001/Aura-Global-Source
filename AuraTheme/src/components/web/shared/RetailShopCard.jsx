@@ -263,6 +263,21 @@ const RetailShopCard = ({
             <Text style={{ color: publicTheme.subtext, fontSize: 10.5 }}>
               ({formatCompact(shopProducts.length)} items)
             </Text>
+            {(shop.id === 'nexus-mobile' || shop.slug === 'nexus-mobile') && (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  color: '#2563eb',
+                  background: 'rgba(37,99,235,0.1)',
+                  padding: '1px 6px',
+                  borderRadius: 6,
+                  marginLeft: 4,
+                }}
+              >
+                2 New ✨
+              </span>
+            )}
           </div>
 
           <Tag
@@ -397,7 +412,7 @@ const RetailShopCard = ({
                   whiteSpace: 'nowrap',
                 }}
               >
-                Telegram E-Menu
+                Telegram
               </Button>
             </div>
 

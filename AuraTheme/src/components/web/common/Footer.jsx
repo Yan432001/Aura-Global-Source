@@ -50,7 +50,7 @@ const Footer = () => (
           <Row gutter={[24, 24]}>
             <Col xs={24} lg={9}>
               <Space direction="vertical" size={14}>
-                <AuraLogo size={42} showText={true} subtitle="B2B SUPPLY & GLOBAL E-COMMERCE" textColor="#ffffff" />
+                <AuraLogo size={42} showText={true} subtitle="AURA SUPPLY B2B & RETAIL" textColor="#ffffff" />
                 <Text style={{ color: 'rgba(219,232,228,0.78)' }}>
                   A clearer business website with shops, retail products, service support, and business learning.
                 </Text>

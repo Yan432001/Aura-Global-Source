@@ -84,6 +84,9 @@ const AppContent = () => {
       {/* Dedicated Website E-Menu Routes (Design matched to Our Tasty Foods mockup) */}
       <Route path="/shop/menu" element={<WebEMenuPage />} />
       <Route path="/shop/menu/:storeSlug" element={<WebEMenuPage />} />
+      <Route path="/digit-emenu" element={<Navigate to="/shop/menu" replace />} />
+      <Route path="/digit-emenu/:storeSlug" element={<Navigate to="/shop/menu" replace />} />
+      <Route path="/emenu" element={<Navigate to="/shop/menu" replace />} />
 
       {/* 2. Isolated Multi-Store E-Menu Routes (No Base Header/Footer) */}
       <Route path="/shop" element={<EMenuLayout />}>

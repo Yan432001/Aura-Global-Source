@@ -18,15 +18,31 @@ import {
   EnvironmentOutlined,
   ClockCircleOutlined,
   SendOutlined,
+  DeleteOutlined,
+  CameraOutlined,
+  ReloadOutlined,
+  PictureOutlined,
+  MobileOutlined,
 } from '@ant-design/icons';
 import { message, Modal, Drawer, notification } from 'antd';
 import simpleData from '../../../data/simpleData';
 import { useCart } from '../contexts/CartContext';
 import { publicTheme } from '../utils/webTheme';
-import TelegramStoreGroupModal from '../components/emenu/TelegramStoreGroupModal';
-import MenuSearchBar from '../components/emenu/MenuSearchBar';
+import MenuSearchBar, { HighlightMatch } from '../components/emenu/MenuSearchBar';
+import OrderStatusMiniBanner from '../components/emenu/OrderStatusMiniBanner';
+import DigitEMenuViewSwitcher from '../components/emenu/DigitEMenuViewSwitcher';
+import AuraLogo from '../components/common/AuraLogo';
 import { useFavorites } from '../hooks/useFavorites';
 import { routeOrderToTelegramGroup } from '../data/telegramStoreGroupManager';
+import {
+  isImageDeleted,
+  deleteProductImage,
+  restoreProductImage,
+  isStoreLogoDeleted,
+  deleteStoreLogo,
+  restoreStoreLogo,
+  getStoreDeletedCount,
+} from '../data/menuImageManager';
 
 // Master Multi-Business Catalog covering Breakfast, Bakery, Coffee, Bistro, Mobile Phones, Computers, and Fashion
 const MOCK_WEB_FOODS = [
@@ -513,14 +529,17 @@ const MOCK_WEB_FOODS = [
   },
 ];
 
-// Available multi-store options for switcher
+// Available 8 merchants across the platform
+// Merchant Yin owns 2 stores (Bakery & Coffee), 7 other merchants own 1 store each
 const STORES_LIST = [
-  { slug: 'aura-bakery', name: 'Aura Artisan Bakery', shortName: 'Bakery', emoji: '🥐', tag: 'Breakfast & Breads' },
-  { slug: 'sbc-store', name: 'Aura Specialty Coffee', shortName: 'Coffee', emoji: '☕', tag: 'Espresso & Roasts' },
-  { slug: 'aura-bistro', name: 'Aura French Bistro', shortName: 'Bistro', emoji: '🍽️', tag: 'Burgers & Pizza' },
-  { slug: 'nexus-mobile', name: 'Nexus Mobile & Gadgets', shortName: 'Mobile', emoji: '📱', tag: 'Phones & Chargers' },
-  { slug: 'apex-pc', name: 'Apex PC & Workstation Hub', shortName: 'Computers', emoji: '💻', tag: 'Laptops & Rigs' },
-  { slug: 'velour-apparel', name: 'Velour Minimalist Apparel', shortName: 'Clothing', emoji: '👔', tag: 'Linen & Denim' },
+  { slug: 'aura-bakery', name: 'Aura Artisan Bakery', shortName: 'Bakery', emoji: '🥐', merchant: 'Yin', tag: 'Breakfast & Breads' },
+  { slug: 'sbc-store', name: 'Aura Specialty Coffee', shortName: 'Coffee', emoji: '☕', merchant: 'Yin', tag: 'Espresso & Roasts' },
+  { slug: 'aura-bistro', name: 'Aura French Bistro', shortName: 'Bistro', emoji: '🍽️', merchant: 'Pierre Dubois', tag: 'French Gastronomy' },
+  { slug: 'aura-lounge', name: 'Botanical Lounge & Matcha', shortName: 'Matcha', emoji: '🍵', merchant: 'Kenji Sato', tag: 'Ceremonial Tea' },
+  { slug: 'nexus-mobile', name: 'Nexus Mobile & Gadgets', shortName: 'Mobile', emoji: '📱', merchant: 'Alex Chen', tag: 'Phones & Gadgets' },
+  { slug: 'aura-tech', name: 'Aura Automation Tech', shortName: 'Tech', emoji: '💻', merchant: 'David Kim', tag: 'Smart Living' },
+  { slug: 'apex-pc', name: 'Apex PC & Workstation Hub', shortName: 'PCs', emoji: '🖥️', merchant: 'Elena Rostova', tag: 'Desktops & Rigs' },
+  { slug: 'velour-apparel', name: 'Velour Minimalist Apparel', shortName: 'Apparel', emoji: '👔', merchant: 'Marcus Vance', tag: 'Fashion & Tailoring' },
 ];
 
 export default function WebEMenuPage() {
@@ -575,7 +594,38 @@ export default function WebEMenuPage() {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [tableNumber, setTableNumber] = useState('Table #06');
   const [diningOption, setDiningOption] = useState('Dine-In');
-  const [isTelegramGroupModalOpen, setIsTelegramGroupModalOpen] = useState(false);
+
+  // Media deletion synchronization state
+  const [mediaVersion, setMediaVersion] = useState(0);
+
+  useEffect(() => {
+    const handleMediaChange = () => setMediaVersion((v) => v + 1);
+    window.addEventListener('aura_menu_image_updated', handleMediaChange);
+    return () => window.removeEventListener('aura_menu_image_updated', handleMediaChange);
+  }, []);
+
+  const handleDeleteProductImage = (item, e) => {
+    e?.stopPropagation?.();
+    deleteProductImage(item.id, currentSlug, item.name, item.image);
+    message.success(`Image for "${item.name}" deleted from E-Menu & synchronized with Telegram Store Manager!`);
+  };
+
+  const handleRestoreProductImage = (item, e) => {
+    e?.stopPropagation?.();
+    restoreProductImage(item.id, currentSlug);
+    message.success(`Image for "${item.name}" restored in E-Menu!`);
+  };
+
+  const handleToggleStoreLogo = () => {
+    const isDeleted = isStoreLogoDeleted(currentSlug);
+    if (isDeleted) {
+      restoreStoreLogo(currentSlug);
+      message.success(`Restored logo for ${currentStore?.name} in E-Menu!`);
+    } else {
+      deleteStoreLogo(currentSlug, currentStore?.name, currentStore?.logo);
+      message.success(`Deleted logo for ${currentStore?.name} from E-Menu!`);
+    }
+  };
 
   // Local cart state
   const [localCart, setLocalCart] = useState(() => {
@@ -701,6 +751,17 @@ export default function WebEMenuPage() {
           (f.category || '').toLowerCase().includes(q) ||
           (f.description || '').toLowerCase().includes(q)
       );
+
+      // Sort with product name exact/prefix matches first
+      list.sort((a, b) => {
+        const aName = (a.name || '').toLowerCase();
+        const bName = (b.name || '').toLowerCase();
+        const aStarts = aName.startsWith(q);
+        const bStarts = bName.startsWith(q);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return aName.localeCompare(bName);
+      });
     } else if (activeCategory && !showFavoritesOnly) {
       list = list.filter((f) => f.category === activeCategory);
     }
@@ -710,10 +771,23 @@ export default function WebEMenuPage() {
 
   return (
     <div className="bg-[#FAF9F6] min-h-screen text-slate-800 font-sans pb-28 antialiased selection:bg-[#A31D1D] selection:text-white">
+      {/* 1. Global View Mode Switcher: App Preview <-> Website View */}
+      <DigitEMenuViewSwitcher
+        currentMode="website"
+        currentSlug={currentSlug}
+        showStorePicker={true}
+      />
+
+      {/* Persistent Mini-Banner at the Top of Screen */}
+      <OrderStatusMiniBanner
+        storeName={currentStore?.name}
+        className="sticky top-0 z-40"
+      />
+
       {/* ======================================================== */}
       {/* 1. TOP UTILITY HEADER (STORE SWITCHER & CART FLOATING)   */}
       {/* ======================================================== */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <header className="sticky top-[52px] z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs px-4 sm:px-8 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -726,7 +800,7 @@ export default function WebEMenuPage() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-[#A31D1D]">
-                Aura E-Menu
+                Digit E-Menu
               </span>
               <span className="text-slate-300">|</span>
               <span className="text-xs font-bold text-slate-700">
@@ -739,7 +813,7 @@ export default function WebEMenuPage() {
           </div>
         </div>
 
-        {/* Right: Store Switcher Dropdown & Cart Trigger */}
+        {/* Right: Store Switcher Dropdown, App Preview Switcher & Cart Trigger */}
         <div className="flex items-center gap-2.5">
           {/* Quick Store Switcher Pills */}
           <div className="hidden lg:flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-full text-xs font-bold">
@@ -763,15 +837,15 @@ export default function WebEMenuPage() {
             ))}
           </div>
 
-          {/* Telegram Multi-Store Group Management & Bot Permissions */}
+          {/* Quick Switch to App Preview Button */}
           <button
             type="button"
-            onClick={() => setIsTelegramGroupModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-[#2F6FED] hover:bg-blue-100 border border-blue-200 text-xs font-bold transition active:scale-95 cursor-pointer shadow-2xs"
-            title="Yin: Multi-Store Telegram Group & Bot Management"
+            onClick={() => navigate(`/shop/${currentSlug}`)}
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-full font-bold text-xs shadow-md shadow-blue-500/20 active:scale-95 transition cursor-pointer"
+            title="Switch to Mobile App Preview (Telegram Mini App view)"
           >
-            <span className="text-sm">✈️</span>
-            <span className="hidden sm:inline">Telegram Groups</span>
+            <MobileOutlined />
+            <span className="hidden sm:inline">App Preview</span>
           </button>
 
           {/* Cart Button */}
@@ -815,10 +889,12 @@ export default function WebEMenuPage() {
               value={searchQuery}
               onChange={setSearchQuery}
               onClear={() => setSearchQuery('')}
-              placeholder={`Search ${currentStore?.name || 'store'} by name or category...`}
+              placeholder={`Search products by name in ${currentStore?.name || 'menu'}...`}
               totalMatches={displayedFoods.length}
               totalItems={storeTotalFoodsCount}
               accentColor="#A31D1D"
+              showQuickTags={true}
+              quickTags={['Croissant', 'Latte', 'Waffle', 'Burger', 'Matcha']}
             />
           </div>
 
@@ -933,8 +1009,31 @@ export default function WebEMenuPage() {
                   key={item.id}
                   className="bg-white rounded-3xl p-5 border border-slate-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_16px_36px_-6px_rgba(163,29,29,0.14),0_8px_16px_-4px_rgba(0,0,0,0.05)] hover:border-rose-100 hover:-translate-y-1.5 active:scale-[0.98] transition-all duration-300 ease-out flex flex-col justify-between relative group cursor-pointer"
                 >
-                  {/* Top: Heart Favorite Button */}
-                  <div className="flex justify-end mb-1">
+                  {/* Top: Left Delete/Restore Button + Right Heart Favorite Button */}
+                  <div className="flex items-center justify-between mb-1">
+                    {/* Direct Delete Image Button within E-Menu */}
+                    {!isImageDeleted(item.id, currentSlug) ? (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteProductImage(item, e)}
+                        className="px-2.5 py-1 rounded-full bg-black/60 hover:bg-rose-600 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1 transition active:scale-90 z-10 cursor-pointer shadow-xs border border-white/20"
+                        title="Delete image directly within E-Menu"
+                      >
+                        <DeleteOutlined style={{ fontSize: 9 }} />
+                        <span>Del Img</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => handleRestoreProductImage(item, e)}
+                        className="px-2.5 py-1 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold flex items-center gap-1 transition active:scale-90 z-10 cursor-pointer shadow-xs"
+                        title="Restore product image"
+                      >
+                        <ReloadOutlined style={{ fontSize: 9 }} />
+                        <span>Restore</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={(e) => toggleFavorite(item.id, item.name, e)}
@@ -961,17 +1060,25 @@ export default function WebEMenuPage() {
                     onClick={() => setQuickViewItem(item)}
                     className="relative w-36 h-36 mx-auto mb-3 flex items-center justify-center cursor-pointer rounded-full overflow-hidden shadow-md bg-gradient-to-b from-white to-slate-100 p-1.5 border border-slate-100 ring-4 ring-slate-50/80 group-hover:scale-105 transition-transform duration-300"
                   >
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src =
-                          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
-                      }}
-                      className="w-full h-full object-cover rounded-full"
-                      loading="lazy"
-                    />
+                    {isImageDeleted(item.id, currentSlug) ? (
+                      <div className="w-full h-full rounded-full bg-slate-100 border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 p-2 text-center select-none">
+                        <CameraOutlined style={{ fontSize: 20 }} className="text-slate-400 mb-0.5" />
+                        <span className="text-[10px] font-bold text-slate-600">Image Deleted</span>
+                        <span className="text-[9px] text-slate-400">Tap to edit</span>
+                      </div>
+                    ) : (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src =
+                            'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
+                        }}
+                        className="w-full h-full object-cover rounded-full"
+                        loading="lazy"
+                      />
+                    )}
                   </div>
 
                   {/* Content: Title & Preparation Time */}
@@ -981,7 +1088,7 @@ export default function WebEMenuPage() {
                         onClick={() => setQuickViewItem(item)}
                         className="font-serif font-black text-lg text-slate-900 leading-snug hover:text-[#A31D1D] transition cursor-pointer tracking-tight"
                       >
-                        {item.name}
+                        <HighlightMatch text={item.name} query={searchQuery} />
                       </h3>
                       {item.time && (
                         <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1 shrink-0 whitespace-nowrap">
@@ -1034,11 +1141,19 @@ export default function WebEMenuPage() {
         >
           <div className="relative">
             <div className="h-64 w-full bg-slate-100 relative overflow-hidden">
-              <img
-                src={quickViewItem.image}
-                alt={quickViewItem.name}
-                className="w-full h-full object-cover"
-              />
+              {isImageDeleted(quickViewItem.id, currentSlug) ? (
+                <div className="w-full h-full bg-slate-100 border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 p-4 text-center select-none">
+                  <CameraOutlined style={{ fontSize: 32 }} className="text-slate-400 mb-1" />
+                  <span className="text-sm font-bold text-slate-700">Image Deleted in E-Menu</span>
+                  <span className="text-xs text-slate-500">Tap &quot;Restore Image&quot; below to restore</span>
+                </div>
+              ) : (
+                <img
+                  src={quickViewItem.image}
+                  alt={quickViewItem.name}
+                  className="w-full h-full object-cover"
+                />
+              )}
               <button
                 type="button"
                 onClick={() => setQuickViewItem(null)}
@@ -1089,6 +1204,28 @@ export default function WebEMenuPage() {
               </div>
 
               <div className="pt-2 flex items-center gap-3">
+                {!isImageDeleted(quickViewItem.id, currentSlug) ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteProductImage(quickViewItem)}
+                    className="py-3 px-3.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-xs"
+                    title="Delete image directly from E-Menu"
+                  >
+                    <DeleteOutlined />
+                    <span>Delete Image</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleRestoreProductImage(quickViewItem)}
+                    className="py-3 px-3.5 rounded-2xl bg-blue-50 hover:bg-blue-100 text-[#2F6FED] border border-blue-200 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-xs"
+                    title="Restore image in E-Menu"
+                  >
+                    <ReloadOutlined />
+                    <span>Restore Image</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {
@@ -1186,6 +1323,19 @@ export default function WebEMenuPage() {
                 type="button"
                 onClick={() => {
                   const refNo = `ORD-${Date.now().toString().slice(-4)}`;
+                  const orderData = {
+                    referenceNo: refNo,
+                    storeName: currentStore?.name || 'Aura Artisan Bakery',
+                    status: 'Preparing',
+                    placedAt: Date.now(),
+                    itemsCount: localCart.reduce((sum, item) => sum + item.quantity, 0),
+                    grandTotal: parseFloat(cartTotalAmount),
+                  };
+                  try {
+                    localStorage.setItem('aura_emenu_active_order', JSON.stringify(orderData));
+                    sessionStorage.removeItem('aura_emenu_order_dismissed');
+                    window.dispatchEvent(new Event('aura_order_updated'));
+                  } catch (_) {}
                   routeOrderToTelegramGroup(currentSlug, {
                     referenceNo: refNo,
                     items: localCart,
@@ -1204,20 +1354,6 @@ export default function WebEMenuPage() {
           )}
         </div>
       </Drawer>
-
-      {/* Telegram Mini App: Multi-Store Group Management & Bot Permissions Modal */}
-      <TelegramStoreGroupModal
-        open={isTelegramGroupModalOpen}
-        onClose={() => setIsTelegramGroupModalOpen(false)}
-        currentStoreSlug={currentSlug}
-        onSwitchStore={(newSlug) => {
-          setIsTelegramGroupModalOpen(false);
-          if (newSlug !== currentSlug) {
-            navigate(`/shop/menu/${newSlug}`);
-            message.success(`Switched store to ${newSlug.replace(/-/g, ' ').toUpperCase()}`);
-          }
-        }}
-      />
     </div>
   );
 }

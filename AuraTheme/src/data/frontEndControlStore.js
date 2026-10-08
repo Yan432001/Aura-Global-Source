@@ -1,6 +1,6 @@
 import { sellers, defaultMasterProducts, getLiveProducts, saveLiveProducts } from './shopData';
 
-export const FRONTEND_STORES_KEY = 'aura_frontend_stores_v2';
+export const FRONTEND_STORES_KEY = 'aura_frontend_stores_v3';
 export const FRONTEND_SETTINGS_KEY = 'aura_frontend_settings_v2';
 export const FRONTEND_SLIDES_KEY = 'aura_frontend_slides_v2';
 export const FRONTEND_PAGES_KEY = 'aura_frontend_pages_v2';
@@ -44,7 +44,7 @@ export const initialStorefrontSettings = {
     directTelegramOrder: true,
   },
   branding: {
-    siteTitle: 'Aura Global Marketplace & Multi-Store E-Menu',
+    siteTitle: 'Aura Supply Marketplace & Multi-Store E-Menu',
     tagline: 'Specialty Coffee, Artisanal Bakery, Workstations & Modern Living',
     logoUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=200&q=80',
     supportEmail: 'hello@auraglobal.com',
@@ -153,7 +153,7 @@ export const getLiveStores = () => {
     const raw = window.localStorage.getItem(FRONTEND_STORES_KEY);
     if (!raw) return initialStores;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialStores;
+    return Array.isArray(parsed) && parsed.length >= initialStores.length ? parsed : initialStores;
   } catch (e) {
     console.warn('Failed reading frontend stores:', e);
     return initialStores;

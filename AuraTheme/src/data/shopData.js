@@ -263,6 +263,46 @@ export const baseProducts = [
   // SMARTPHONES & MOBILE TECH (Nexus Mobile)
   // ==========================================
   {
+    id: 'prod-mob-7',
+    name: 'DJI Osmo Pocket 3 Creator Combo (4K 120fps Gimbal)',
+    category: 'smartphones',
+    subcategory: 'accessories',
+    seller: 'nexus-mobile',
+    branch: 'phnom-penh',
+    price: 669,
+    originalPrice: 729,
+    badge: '✨ New Arrival',
+    isNew: true,
+    isFeatured: true,
+    image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&h=600&fit=crop',
+    rating: 5.0,
+    reviews: 38,
+    description: 'Ultra-compact 1-inch CMOS pocket gimbal camera with 4K/120fps video, 2-inch rotatable OLED touchscreen, 3-axis stabilization, and wireless mic transmitter combo.',
+    features: ['1-inch CMOS Sensor', '4K/120fps UHD', '3-Axis Mechanical Gimbal', 'DJI Mic 2 Wireless Transmitter'],
+    inStock: true,
+    tags: ['dji', 'camera', 'creator', 'gimbal', 'new'],
+  },
+  {
+    id: 'prod-mob-8',
+    name: 'Apple Watch Ultra 2 (Black Titanium Ocean Band)',
+    category: 'smartphones',
+    subcategory: 'accessories',
+    seller: 'nexus-mobile',
+    branch: 'phnom-penh',
+    price: 799,
+    originalPrice: 849,
+    badge: '✨ New Arrival',
+    isNew: true,
+    isFeatured: true,
+    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=600&fit=crop',
+    rating: 4.9,
+    reviews: 49,
+    description: 'Rugged black titanium GPS + Cellular adventure smartwatch with precision dual-frequency GPS, 3000 nits brightest display, and 36-hour battery life.',
+    features: ['Black Titanium Case', '3000 Nits Always-On Retina', 'Precision Dual-Frequency GPS', '100m Water Resistance'],
+    inStock: true,
+    tags: ['apple', 'watch', 'wearable', 'titanium', 'new'],
+  },
+  {
     id: 'prod-mob-1',
     name: 'iPhone 16 Pro Max (Desert Titanium 256GB)',
     category: 'smartphones',
@@ -1017,7 +1057,21 @@ export const getLiveProducts = () => {
     const raw = window.localStorage.getItem(LIVE_PRODUCTS_STORAGE_KEY);
     if (!raw) return defaultMasterProducts;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultMasterProducts;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Auto-merge any newly added products from defaultMasterProducts that don't exist in cache
+      let modified = false;
+      defaultMasterProducts.forEach((dp) => {
+        if (!parsed.some((p) => p.id === dp.id)) {
+          parsed.unshift(dp);
+          modified = true;
+        }
+      });
+      if (modified) {
+        window.localStorage.setItem(LIVE_PRODUCTS_STORAGE_KEY, JSON.stringify(parsed));
+      }
+      return parsed;
+    }
+    return defaultMasterProducts;
   } catch (err) {
     console.warn('[shopData] Failed reading live products from localStorage, falling back:', err);
     return defaultMasterProducts;

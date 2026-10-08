@@ -21,6 +21,8 @@ import {
 } from '@ant-design/icons';
 import { formatCurrency } from '../../../utils/webTheme';
 import simpleData from '../../../../data/simpleData';
+import { sellers } from '../../../data/shopData';
+import AuraLogo from '../../common/AuraLogo';
 
 // Telegram staff & kitchen dispatch channels per shop
 export const shopTelegramGroups = {
@@ -97,18 +99,29 @@ export default function TelegramMiniAppModal({
       };
     }
     if (product) {
-      const prodStore = (simpleData.stores || []).find(
-        (s) => s.id === product.biller_id || s.slug === product.shopSlug
-      );
-      const prodSlug = product.shopSlug || prodStore?.slug || 'sbc-store';
+      const prodStore =
+        (simpleData.stores || []).find(
+          (s) =>
+            s.id === product.biller_id ||
+            s.slug === product.shopSlug ||
+            s.id === product.shopId ||
+            s.name?.toLowerCase() === product.shopName?.toLowerCase()
+        ) ||
+        (sellers || []).find(
+          (s) =>
+            s.id === product.shopId ||
+            s.slug === product.shopSlug ||
+            s.name?.toLowerCase() === product.shopName?.toLowerCase()
+        );
+      const prodSlug = product.shopSlug || prodStore?.slug || product.shopId || 'nexus-mobile';
       return {
         id: product.shopId || prodSlug,
         slug: prodSlug,
-        name: product.shopName || prodStore?.name || 'Aura Specialty Store',
-        rating: 4.9,
-        branch: 'phnom-penh',
-        heroImage: prodStore?.banner || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200&h=800&fit=crop',
-        logoText: 'AS',
+        name: product.shopName || prodStore?.name || (product.category === 'Phones' || product.category === 'Electronics' ? 'Nexus Mobile & Gadgets' : 'Aura Specialty Store'),
+        rating: prodStore?.rating || 4.9,
+        branch: prodStore?.branch || 'phnom-penh',
+        heroImage: prodStore?.heroImage || prodStore?.banner || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=1200&h=800&fit=crop',
+        logoText: 'NM',
       };
     }
     return {
@@ -261,7 +274,7 @@ export default function TelegramMiniAppModal({
 
       ctx.fillStyle = '#64748b';
       ctx.font = '500 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText(`@${BOTFATHER_CONFIG.botUsername} • Instant Menu & Order`, W / 2, bottomY + 24);
+      ctx.fillText('Aura Telegram Mini App • Instant Menu & Order', W / 2, bottomY + 24);
 
       // Trigger download
       const pngUrl = card.toDataURL('image/png');
@@ -309,7 +322,7 @@ export default function TelegramMiniAppModal({
       {/* Top Telegram Identity Bar */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #1d74b8 0%, #2481cc 60%, #3ba2e8 100%)',
+          background: 'linear-gradient(135deg, #1d74b8 0%, #229ED9 60%, #3ba2e8 100%)',
           padding: '16px 20px',
           color: '#ffffff',
           display: 'flex',
@@ -320,40 +333,43 @@ export default function TelegramMiniAppModal({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div
             style={{
-              width: 42,
-              height: 42,
+              width: 44,
+              height: 44,
               borderRadius: '50%',
               background: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#2481cc',
-              fontSize: 22,
               boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
+              overflow: 'hidden',
+              flexShrink: 0,
+              padding: 2,
             }}
+            title="Aura Supply Official Website Logo"
           >
-            ✈️
+            <AuraLogo size={34} showText={false} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 16, fontWeight: 800 }}>@{BOTFATHER_CONFIG.botUsername}</span>
-              <CheckCircleFilled style={{ color: '#6ee7b7', fontSize: 14 }} />
+              <span style={{ fontSize: 16, fontWeight: 800 }}>Aura Supply</span>
+              <CheckCircleFilled style={{ color: '#4ade80', fontSize: 14 }} />
               <Tag
                 style={{
-                  background: 'rgba(255,255,255,0.22)',
+                  background: 'rgba(255,255,255,0.25)',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: 999,
                   fontSize: 10,
                   fontWeight: 700,
                   margin: 0,
+                  padding: '1px 8px',
                 }}
               >
                 Verified
               </Tag>
             </div>
             <div style={{ fontSize: 12, opacity: 0.9 }}>
-              Telegram Mini App E-Menu • {product ? 'Item Product Link' : 'Shop Directory Link'}
+              Telegram Mini App E-Menu • {product ? `${product.name} • ${targetShop?.name || 'Shop'}` : (targetShop?.name ? `${targetShop.name} Directory` : 'Shop Directory Link')}
             </div>
           </div>
         </div>
@@ -487,28 +503,7 @@ export default function TelegramMiniAppModal({
                   gap: 8,
                 }}
               >
-                Launch Telegram Mini App (@{BOTFATHER_CONFIG.botUsername})
-              </Button>
-
-              <Button
-                onClick={() => {
-                  onClose?.();
-                  window.open(`/shop/${targetShop?.slug || 'sbc-store'}`, '_blank');
-                }}
-                style={{
-                  height: 40,
-                  borderRadius: 12,
-                  borderColor: '#cbd5e1',
-                  color: '#1e293b',
-                  fontWeight: 700,
-                  fontSize: 13,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: '#f8fafc',
-                }}
-              >
-                🌐 Open Web E-Menu
+                Launch Telegram
               </Button>
 
               <Button

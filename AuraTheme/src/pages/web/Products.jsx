@@ -313,29 +313,6 @@ const Products = () => {
     <div style={{ padding: 0 }}>
       {contextHolder}
       {notificationContextHolder}
-      <Card
-        className="frosted-panel stagger-rise"
-        style={{
-          borderRadius: screens.xs ? 22 : 34,
-          border: `1px solid ${publicTheme.border}`,
-          boxShadow: publicTheme.shadow,
-          background: publicTheme.heroBackground,
-          marginBottom: screens.xs ? 16 : 24,
-        }}
-        styles={{ body: { padding: screens.xs ? 18 : 28 } }}
-      >
-        <Space direction="vertical" size={screens.xs ? 10 : 16} style={{ width: '100%' }}>
-          <Tag style={{ width: 'fit-content', borderRadius: 999, border: 'none', background: publicTheme.pill, color: publicTheme.primary, fontWeight: 700, padding: screens.xs ? '4px 10px' : '8px 14px', fontSize: screens.xs ? 11 : 12 }}>
-            Retail products
-          </Tag>
-          <Title level={1} style={{ margin: 0, color: publicTheme.text, fontSize: 'clamp(24px, 4vw, 48px)', lineHeight: 1.1 }}>
-            Full-width products with open and close filter sidebar.
-          </Title>
-          <Paragraph style={{ margin: 0, color: publicTheme.subtext, fontSize: screens.xs ? 13 : 16, maxWidth: 860 }}>
-            Browse verified catalog lines. On mobile and tablet, products adapt to a compact, app-like 2-column view with quick order and Telegram E-Menu integration.
-          </Paragraph>
-        </Space>
-      </Card>
 
       <div
         style={{

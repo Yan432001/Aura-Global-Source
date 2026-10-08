@@ -209,7 +209,7 @@ const Cart = () => {
                   padding: '0 20px',
                 }}
               >
-                Open Telegram E-Menu
+                Open Telegram
               </Button>,
             ]}
           >
@@ -345,7 +345,7 @@ const Cart = () => {
                 background: '#f0f9ff',
               }}
             >
-              Browse Bakery E-Menu
+              Browse Bakery Menu
             </Button>
           </Space>
         </Card>

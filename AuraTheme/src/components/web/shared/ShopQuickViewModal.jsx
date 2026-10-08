@@ -109,7 +109,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
       try {
         await navigator.share({
           title: shop.name,
-          text: shop.summary || shop.description || `Discover ${shop.name} on Aura Global!`,
+          text: shop.summary || shop.description || `Discover ${shop.name} on Aura Supply!`,
           url: shareUrl,
         });
         return;
@@ -821,10 +821,10 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
                           textOverflow: 'ellipsis',
                         }}
                       >
-                        Telegram Mini App Menu
+                        Telegram Menu
                       </div>
                       <div style={{ fontSize: 11.5, color: '#64748b' }}>
-                        @{BOTFATHER_CONFIG.botUsername}
+                        Instant Ordering &amp; Kitchen Updates
                       </div>
                     </div>
                   </div>

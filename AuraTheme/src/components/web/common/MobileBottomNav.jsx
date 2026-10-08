@@ -5,6 +5,7 @@ import {
   HeartOutlined,
   ShoppingCartOutlined,
   UserOutlined,
+  QrcodeOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../../../contexts/CartContext';
@@ -47,6 +48,13 @@ const MobileBottomNav = () => {
       ),
       path: '/wishlist',
       isActive: currentPath.startsWith('/wishlist'),
+    },
+    {
+      key: 'emenu',
+      label: 'E-Menu',
+      icon: <QrcodeOutlined style={{ fontSize: 20 }} />,
+      path: '/shop/menu',
+      isActive: currentPath.startsWith('/shop/menu') || currentPath.startsWith('/shop') || currentPath.startsWith('/digit-emenu'),
     },
     {
       key: 'cart',

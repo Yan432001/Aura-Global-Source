@@ -249,7 +249,7 @@ export default function SocialAuthModal({ open, onClose, mode = 'register', defa
         </Title>
         <Text style={{ fontSize: 12.5, color: '#64748b' }}>
           {activeTab === 'telegram'
-            ? 'Auto-opens @aura_emenu_order_bot, inserts you into the users table, and sends username & password to your personal Telegram.'
+            ? 'Auto-opens the Telegram Bot, inserts you into the users table, and sends username & password to your personal Telegram.'
             : 'Instant Google profile verification with 150 VIP Welcome Points.'}
         </Text>
       </div>
@@ -306,7 +306,7 @@ export default function SocialAuthModal({ open, onClose, mode = 'register', defa
                   User Account Registered in Database!
                 </h4>
                 <p style={{ margin: '4px 0 0', fontSize: 12, color: '#166534' }}>
-                  The Telegram Bot <b>@aura_emenu_order_bot</b> has created your username &amp; password and dispatched them to your Telegram chat.
+                  The Telegram Bot has created your username &amp; password and dispatched them to your Telegram chat.
                 </p>
               </div>
 
@@ -409,7 +409,7 @@ export default function SocialAuthModal({ open, onClose, mode = 'register', defa
                   <span>How the Telegram Bot Concept Works:</span>
                 </div>
                 <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.5, fontSize: 11.5 }}>
-                  <li>Click <b>Launch Telegram Bot</b> below to auto-open <code>@aura_emenu_order_bot</code></li>
+                  <li>Click <b>Launch Telegram Bot</b> below to open the bot</li>
                   <li>Tap <b>Start</b> in Telegram &rarr; bot catches your account info</li>
                   <li>Bot inserts you into the <b>User Table</b> and creates a username &amp; password</li>
                   <li>Bot sends credentials directly to your <b>personal Telegram chat</b>!</li>
@@ -463,7 +463,7 @@ export default function SocialAuthModal({ open, onClose, mode = 'register', defa
                     <span>Listening for /start from your Telegram account...</span>
                   </div>
                   <span style={{ fontSize: 11.5, color: '#64748b', maxWidth: 360, lineHeight: 1.4 }}>
-                    Once you tap <b>Start</b> in Telegram, <b>@aura_emenu_order_bot</b> will automatically insert you into the User Table, generate your username &amp; password, and send them directly to your personal chat!
+                    Once you tap <b>Start</b> in Telegram, the bot will automatically insert you into the User Table, generate your username &amp; password, and send them directly to your personal chat!
                   </span>
 
                   {telegramBotUrl && (

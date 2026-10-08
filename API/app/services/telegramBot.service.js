@@ -1,4 +1,4 @@
-const { Bot, InlineKeyboard } = require('grammy');
+const { Bot, InlineKeyboard, Keyboard } = require('grammy');
 const EMenuModel = require('../models/emenu.model');
 const simpleData = require('../../../data/simpleData');
 
@@ -12,31 +12,87 @@ const webAppBaseUrl = (
 
 let bot = null;
 
+// Persistent Reply Keyboard Bar for Telegram Chat Interface (with "Show All Stores" bar)
+const showAllStoresReplyKeyboard = new Keyboard()
+  .text('🏬 Show All Stores')
+  .row()
+  .text('☕ Aura Coffee')
+  .text('🥐 Aura Bakery')
+  .text('📱 Nexus Mobile')
+  .resized()
+  .persistent();
+
+// Master Available Stores Catalog across 8 Merchants:
+// - Merchant 'Yin' owns 2 stores: 'sbc-store' & 'aura-bakery'
+// - 7 other merchants own 1 store each (one store one merchant)
+const ALL_AVAILABLE_STORES = [
+  { slug: 'sbc-store', name: 'Aura Specialty Coffee', emoji: '☕', merchant: 'Yin', tagline: 'Artisan Highland Roasts & Specialty Espresso' },
+  { slug: 'aura-bakery', name: 'Aura Artisan Bakery', emoji: '🥐', merchant: 'Yin', tagline: 'Fresh Sourdough, Viennoiserie & Pastries' },
+  { slug: 'aura-bistro', name: 'Aura French Bistro', emoji: '🍽️', merchant: 'Pierre Dubois', tagline: 'Classical French Gastronomy, Burgers & Steaks' },
+  { slug: 'aura-lounge', name: 'Botanical Lounge & Matcha', emoji: '🍵', merchant: 'Kenji Sato', tagline: 'Ceremonial Matcha, Herbal Tonics & Teas' },
+  { slug: 'nexus-mobile', name: 'Nexus Mobile & Gadgets', emoji: '📱', merchant: 'Alex Chen', tagline: 'Smartphones, Audio & Mobile Tech' },
+  { slug: 'aura-tech', name: 'Aura Automation Tech', emoji: '💻', merchant: 'David Kim', tagline: 'Smart Living, Workstations & Accessories' },
+  { slug: 'apex-pc', name: 'Apex PC & Workstation Hub', emoji: '🖥️', merchant: 'Elena Rostova', tagline: 'High-Performance Desktops & Computing' },
+  { slug: 'velour-apparel', name: 'Velour Minimalist Apparel', emoji: '👔', merchant: 'Marcus Vance', tagline: 'Contemporary Fashion & Tailoring' },
+];
+
 if (botToken) {
   bot = new Bot(botToken);
 
-  // Automatically enforce clean official bot description and remove any unauthorized spam
+  // Automatically enforce clean official bot description (strictly NO promotional lines)
+  // and configure persistent "Show All Stores" menu button bar
   (async () => {
     try {
+      // 1. Enforce clean description without promo text
       await bot.api.setMyDescription(
         'Official Aura Global E-Menu & Ordering Bot. Browse menus, order food & beverages, and receive real-time kitchen updates.'
+      );
+      await bot.api.setMyDescription(
+        'Official Aura Global E-Menu & Ordering Bot. Browse menus, order food & beverages, and receive real-time kitchen updates.',
+        { language_code: 'en' }
       );
       await bot.api.setMyShortDescription(
         'Aura Global E-Menu & Instant Telegram Ordering'
       );
-    } catch (_) {}
+      await bot.api.setMyShortDescription(
+        'Aura Global E-Menu & Instant Telegram Ordering',
+        { language_code: 'en' }
+      );
+
+      // 2. Set persistent "Show All Stores" Bar in the chat interface
+      await bot.api.setChatMenuButton({
+        menu_button: {
+          type: 'web_app',
+          text: 'Show All Stores',
+          web_app: { url: `${webAppBaseUrl}/shop` },
+        },
+      });
+
+      // 3. Register official bot commands
+      await bot.api.setMyCommands([
+        { command: 'stores', description: 'Show All Stores' },
+        { command: 'shops', description: 'Show All Stores' },
+        { command: 'start', description: 'Start Bot & Show Stores' },
+        { command: 'orders', description: 'View My Orders' },
+        { command: 'help', description: 'How to use Aura E-Menu' },
+      ]);
+    } catch (e) {
+      console.warn('[Telegram Bot] Initialization sync notice:', e.message);
+    }
   })();
 
-  // Anti-Spam Middleware: Automatically drop & delete any spam links/phrases
+  // Anti-Spam Middleware: Automatically drop & delete any spam links/promos
   bot.use(async (ctx, next) => {
     const text = ctx.message?.text || ctx.message?.caption || '';
     if (text) {
       const lower = text.toLowerCase();
       if (
+        lower.includes('chatprovider_bot') ||
+        lower.includes('ref_c39') ||
+        lower.includes('chatgpt') ||
         lower.includes('xaitool') ||
         lower.includes('generai.org') ||
         lower.includes('undress') ||
-        lower.includes('ref_c39') ||
         lower.includes('porn')
       ) {
         try {
@@ -50,24 +106,65 @@ if (botToken) {
     return next();
   });
 
+  // Reusable helper to display all available stores
+  async function showAllStoresHandler(ctx) {
+    // Ensure the "Show All Stores" web app menu button is set for this chat
+    try {
+      await ctx.api.setChatMenuButton({
+        chat_id: ctx.chat.id,
+        menu_button: {
+          type: 'web_app',
+          text: 'Show All Stores',
+          web_app: { url: `${webAppBaseUrl}/shop` },
+        },
+      });
+    } catch (_) {}
+
+    const keyboard = new InlineKeyboard();
+
+    // Top primary action bar: Open Full Stores Directory
+    keyboard
+      .webApp('🏬 Open Full Stores Directory (Web App)', `${webAppBaseUrl}/shop`)
+      .row();
+
+    // Individual store buttons (2 per row for easy mobile tapping)
+    ALL_AVAILABLE_STORES.forEach((s, idx) => {
+      keyboard.webApp(`${s.emoji} ${s.name}`, `${webAppBaseUrl}/shop/${s.slug}`);
+      if (idx % 2 === 1) keyboard.row();
+    });
+
+    if (ALL_AVAILABLE_STORES.length % 2 !== 0) keyboard.row();
+
+    keyboard
+      .webApp('📋 My Orders & Receipts', `${webAppBaseUrl}/shop/sbc-store`)
+      .row()
+      .webApp('🌐 Browse Global Website', `${webAppBaseUrl}/`);
+
+    const messageText =
+      `🏪 **Aura Global — All 8 Merchants & Stores:**\n\n` +
+      `Browse menus, order online, or switch between stores directly inside Telegram:\n\n` +
+      ALL_AVAILABLE_STORES.map(
+        (s, idx) => `${idx + 1}. ${s.emoji} **${s.name}** (Merchant: *${s.merchant}*)\n   _${s.tagline}_\n`
+      ).join('\n') +
+      `\n👇 *Tap any store below or use the "Show All Stores" bar anytime:*`;
+
+    return ctx.reply(messageText, {
+      reply_markup: keyboard,
+      parse_mode: 'Markdown',
+    });
+  }
+
   // Helper to register user and send credentials directly to their personal chat
   async function registerAndSendCredentials(ctx, token = 'auth_telegram') {
     try {
-      // Remove the "Open E-Menu" web app menu button for this chat
-      try {
-        await ctx.api.setChatMenuButton({
-          chat_id: ctx.chat.id,
-          menu_button: { type: 'commands' }
-        });
-      } catch (_) {}
-
       const TelegramAuthController = require('../controller/tma/telegramAuth.controller');
       const result = await TelegramAuthController.handleBotStartAuth(token, ctx.from);
       if (result) {
         const { credentials } = result;
-        // Only include "Open Aura Global Website" button (deleted "Order from Menu")
         const keyboard = new InlineKeyboard()
-          .webApp('🌐 Open Aura Global Website', `${webAppBaseUrl}/login?user=${credentials.username}`);
+          .webApp('🌐 Open Aura Global Website', `${webAppBaseUrl}/login?user=${credentials.username}`)
+          .row()
+          .webApp('🏬 Show All Stores', `${webAppBaseUrl}/shop`);
 
         return ctx.reply(
           `🎉 <b>Welcome to Aura Global, ${ctx.from.first_name || 'Member'}!</b>\n\n` +
@@ -90,11 +187,15 @@ if (botToken) {
 
   // Command: /start [param]
   bot.command('start', async (ctx) => {
-    // Reset chat menu button to standard commands menu
+    // Ensure "Show All Stores" menu button bar is active in chat
     try {
       await ctx.api.setChatMenuButton({
         chat_id: ctx.chat.id,
-        menu_button: { type: 'commands' }
+        menu_button: {
+          type: 'web_app',
+          text: 'Show All Stores',
+          web_app: { url: `${webAppBaseUrl}/shop` },
+        },
       });
     } catch (_) {}
 
@@ -126,6 +227,8 @@ if (botToken) {
       const keyboard = new InlineKeyboard()
         .webApp(`🛍️ Open ${storeName}`, webMenuUrl)
         .row()
+        .webApp('🏬 Show All Stores', `${webAppBaseUrl}/shop`)
+        .row()
         .webApp('📋 My Orders & Receipts', `${webAppBaseUrl}/shop/${targetStoreSlug}`);
 
       return ctx.reply(
@@ -136,16 +239,19 @@ if (botToken) {
       );
     }
 
-    // Curated Aura Global Flagship Stores (Filter out mock UI concept stores like stride-carry)
-    const AURA_FLAGSHIP_SLUGS = ['sbc-store', 'aura-bakery', 'aura-bistro', 'aura-lounge', 'aura-tech'];
-    const rawStores = simpleData.default ? simpleData.default.stores : (simpleData.stores || []);
-    const flagshipStores = rawStores.filter((s) => AURA_FLAGSHIP_SLUGS.includes(s.slug));
-
+    // Default welcome: Provide Show All Stores Bar + Direct links
     const keyboard = new InlineKeyboard();
 
-    flagshipStores.forEach((s) => {
-      keyboard.webApp(`☕ ${s.name}`, `${webAppBaseUrl}/shop/${s.slug}`).row();
+    keyboard
+      .webApp('🏬 Show All Stores', `${webAppBaseUrl}/shop`)
+      .row();
+
+    ALL_AVAILABLE_STORES.slice(0, 6).forEach((s, idx) => {
+      keyboard.webApp(`${s.emoji} ${s.name}`, `${webAppBaseUrl}/shop/${s.slug}`);
+      if (idx % 2 === 1) keyboard.row();
     });
+
+    if (ALL_AVAILABLE_STORES.slice(0, 6).length % 2 !== 0) keyboard.row();
 
     keyboard
       .webApp('📋 My Orders & Receipts', `${webAppBaseUrl}/shop/sbc-store`)
@@ -154,39 +260,78 @@ if (botToken) {
 
     await ctx.reply(
       `👋 **Welcome to Aura Global E-Menu & Telegram Mini App!**\n\n` +
-      `Choose an authentic Aura flagship store below to open our interactive Telegram Mini App:\n\n` +
-      flagshipStores.map((s, idx) => `${idx + 1}. *${s.name}* — ${s.tagline}`).join('\n') +
-      `\n\n_Note: Demo mock stores (like Stride & Carry) are UI concepts only and excluded from live Telegram ordering._`,
+      `Choose a store below or tap the **"Show All Stores"** bar anytime to open our interactive Telegram Mini App directory:\n\n` +
+      ALL_AVAILABLE_STORES.map((s, idx) => `${idx + 1}. ${s.emoji} *${s.name}* — ${s.tagline}`).join('\n') +
+      `\n\n_Use the bottom bar or keyboard to switch stores anytime._`,
       { reply_markup: keyboard, parse_mode: 'Markdown' }
     );
+
+    // Send persistent reply keyboard bar for quick access
+    return ctx.reply('👇 *Quick Bar: Tap "Show All Stores" below to view all stores:*', {
+      reply_markup: showAllStoresReplyKeyboard,
+      parse_mode: 'Markdown',
+    });
   });
 
-  // Command: /shops
-  bot.command(['shops', 'stores'], async (ctx) => {
-    const AURA_FLAGSHIP_SLUGS = ['sbc-store', 'aura-bakery', 'aura-bistro', 'aura-lounge', 'aura-tech'];
-    const rawStores = simpleData.default ? simpleData.default.stores : (simpleData.stores || []);
-    const flagshipStores = rawStores.filter((s) => AURA_FLAGSHIP_SLUGS.includes(s.slug));
+  // Command: /shops or /stores -> Displays All Stores
+  bot.command(['shops', 'stores'], showAllStoresHandler);
 
-    const keyboard = new InlineKeyboard();
+  // User message trigger for "Show All Stores" bar button
+  bot.hears([
+    '🏬 Show All Stores',
+    'Show All Stores',
+    /show all stores/i,
+    /all stores/i,
+    /^stores$/i,
+    /^shops$/i,
+  ], showAllStoresHandler);
 
-    flagshipStores.forEach((s) => {
-      keyboard.webApp(`🛍️ ${s.name}`, `${webAppBaseUrl}/shop/${s.slug}`).row();
+  // Callback query trigger
+  bot.callbackQuery('show_all_stores', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    return showAllStoresHandler(ctx);
+  });
+
+  // Quick reply keyboard shortcuts for individual stores
+  bot.hears(/Aura Coffee/i, (ctx) => {
+    const kb = new InlineKeyboard()
+      .webApp('☕ Open Aura Coffee', `${webAppBaseUrl}/shop/sbc-store`)
+      .row()
+      .webApp('🏬 Show All Stores', `${webAppBaseUrl}/shop`);
+    return ctx.reply('☕ *Aura Specialty Coffee*\nArtisan highland roasts and espresso.', {
+      reply_markup: kb,
+      parse_mode: 'Markdown',
     });
+  });
 
-    await ctx.reply(
-      `🏪 **Aura Global Active Stores:**\n\n` +
-      flagshipStores.map((s, idx) => `${idx + 1}. *${s.name}* — ${s.tagline}`).join('\n') +
-      `\n\nTap a shop below to open in Telegram Mini App:`,
-      { reply_markup: keyboard, parse_mode: 'Markdown' }
-    );
+  bot.hears(/Aura Bakery/i, (ctx) => {
+    const kb = new InlineKeyboard()
+      .webApp('🥐 Open Aura Bakery', `${webAppBaseUrl}/shop/aura-bakery`)
+      .row()
+      .webApp('🏬 Show All Stores', `${webAppBaseUrl}/shop`);
+    return ctx.reply('🥐 *Aura Artisan Bakery*\nFresh sourdough, viennoiserie, and pastries.', {
+      reply_markup: kb,
+      parse_mode: 'Markdown',
+    });
+  });
+
+  bot.hears(/Nexus Mobile/i, (ctx) => {
+    const kb = new InlineKeyboard()
+      .webApp('📱 Open Nexus Mobile', `${webAppBaseUrl}/shop/nexus-mobile`)
+      .row()
+      .webApp('🏬 Show All Stores', `${webAppBaseUrl}/shop`);
+    return ctx.reply('📱 *Nexus Mobile & Gadgets*\nSmartphones, audio gear, and accessories.', {
+      reply_markup: kb,
+      parse_mode: 'Markdown',
+    });
   });
 
   // Command: /orders
   bot.command('orders', async (ctx) => {
-    const keyboard = new InlineKeyboard().webApp(
-      '📋 View My Past Orders',
-      `${webAppBaseUrl}/shop/sbc-store`
-    );
+    const keyboard = new InlineKeyboard()
+      .webApp('📋 View My Past Orders', `${webAppBaseUrl}/shop/sbc-store`)
+      .row()
+      .webApp('🏬 Show All Stores', `${webAppBaseUrl}/shop`);
 
     await ctx.reply(
       `🧾 **Your Past Orders & Receipts**\n\n` +
@@ -197,15 +342,18 @@ if (botToken) {
 
   // Command: /help
   bot.command('help', async (ctx) => {
+    const keyboard = new InlineKeyboard()
+      .webApp('🏬 Show All Stores', `${webAppBaseUrl}/shop`);
+
     await ctx.reply(
       `ℹ️ **How to use Aura E-Menu Mini App:**\n\n` +
-      `1️⃣ Send /shops to see all partner shops.\n` +
-      `2️⃣ Tap any shop button to open the instant Telegram Mini App.\n` +
-      `3️⃣ Add food, drinks, or beans to your cart.\n` +
+      `1️⃣ Tap the **Show All Stores** bar or send /stores to view all stores.\n` +
+      `2️⃣ Tap any store button to open the instant Telegram Mini App.\n` +
+      `3️⃣ Add food, drinks, or gadgets to your cart.\n` +
       `4️⃣ Enter your table number or delivery address and tap **Place Order**.\n` +
-      `5️⃣ The shop's kitchen/staff Telegram group receives the order instantly with customer contact and item breakdown!\n` +
+      `5️⃣ The store's staff Telegram group receives the order instantly with customer contact and item breakdown!\n` +
       `6️⃣ Tap **My Orders** in the app to follow order preparation status.`,
-      { parse_mode: 'Markdown' }
+      { reply_markup: keyboard, parse_mode: 'Markdown' }
     );
   });
 

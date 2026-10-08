@@ -81,6 +81,7 @@ import {
   saveStoreTelegramConfig,
   sendTestGroupNotification,
   getTelegramRoutingLogs,
+  syncStoreTelegramConfigsWithServer,
 } from '../../data/telegramStoreGroupManager';
 import {
   getLiveProducts,
@@ -90,6 +91,7 @@ import {
 } from '../../data/shopData';
 import { useAdminTheme } from '../../hooks/useAdminTheme';
 import { formatCurrency } from '../../utils/uiTheme';
+import AdminStorefrontPreviewModal from '../../components/admins/AdminStorefrontPreviewModal';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -173,17 +175,33 @@ export default function AdminFrontEndManager({ initialTab }) {
 
   // Synchronize on external changes
   useEffect(() => {
+    // Sync store telegram configs with server on mount
+    syncStoreTelegramConfigsWithServer().then((serverConfigs) => {
+      if (serverConfigs && Array.isArray(serverConfigs)) {
+        setTelegramConfigs(serverConfigs);
+      }
+    });
+
     const handleStoresUpdated = (e) => setStores(e.detail);
     const handleProductsUpdated = (e) => setProducts(e.detail);
     const handleSettingsUpdated = (e) => setSettings(e.detail);
     const handleSlidesUpdated = (e) => setSlides(e.detail);
     const handlePagesUpdated = (e) => setPages(e.detail);
+    const handleTelegramUpdated = (e) => {
+      if (e.detail?.configs) {
+        setTelegramConfigs(e.detail.configs);
+      } else {
+        setTelegramConfigs(getAllStoreTelegramConfigs());
+      }
+      setRoutingLogs(getTelegramRoutingLogs('all'));
+    };
 
     window.addEventListener('aura_frontend_stores_updated', handleStoresUpdated);
     window.addEventListener('aura_live_products_updated', handleProductsUpdated);
     window.addEventListener('aura_frontend_settings_updated', handleSettingsUpdated);
     window.addEventListener('aura_frontend_slides_updated', handleSlidesUpdated);
     window.addEventListener('aura_frontend_pages_updated', handlePagesUpdated);
+    window.addEventListener('aura_telegram_groups_updated', handleTelegramUpdated);
 
     return () => {
       window.removeEventListener('aura_frontend_stores_updated', handleStoresUpdated);
@@ -191,6 +209,7 @@ export default function AdminFrontEndManager({ initialTab }) {
       window.removeEventListener('aura_frontend_settings_updated', handleSettingsUpdated);
       window.removeEventListener('aura_frontend_slides_updated', handleSlidesUpdated);
       window.removeEventListener('aura_frontend_pages_updated', handlePagesUpdated);
+      window.removeEventListener('aura_telegram_groups_updated', handleTelegramUpdated);
     };
   }, []);
 
@@ -1086,94 +1105,13 @@ export default function AdminFrontEndManager({ initialTab }) {
       {/* ======================================================== */}
       {/* IN-APP LIVE PREVIEW MODAL */}
       {/* ======================================================== */}
-      <Modal
-        title={
-          <Flex justify="space-between" align="center" style={{ width: '96%' }}>
-            <Flex align="center" gap={10}>
-              <GlobalOutlined style={{ color: '#10b981', fontSize: 18 }} />
-              <span style={{ fontWeight: 700 }}>Live Website Storefront Preview</span>
-              <Tag color="green">Synchronized</Tag>
-            </Flex>
-
-            <Flex align="center" gap={8}>
-              <Radio.Group
-                value={previewDevice}
-                onChange={(e) => setPreviewDevice(e.target.value)}
-                buttonStyle="solid"
-                size="small"
-              >
-                <Radio.Button value="desktop">
-                  <DesktopOutlined /> Desktop
-                </Radio.Button>
-                <Radio.Button value="tablet">
-                  <TabletOutlined /> Tablet
-                </Radio.Button>
-                <Radio.Button value="mobile">
-                  <MobileOutlined /> Mobile
-                </Radio.Button>
-              </Radio.Group>
-
-              <Button
-                type="primary"
-                size="small"
-                icon={<ExportOutlined />}
-                onClick={() => window.open(previewUrl, '_blank')}
-                style={{ background: '#2563eb' }}
-              >
-                Open in Full Tab
-              </Button>
-            </Flex>
-          </Flex>
-        }
+      <AdminStorefrontPreviewModal
         open={previewModalVisible}
-        onCancel={() => setPreviewModalVisible(false)}
-        footer={null}
-        width={
-          previewDevice === 'mobile'
-            ? 440
-            : previewDevice === 'tablet'
-            ? 820
-            : 1180
-        }
-        destroyOnHidden={false}
-        style={{ top: 20 }}
-      >
-        <div style={{ marginBottom: 12 }}>
-          <Space>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Quick Preview Route:
-            </Text>
-            <Button size="small" onClick={() => setPreviewUrl('/')}>
-              Homepage (/)
-            </Button>
-            <Button size="small" onClick={() => setPreviewUrl('/shops')}>
-              All Stores (/shops)
-            </Button>
-            <Button size="small" onClick={() => setPreviewUrl('/shop/menu')}>
-              Digital E-Menu (/shop/menu)
-            </Button>
-            <Button size="small" onClick={() => setPreviewUrl('/tg')}>
-              Telegram TMA (/tg)
-            </Button>
-          </Space>
-        </div>
-
-        <div
-          style={{
-            height: '75vh',
-            borderRadius: 12,
-            overflow: 'hidden',
-            border: '2px solid #e2e8f0',
-            background: '#ffffff',
-          }}
-        >
-          <iframe
-            src={previewUrl}
-            title="Website Live Preview"
-            style={{ width: '100%', height: '100%', border: 'none' }}
-          />
-        </div>
-      </Modal>
+        onClose={() => setPreviewModalVisible(false)}
+        initialUrl={previewUrl || '/'}
+        initialDevice={previewDevice || 'desktop'}
+        stores={stores}
+      />
     </Space>
   );
 }
@@ -2177,7 +2115,8 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
       storeName: config.storeName,
       groupTitle: config.groupTitle,
       groupId: config.groupId,
-      botUsername: config.botUsername || '@auraglobal_bot',
+      botUsername: config.botUsername || '@auraglobalsource_bot',
+      botToken: config.botToken || '',
       groupInviteLink: config.groupInviteLink || '',
       canSendOrders: config.permissions?.canSendOrders !== false,
       canUpdateStatus: config.permissions?.canUpdateStatus !== false,
@@ -2187,12 +2126,14 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
     setEditModalVisible(true);
   };
 
-  const handleSaveModal = () => {
-    form.validateFields().then((vals) => {
+  const handleSaveModal = async () => {
+    try {
+      const vals = await form.validateFields();
       saveStoreTelegramConfig(editingConfig.storeSlug, {
         groupTitle: vals.groupTitle?.trim(),
         groupId: vals.groupId?.trim(),
         botUsername: vals.botUsername?.trim(),
+        botToken: vals.botToken?.trim() || '',
         groupInviteLink: vals.groupInviteLink?.trim(),
         permissions: {
           canSendOrders: vals.canSendOrders,
@@ -2204,17 +2145,75 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
       message.success(`Telegram Group & Bot settings updated for ${editingConfig.storeName}`);
       setEditModalVisible(false);
       onRefreshConfigs();
-    });
+    } catch (_) {}
   };
 
-  const handleSendTest = (storeSlug) => {
+  const handleSendTest = async (storeSlug) => {
     setSendingTestMap((prev) => ({ ...prev, [storeSlug]: true }));
-    setTimeout(() => {
-      const res = sendTestGroupNotification(storeSlug);
+    try {
+      const res = await sendTestGroupNotification(storeSlug);
       setSendingTestMap((prev) => ({ ...prev, [storeSlug]: false }));
-      message.success(res.message);
+      if (res.success) {
+        message.success({
+          content: res.message,
+          duration: 6,
+        });
+      } else {
+        message.error({
+          content: res.message || res.error || 'Failed sending test ping to Telegram',
+          duration: 8,
+        });
+      }
       onRefreshConfigs();
-    }, 600);
+    } catch (err) {
+      setSendingTestMap((prev) => ({ ...prev, [storeSlug]: false }));
+      message.error(`Test ping error: ${err.message}`);
+    }
+  };
+
+  const handleTestFromModal = async () => {
+    if (!editingConfig) return;
+    try {
+      const vals = await form.validateFields();
+      const storeSlug = editingConfig.storeSlug;
+      setSendingTestMap((prev) => ({ ...prev, [storeSlug]: true }));
+
+      // Save latest inputs first
+      saveStoreTelegramConfig(storeSlug, {
+        groupTitle: vals.groupTitle?.trim(),
+        groupId: vals.groupId?.trim(),
+        botUsername: vals.botUsername?.trim(),
+        botToken: vals.botToken?.trim() || '',
+        groupInviteLink: vals.groupInviteLink?.trim(),
+        permissions: {
+          canSendOrders: vals.canSendOrders,
+          canUpdateStatus: vals.canUpdateStatus,
+          notifySoundAlert: vals.notifySoundAlert,
+          dailySummary: vals.dailySummary,
+        },
+      });
+
+      const res = await sendTestGroupNotification(storeSlug, {
+        groupId: vals.groupId?.trim(),
+        groupTitle: vals.groupTitle?.trim(),
+        botUsername: vals.botUsername?.trim(),
+        botToken: vals.botToken?.trim() || '',
+      });
+
+      setSendingTestMap((prev) => ({ ...prev, [storeSlug]: false }));
+      if (res.success) {
+        message.success({
+          content: res.message,
+          duration: 6,
+        });
+      } else {
+        message.error({
+          content: res.message || res.error,
+          duration: 8,
+        });
+      }
+      onRefreshConfigs();
+    } catch (_) {}
   };
 
   const columns = [
@@ -2537,10 +2536,30 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
         }
         open={editModalVisible}
         onCancel={() => setEditModalVisible(false)}
-        onOk={handleSaveModal}
-        okText="Save Telegram Settings"
         width={620}
         destroyOnHidden={false}
+        footer={[
+          <Button key="cancel" onClick={() => setEditModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button
+            key="test"
+            icon={<BellOutlined />}
+            loading={Boolean(editingConfig && sendingTestMap[editingConfig.storeSlug])}
+            onClick={handleTestFromModal}
+            style={{ borderRadius: 8, fontWeight: 600, borderColor: '#0284c7', color: '#0284c7' }}
+          >
+            Test Ping
+          </Button>,
+          <Button
+            key="save"
+            type="primary"
+            onClick={handleSaveModal}
+            style={{ borderRadius: 8, fontWeight: 700, background: '#059669', borderColor: '#059669' }}
+          >
+            Save Telegram Settings
+          </Button>,
+        ]}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="groupTitle" label="Telegram Group Chat Title" rules={[{ required: true }]}>
@@ -2567,6 +2586,14 @@ function TelegramGroupsControllerTab({ configs, onRefreshConfigs, routingLogs, a
 
           <Form.Item name="groupInviteLink" label="Group Chat Invite Link (Optional)">
             <Input placeholder="https://t.me/+AbCdEfGhIjK" />
+          </Form.Item>
+
+          <Form.Item
+            name="botToken"
+            label="Bot API Token (Optional)"
+            extra="Leave blank to use system bot (@aura_emenu_order_bot), or paste custom bot token from @BotFather."
+          >
+            <Input.Password placeholder="e.g. 8613686625:AAFe8-04LvQumEXZ8-MBjbNSDozba3E1lCw" />
           </Form.Item>
 
           <Divider style={{ margin: '12px 0 16px' }} />

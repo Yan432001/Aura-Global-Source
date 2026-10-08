@@ -221,7 +221,7 @@ const ShopDetail = () => {
                   boxShadow: '0 8px 18px rgba(36, 129, 204, 0.4)',
                 }}
               >
-                Telegram Mini App
+                Telegram
               </Button>
             </div>
 

@@ -51,6 +51,16 @@ async function startServer() {
     console.warn('[Route] Warning mounting /api/cms:', err.message);
   }
 
+  // Telegram Multi-Store & Group Configuration & Test Ping Routes
+  try {
+    const telegramStoresRoute = require('./API/app/config/route/admin/telegramStores.route');
+    app.use('/api/admin/telegram-stores', telegramStoresRoute);
+    app.use('/api/tma/telegram-stores', telegramStoresRoute);
+    console.log('[Route] Mounted /api/admin/telegram-stores & /api/tma/telegram-stores');
+  } catch (err) {
+    console.warn('[Route] Warning mounting telegram-stores routes:', err.message);
+  }
+
   // Mount Admin & ERP Module Routes
   const adminRoutes = [
     'auth',

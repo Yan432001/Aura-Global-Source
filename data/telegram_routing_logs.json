@@ -1,0 +1,20 @@
+[
+  {
+    "id": "ping_1791462496733",
+    "timestamp": "12:28:16 PM",
+    "storeSlug": "nexus-mobile",
+    "storeName": "Nexus Mobile & Gadgets",
+    "groupId": "-5004978007",
+    "groupTitle": "Nexus Mobile - Dispatch & Orders Group",
+    "botUsername": "@auraglobalsource_bot",
+    "orderRef": "PING-4644",
+    "customerName": "Yin (Admin Test Ping)",
+    "location": "Admin Portal Handshake",
+    "itemsCount": 1,
+    "grandTotal": 0,
+    "status": "Delivered to Telegram Group",
+    "type": "TEST_ALERT",
+    "error": null,
+    "messageId": 41
+  }
+]

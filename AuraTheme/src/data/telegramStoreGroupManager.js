@@ -125,6 +125,81 @@ export const DEFAULT_TELEGRAM_STORE_CONFIGS = [
       lastRoutedAt: 'Yesterday',
     },
   },
+  {
+    storeSlug: 'nexus-mobile',
+    storeName: 'Nexus Mobile & Gadgets',
+    storeEmoji: '📱',
+    ownerName: 'Yin',
+    botUsername: '@auraglobalsource_bot',
+    botToken: '',
+    botTokenPreview: '8613686...1lCw',
+    botStatus: 'connected',
+    groupId: '-5004978007',
+    groupTitle: 'Nexus Mobile - Dispatch & Orders Group',
+    groupInviteLink: 'https://t.me/+9YYwU2Lfz600YWY1',
+    permissions: {
+      canSendOrders: true,
+      canUpdateStatus: true,
+      notifyInquiries: true,
+      dailySummary: true,
+      notifySoundAlert: true,
+    },
+    notificationTemplate: 'detailed',
+    stats: {
+      totalOrdersRouted: 60,
+      lastRoutedAt: 'Just now',
+    },
+  },
+  {
+    storeSlug: 'apex-pc',
+    storeName: 'Apex PC & Workstation Hub',
+    storeEmoji: '🖥️',
+    ownerName: 'Elena Rostova',
+    botUsername: '@auraglobal_bot',
+    botToken: '',
+    botTokenPreview: '8613686...1lCw',
+    botStatus: 'connected',
+    groupId: '-1002998765432',
+    groupTitle: 'Apex PC - Custom Builds & Orders',
+    groupInviteLink: 'https://t.me/+ApexPCOrders',
+    permissions: {
+      canSendOrders: true,
+      canUpdateStatus: true,
+      notifyInquiries: true,
+      dailySummary: true,
+      notifySoundAlert: true,
+    },
+    notificationTemplate: 'detailed',
+    stats: {
+      totalOrdersRouted: 19,
+      lastRoutedAt: '2 days ago',
+    },
+  },
+  {
+    storeSlug: 'velour-apparel',
+    storeName: 'Velour Minimalist Apparel',
+    storeEmoji: '👔',
+    ownerName: 'Marcus Vance',
+    botUsername: '@auraglobal_bot',
+    botToken: '',
+    botTokenPreview: '8613686...1lCw',
+    botStatus: 'connected',
+    groupId: '-1003109876543',
+    groupTitle: 'Velour Apparel - VIP Stylist & Dispatch',
+    groupInviteLink: 'https://t.me/+VelourApparelOrders',
+    permissions: {
+      canSendOrders: true,
+      canUpdateStatus: true,
+      notifyInquiries: true,
+      dailySummary: true,
+      notifySoundAlert: true,
+    },
+    notificationTemplate: 'detailed',
+    stats: {
+      totalOrdersRouted: 35,
+      lastRoutedAt: '3 days ago',
+    },
+  },
 ];
 
 // Read all store configs
@@ -137,7 +212,22 @@ export const getAllStoreTelegramConfigs = () => {
       return DEFAULT_TELEGRAM_STORE_CONFIGS;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_TELEGRAM_STORE_CONFIGS;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Ensure any newly added default stores (like nexus-mobile) exist in the list
+      let hasChanges = false;
+      const combined = [...parsed];
+      DEFAULT_TELEGRAM_STORE_CONFIGS.forEach((def) => {
+        if (!combined.some((c) => c.storeSlug === def.storeSlug)) {
+          combined.push(def);
+          hasChanges = true;
+        }
+      });
+      if (hasChanges) {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(combined));
+      }
+      return combined;
+    }
+    return DEFAULT_TELEGRAM_STORE_CONFIGS;
   } catch (err) {
     console.warn('[telegramStoreGroupManager] Failed reading from localStorage:', err);
     return DEFAULT_TELEGRAM_STORE_CONFIGS;
@@ -202,7 +292,38 @@ export const saveStoreTelegramConfig = (storeSlug, updates) => {
     console.error('[telegramStoreGroupManager] Failed saving to localStorage:', err);
   }
 
+  // Sync to backend server persistence
+  try {
+    fetch('/api/admin/telegram-stores/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storeSlug, ...updates }),
+    }).catch(() => {});
+  } catch (_) {}
+
   return updatedConfigs.find((c) => c.storeSlug === storeSlug);
+};
+
+// Sync store configs with server on initialization
+export const syncStoreTelegramConfigsWithServer = async () => {
+  try {
+    const resp = await fetch('/api/admin/telegram-stores');
+    if (resp.ok) {
+      const result = await resp.json();
+      if (result.status && Array.isArray(result.data) && result.data.length > 0) {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(result.data));
+          window.dispatchEvent(
+            new CustomEvent('aura_telegram_groups_updated', {
+              detail: { configs: result.data },
+            })
+          );
+        }
+        return result.data;
+      }
+    }
+  } catch (_) {}
+  return getAllStoreTelegramConfigs();
 };
 
 // Read routing logs
@@ -260,11 +381,30 @@ export const routeOrderToTelegramGroup = (storeSlug, orderData) => {
 };
 
 // Send a test notification to verify bot permissions and group ID
-export const sendTestGroupNotification = (storeSlug) => {
+export const sendTestGroupNotification = async (storeSlug, overrideParams = {}) => {
   const config = getStoreTelegramConfig(storeSlug);
+  const payload = {
+    storeSlug,
+    groupId: overrideParams.groupId || config.groupId,
+    groupTitle: overrideParams.groupTitle || config.groupTitle,
+    botUsername: overrideParams.botUsername || config.botUsername,
+    botToken: overrideParams.botToken || config.botToken || '',
+  };
+
+  let serverResult = null;
+  try {
+    const resp = await fetch('/api/admin/telegram-stores/test-ping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    serverResult = await resp.json();
+  } catch (netErr) {
+    console.warn('[telegramStoreGroupManager] Network error contacting test-ping API:', netErr);
+  }
 
   const testOrder = {
-    referenceNo: `TEST-${Math.floor(1000 + Math.random() * 9000)}`,
+    referenceNo: serverResult?.log?.orderRef || `PING-${Math.floor(1000 + Math.random() * 9000)}`,
     isTest: true,
     customer: {
       name: `${config.ownerName} (Owner Verification)`,
@@ -279,9 +419,26 @@ export const sendTestGroupNotification = (storeSlug) => {
   };
 
   const routed = routeOrderToTelegramGroup(storeSlug, testOrder);
+
+  if (serverResult && serverResult.success) {
+    return {
+      success: true,
+      routed,
+      message: serverResult.message || `Test notification sent successfully to group "${payload.groupTitle}" (ID: ${payload.groupId}) via ${payload.botUsername}`,
+      messageId: serverResult.messageId,
+    };
+  } else if (serverResult && !serverResult.success) {
+    return {
+      success: false,
+      routed,
+      error: serverResult.error,
+      message: serverResult.message || `Failed to send ping to Telegram group "${payload.groupTitle}" (ID: ${payload.groupId})`,
+    };
+  }
+
   return {
     success: true,
     routed,
-    message: `Test notification sent successfully to group "${config.groupTitle}" (ID: ${config.groupId}) via ${config.botUsername}`,
+    message: `Test notification sent to group "${config.groupTitle}" (ID: ${config.groupId}) via ${config.botUsername}`,
   };
 };

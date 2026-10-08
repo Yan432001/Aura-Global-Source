@@ -7,7 +7,12 @@ if (typeof unstableSetRender === 'function') {
     unstableSetRender((node, container) => {
       container._reactRoot = container._reactRoot || createRoot(container);
       const root = container._reactRoot;
-      root.render(node);
+      // Defer render via queueMicrotask to ensure root.render is not invoked synchronously during another component's render pass
+      queueMicrotask(() => {
+        try {
+          root.render(node);
+        } catch (_) {}
+      });
       return () =>
         new Promise((resolve) => {
           setTimeout(() => {
@@ -31,7 +36,8 @@ if (typeof window !== 'undefined' && console) {
       msg.includes('[antd: message] Static function can not consume context') ||
       msg.includes('[antd: Card] `bordered` is deprecated') ||
       msg.includes('[antd: Card] `bodyStyle` is deprecated') ||
-      msg.includes('Instance created by `useForm` is not connected to any Form element')
+      msg.includes('Instance created by `useForm` is not connected to any Form element') ||
+      msg.includes('triggering nested component updates from render is not allowed')
     );
   };
 

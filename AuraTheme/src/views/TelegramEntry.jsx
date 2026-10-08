@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTelegram } from '../hooks/useTelegram';
 import simpleData from '../../../data/simpleData';
+import AuraLogo from '../components/common/AuraLogo';
 
 const SELLER_SLUG_MAP = {
   'seller-1': 'sbc-store',
@@ -106,8 +107,8 @@ export default function TelegramEntry() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] flex-1">
-      <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center text-2xl mb-3 animate-pulse">
-        ✈️
+      <div className="w-14 h-14 rounded-2xl bg-white p-2.5 flex items-center justify-center shadow-lg shadow-blue-500/15 mb-3 animate-pulse border border-blue-100">
+        <AuraLogo size={36} showText={false} />
       </div>
       <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-500 mb-3" />
       <p className="text-xs font-bold text-slate-700 tracking-wide">

@@ -10,7 +10,7 @@ export default function AuraLogo({
   size = 36,
   showText = true,
   textColor = 'inherit',
-  subtitle = 'GLOBAL',
+  subtitle = 'SUPPLY',
   className = '',
   style = {},
 }) {

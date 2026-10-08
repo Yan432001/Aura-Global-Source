@@ -410,15 +410,15 @@ export const initialWebsiteData = {
   ],
 
   settings: {
-    site_name: 'Aura Global',
+    site_name: 'Aura Supply',
     site_tagline: 'Specialty Coffee, Artisanal Bakery & Modern Living',
     logo_url: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=200&q=80',
     favicon_url: '/favicon.ico',
     phone: '+855 12 345 678',
-    email: 'contact@auraglobal.com',
+    email: 'contact@aurasupply.com',
     address: 'No. 128 Preah Norodom Blvd, Phnom Penh, Cambodia',
-    footer_text: '© 2026 Aura Global. All rights reserved.',
-    seo_meta_title: 'Aura Global - Specialty Coffee & Lifestyle',
+    footer_text: '© 2026 Aura Supply. All rights reserved.',
+    seo_meta_title: 'Aura Supply - Specialty Coffee & Lifestyle',
     seo_meta_description: 'Premier coffee roastery, artisanal menu, and dynamic customer experiences.',
   },
 };

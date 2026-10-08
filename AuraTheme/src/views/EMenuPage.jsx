@@ -15,13 +15,27 @@ import {
   StarFilled,
   HeartOutlined,
   HeartFilled,
+  DeleteOutlined,
+  CameraOutlined,
+  ReloadOutlined,
+  PictureOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import { useTelegram } from '../hooks/useTelegram';
 import { useFavorites } from '../hooks/useFavorites';
 import simpleData from '../../../data/simpleData';
-import TelegramStoreGroupModal from '../components/emenu/TelegramStoreGroupModal';
-import MenuSearchBar from '../components/emenu/MenuSearchBar';
-import { routeOrderToTelegramGroup, getStoreTelegramConfig } from '../data/telegramStoreGroupManager';
+import MenuSearchBar, { HighlightMatch } from '../components/emenu/MenuSearchBar';
+import OrderStatusMiniBanner from '../components/emenu/OrderStatusMiniBanner';
+import { routeOrderToTelegramGroup, getStoreTelegramConfig, getAllStoreTelegramConfigs } from '../data/telegramStoreGroupManager';
+import {
+  isImageDeleted,
+  deleteProductImage,
+  restoreProductImage,
+  isStoreLogoDeleted,
+  deleteStoreLogo,
+  restoreStoreLogo,
+  getStoreDeletedCount,
+} from '../data/menuImageManager';
 
 // Website Default Theme aligned with Aura publicTheme
 // Primary: #2F6FED, Secondary: #5B8DEF, Accent: #FF7A3D
@@ -91,6 +105,19 @@ const SHOP_THEMES = {
     priceText: 'text-[#2F6FED]',
     badgeText: 'text-[#2F6FED]',
   },
+  'nexus-mobile': {
+    name: 'Nexus Mobile & Gadgets',
+    bg: '#ffffff',
+    cardBg: '#ffffff',
+    cardBorder: 'border-slate-200/80',
+    accent: '#2F6FED',
+    accentHover: '#255bc2',
+    accentBtn: 'bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-md shadow-[#2F6FED]/25 font-bold',
+    pillActive: 'bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] text-white shadow-md shadow-[#2F6FED]/25 font-bold border-none',
+    pillInactive: 'bg-slate-100/90 text-slate-600 border border-slate-200/80 hover:border-[#2F6FED]/40 hover:text-[#2F6FED] font-semibold',
+    priceText: 'text-[#2F6FED]',
+    badgeText: 'text-[#2F6FED]',
+  },
 };
 
 export default function EMenuPage() {
@@ -114,7 +141,8 @@ export default function EMenuPage() {
       'seller-3': 'aura-lounge',
       'seller-4': 'aura-bistro',
       'seller-5': 'aura-tech',
-      'seller-6': 'sbc-store',
+      'seller-6': 'nexus-mobile',
+      'nexus-mobile': 'nexus-mobile',
     };
     if (raw && SELLER_SLUG_MAP[raw]) {
       return SELLER_SLUG_MAP[raw];
@@ -171,7 +199,6 @@ export default function EMenuPage() {
   const [customerNote, setCustomerNote] = useState('');
   const [hasClaimedCoupon, setHasClaimedCoupon] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
-  const [isStoreGroupModalOpen, setIsStoreGroupModalOpen] = useState(false);
 
   // Customization Modal (`Opt`)
   const [customizingProduct, setCustomizingProduct] = useState(null);
@@ -180,6 +207,42 @@ export default function EMenuPage() {
   const [selectedIce, setSelectedIce] = useState('Normal Ice');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [customizeQty, setCustomizeQty] = useState(1);
+
+  // Media deletion synchronization state
+  const [mediaVersion, setMediaVersion] = useState(0);
+
+  useEffect(() => {
+    const handleMediaChange = () => setMediaVersion((v) => v + 1);
+    window.addEventListener('aura_menu_image_updated', handleMediaChange);
+    return () => window.removeEventListener('aura_menu_image_updated', handleMediaChange);
+  }, []);
+
+  const handleDeleteProductImage = (prod, e) => {
+    e?.stopPropagation?.();
+    triggerHaptic?.('medium');
+    deleteProductImage(prod.id, currentSlug, prod.name, prod.image);
+    message.success(`Image for "${prod.name}" deleted directly from E-Menu & synced to Telegram Store Manager!`);
+  };
+
+  const handleRestoreProductImage = (prod, e) => {
+    e?.stopPropagation?.();
+    triggerHaptic?.('light');
+    restoreProductImage(prod.id, currentSlug);
+    message.success(`Image for "${prod.name}" restored in E-Menu!`);
+  };
+
+  const handleToggleStoreLogo = (e) => {
+    e?.stopPropagation?.();
+    triggerHaptic?.('medium');
+    const isDeleted = isStoreLogoDeleted(currentSlug);
+    if (isDeleted) {
+      restoreStoreLogo(currentSlug);
+      message.success(`Restored logo for ${currentStore?.name || 'store'} in E-Menu!`);
+    } else {
+      deleteStoreLogo(currentSlug, currentStore?.name, currentStore?.logo);
+      message.success(`Deleted logo for ${currentStore?.name || 'store'} from E-Menu & synced to Telegram Store Manager!`);
+    }
+  };
 
   // Active Order & 'Notify Me' status changes
   const [activeOrder, setActiveOrder] = useState(() => {
@@ -309,12 +372,9 @@ export default function EMenuPage() {
 
   // Filter products by selected category, favorites bookmark filter, and real-time search query
   const filteredProducts = useMemo(() => {
-    let list = products;
-    if (showFavoritesOnly) {
-      list = list.filter((p) => isFavorite(p.id));
-    } else if (selectedCategory !== null) {
-      list = list.filter((p) => p.category_id === selectedCategory);
-    }
+    let list = [...products];
+
+    // Real-time search query by product name (also checks details/category)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter((p) => {
@@ -324,7 +384,31 @@ export default function EMenuPage() {
         const catMatches = catName.includes(q);
         return nameMatches || detailsMatches || catMatches;
       });
+
+      if (showFavoritesOnly) {
+        list = list.filter((p) => isFavorite(p.id));
+      }
+
+      // Sort matches with exact/prefix name matches first for fast product finding
+      list.sort((a, b) => {
+        const aName = (a.name || '').toLowerCase();
+        const bName = (b.name || '').toLowerCase();
+        const aStarts = aName.startsWith(q);
+        const bStarts = bName.startsWith(q);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return aName.localeCompare(bName);
+      });
+
+      return list;
     }
+
+    if (showFavoritesOnly) {
+      list = list.filter((p) => isFavorite(p.id));
+    } else if (selectedCategory !== null) {
+      list = list.filter((p) => p.category_id === selectedCategory);
+    }
+
     return list;
   }, [products, selectedCategory, searchQuery, categoryMap, showFavoritesOnly, isFavorite]);
 
@@ -489,6 +573,8 @@ export default function EMenuPage() {
         setActiveOrder(orderData);
         try {
           localStorage.setItem('aura_emenu_active_order', JSON.stringify(orderData));
+          sessionStorage.removeItem('aura_emenu_order_dismissed');
+          window.dispatchEvent(new Event('aura_order_updated'));
         } catch (_) {}
 
         setCart([]);
@@ -512,6 +598,8 @@ export default function EMenuPage() {
         setActiveOrder(orderData);
         try {
           localStorage.setItem('aura_emenu_active_order', JSON.stringify(orderData));
+          sessionStorage.removeItem('aura_emenu_order_dismissed');
+          window.dispatchEvent(new Event('aura_order_updated'));
         } catch (_) {}
         setCart([]);
         setIsCartOpen(false);
@@ -530,6 +618,8 @@ export default function EMenuPage() {
       setActiveOrder(orderData);
       try {
         localStorage.setItem('aura_emenu_active_order', JSON.stringify(orderData));
+        sessionStorage.removeItem('aura_emenu_order_dismissed');
+        window.dispatchEvent(new Event('aura_order_updated'));
       } catch (_) {}
       setCart([]);
       setIsCartOpen(false);
@@ -539,12 +629,45 @@ export default function EMenuPage() {
     }
   };
 
-  const storeOptions = [
-    { slug: 'sbc-store', name: 'Aura Specialty Coffee', emoji: '☕' },
-    { slug: 'aura-lounge', name: 'Botanical Lounge & Matcha', emoji: '🍵' },
-    { slug: 'aura-bistro', name: 'Aura French Bistro', emoji: '🍽️' },
-    { slug: 'aura-bakery', name: 'Aura Artisan Bakery', emoji: '🥐' },
-  ];
+  // 8 Total Merchants across website:
+  // - Merchant 'Yin' owns 2 stores: 'sbc-store' & 'aura-bakery'
+  // - 7 other merchants own 1 store each (simple merchant: 1 store 1 merchant)
+  const MERCHANT_OWNER_MAP = {
+    'sbc-store': { owner: 'Yin', storeCount: 2 },
+    'aura-bakery': { owner: 'Yin', storeCount: 2 },
+    'aura-bistro': { owner: 'Pierre Dubois', storeCount: 1 },
+    'aura-lounge': { owner: 'Kenji Sato', storeCount: 1 },
+    'nexus-mobile': { owner: 'Alex Chen', storeCount: 1 },
+    'aura-tech': { owner: 'David Kim', storeCount: 1 },
+    'apex-pc': { owner: 'Elena Rostova', storeCount: 1 },
+    'velour-apparel': { owner: 'Marcus Vance', storeCount: 1 },
+  };
+
+  const currentStoreOwner = MERCHANT_OWNER_MAP[currentSlug]?.owner || 'Yin';
+  const [storeSwitchScope, setStoreSwitchScope] = useState('owner'); // 'owner' | 'all'
+
+  // Master catalog of all 8 merchants across the website
+  const allEightMerchantStores = useMemo(() => {
+    return [
+      { slug: 'sbc-store', name: 'Specialty Coffee', fullName: 'Aura Specialty Coffee', emoji: '☕', owner: 'Yin' },
+      { slug: 'aura-bakery', name: 'Artisan Bakery', fullName: 'Aura Artisan Bakery', emoji: '🥐', owner: 'Yin' },
+      { slug: 'aura-bistro', name: 'French Bistro', fullName: 'Aura French Bistro', emoji: '🍽️', owner: 'Pierre Dubois' },
+      { slug: 'aura-lounge', name: 'Botanical Lounge & Matcha', fullName: 'Aura Botanical Lounge', emoji: '🍵', owner: 'Kenji Sato' },
+      { slug: 'nexus-mobile', name: 'Nexus Mobile & Gadgets', fullName: 'Nexus Mobile & Gadgets', emoji: '📱', owner: 'Alex Chen' },
+      { slug: 'aura-tech', name: 'Tech & Workstations', fullName: 'Aura Automation Tech', emoji: '💻', owner: 'David Kim' },
+      { slug: 'apex-pc', name: 'Apex PC Hub', fullName: 'Apex PC & Workstation Hub', emoji: '🖥️', owner: 'Elena Rostova' },
+      { slug: 'velour-apparel', name: 'Velour Apparel', fullName: 'Velour Minimalist Apparel', emoji: '👔', owner: 'Marcus Vance' },
+    ];
+  }, []);
+
+  // Filtered store options: either current merchant's stores (Yin has 2, others have 1) or all 8 merchants
+  const storeOptions = useMemo(() => {
+    if (storeSwitchScope === 'all') {
+      return allEightMerchantStores;
+    }
+    const ownerStores = allEightMerchantStores.filter((st) => st.owner === currentStoreOwner);
+    return ownerStores.length > 0 ? ownerStores : allEightMerchantStores.slice(0, 2);
+  }, [storeSwitchScope, currentStoreOwner, allEightMerchantStores]);
 
   return (
     <div
@@ -556,6 +679,17 @@ export default function EMenuPage() {
       className="w-full max-w-[480px] min-h-screen text-slate-800 font-sans flex flex-col relative pb-32 border-x border-blue-100/60 selection:bg-[#2F6FED] selection:text-white"
     >
       {/* ======================================================== */}
+      {/* 0. PERSISTENT MINI-BANNER AT TOP (REAL-TIME ORDER STATUS) */}
+      {/* ======================================================== */}
+      <OrderStatusMiniBanner
+        order={activeOrder}
+        onOrderUpdate={setActiveOrder}
+        storeName={currentStore?.name}
+        triggerHaptic={triggerHaptic}
+        className="sticky top-0 z-40"
+      />
+
+      {/* ======================================================== */}
       {/* 1. TOP HEADER (WEBSITE DEFAULT STYLE & ELEGANT SHADOW)   */}
       {/* ======================================================== */}
       <header className="px-4 py-3 flex items-center justify-between sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
@@ -564,20 +698,49 @@ export default function EMenuPage() {
           onClick={() => setIsLocationModalOpen(true)}
           className="flex items-center gap-3 cursor-pointer select-none active:opacity-80 transition"
         >
-          <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-[#2F6FED]/25 shrink-0 bg-slate-100 shadow-sm">
-            <img
-              src={
-                currentStore?.logo ||
-                'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=150&q=80'
-              }
-              alt=""
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src =
-                  'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=150&q=80';
-              }}
-              className="w-full h-full object-cover"
-            />
+          <div className="relative group shrink-0">
+            <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-[#2F6FED]/25 bg-slate-100 shadow-sm relative">
+              {isStoreLogoDeleted(currentSlug) ? (
+                <div className="w-full h-full bg-blue-50 text-[#2F6FED] font-black text-xs flex items-center justify-center text-center p-1">
+                  {currentStore?.name?.slice(0, 2)?.toUpperCase() || 'AS'}
+                </div>
+              ) : (
+                <img
+                  src={
+                    currentStore?.logo ||
+                    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=150&q=80'
+                  }
+                  alt=""
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src =
+                      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=150&q=80';
+                  }}
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+
+            {/* Direct Logo Delete / Restore Button in Header */}
+            {!isStoreLogoDeleted(currentSlug) ? (
+              <button
+                type="button"
+                onClick={handleToggleStoreLogo}
+                title="Delete store logo directly from E-Menu"
+                className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center text-[9px] shadow-sm cursor-pointer transition active:scale-90 border border-white"
+              >
+                <DeleteOutlined style={{ fontSize: 8 }} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleToggleStoreLogo}
+                title="Restore store logo in E-Menu"
+                className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#2F6FED] hover:bg-blue-600 text-white flex items-center justify-center text-[9px] shadow-sm cursor-pointer transition active:scale-90 border border-white"
+              >
+                <ReloadOutlined style={{ fontSize: 8 }} />
+              </button>
+            )}
           </div>
           <div>
             <h1 className="font-extrabold text-sm sm:text-base text-slate-900 tracking-tight leading-tight flex items-center gap-1">
@@ -587,25 +750,24 @@ export default function EMenuPage() {
               <span>
                 {customerLocation} • {diningMode}
               </span>
-              <DownOutlined style={{ fontSize: 9 }} />
+              <span className="text-[10px] bg-blue-50 text-[#2F6FED] px-1.5 py-0.5 rounded-md font-extrabold flex items-center gap-0.5 border border-blue-200/60">
+                <span>Switch Store</span>
+                <DownOutlined style={{ fontSize: 7 }} />
+              </span>
             </p>
           </div>
         </div>
 
-        {/* Right: Multi-Store Switcher + Signature Aura Blue Bag Pill Badge */}
+        {/* Right: Switch to Website View & Cart Badge */}
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => {
-              triggerHaptic?.('light');
-              setIsStoreGroupModalOpen(true);
-            }}
-            className="px-2.5 py-1.5 rounded-full bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-[#2F6FED] border border-slate-200 text-xs font-extrabold flex items-center gap-1 active:scale-95 transition cursor-pointer shadow-2xs"
-            title="Yin: Switch Store Account or Manage Telegram Groups"
+            onClick={() => navigate(`/shop/menu/${currentSlug}`)}
+            className="px-2.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 border border-slate-200/80 active:scale-95 transition cursor-pointer"
+            title="Switch from App Preview to Website View"
           >
-            <span className="text-sm">🏬</span>
-            <span className="hidden xs:inline">Stores</span>
-            <DownOutlined style={{ fontSize: 8 }} />
+            <GlobalOutlined style={{ color: '#2563eb', fontSize: 13 }} />
+            <span className="hidden sm:inline text-[11px] font-extrabold">Website View</span>
           </button>
 
           <button
@@ -619,63 +781,6 @@ export default function EMenuPage() {
         </div>
       </header>
 
-      {/* Active Order Status Notification Bar & 'Notify Me' feature */}
-      {activeOrder && (
-        <div className="mx-3 mt-2 mb-1 p-3 rounded-2xl bg-gradient-to-r from-blue-50/90 to-indigo-50/90 border border-blue-200/90 flex items-center justify-between gap-2 shadow-sm">
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                activeOrder.status === 'Ready'
-                  ? 'bg-emerald-500 text-white animate-bounce'
-                  : 'bg-blue-100 text-[#2F6FED]'
-              }`}
-            >
-              {activeOrder.status === 'Ready' ? '🎉' : '⏳'}
-            </div>
-            <div className="overflow-hidden">
-              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5 truncate">
-                <span>Ref #{activeOrder.referenceNo}</span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                    activeOrder.status === 'Ready'
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-[#2F6FED] text-white'
-                  }`}
-                >
-                  {activeOrder.status}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 m-0 truncate">
-                {activeOrder.status === 'Ready'
-                  ? '🔔 Order Ready! Collect at counter'
-                  : 'Kitchen preparing your order...'}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic?.('light');
-              setNotifyMeEnabled(!notifyMeEnabled);
-              message.info(
-                !notifyMeEnabled
-                  ? '🔔 Notify Me enabled for order status changes!'
-                  : 'Order notifications paused'
-              );
-            }}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0 transition active:scale-95 cursor-pointer ${
-              notifyMeEnabled
-                ? 'bg-white border border-blue-300 text-[#2F6FED] shadow-xs'
-                : 'bg-slate-100 border border-slate-200 text-slate-500'
-            }`}
-            title="Toggle status push notification"
-          >
-            {notifyMeEnabled ? <BellFilled className="text-[#2F6FED]" /> : <BellOutlined />}
-            <span className="text-[11px]">{notifyMeEnabled ? 'Notify On' : 'Notify Off'}</span>
-          </button>
-        </div>
-      )}
-
       {/* ======================================================== */}
       {/* 2. REAL-TIME SEARCH BAR COMPONENT AT TOP OF MENU         */}
       {/* ======================================================== */}
@@ -684,10 +789,12 @@ export default function EMenuPage() {
           value={searchQuery}
           onChange={setSearchQuery}
           onClear={() => setSearchQuery('')}
-          placeholder={`Search ${currentStore?.name || 'store'} items or category...`}
+          placeholder={`Search ${currentStore?.name || 'menu'} products by name...`}
           totalMatches={filteredProducts.length}
           totalItems={products.length}
           accentColor={activeTheme.accent || '#2F6FED'}
+          showQuickTags={true}
+          quickTags={['Croissant', 'Latte', 'Sourdough', 'Matcha', 'Cruffin']}
         />
       </div>
 
@@ -802,24 +909,55 @@ export default function EMenuPage() {
                 id={`product-${prod.id}`}
                 className="bg-white rounded-2xl border border-slate-200/80 p-2.5 flex flex-col justify-between space-y-2.5 transition shadow-xs hover:shadow-md hover:border-[#2F6FED]/40"
               >
-                {/* Product Image with Price Badge & Bookmark Toggle */}
+                {/* Product Image with Price Badge, Favorite, and Direct Delete Image Button */}
                 <div
                   role="button"
                   tabIndex={0}
                   onClick={() => openCustomizer(prod)}
-                  className="relative h-28 w-full rounded-xl overflow-hidden bg-slate-100 cursor-pointer"
+                  className="relative h-28 w-full rounded-xl overflow-hidden bg-slate-100 cursor-pointer group"
                 >
-                  <img
-                    src={prod.image}
-                    alt={prod.name}
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src =
-                        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
-                    }}
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                    loading="lazy"
-                  />
+                  {isImageDeleted(prod.id, currentSlug) ? (
+                    <div className="w-full h-full bg-slate-50 border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 p-2 text-center select-none">
+                      <CameraOutlined style={{ fontSize: 18 }} className="text-slate-400 mb-0.5" />
+                      <span className="text-[10px] font-bold text-slate-500">Image Deleted</span>
+                      <span className="text-[9px] text-slate-400">Tap to edit / restore</span>
+                    </div>
+                  ) : (
+                    <img
+                      src={prod.image}
+                      alt={prod.name}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src =
+                          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
+                      }}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      loading="lazy"
+                    />
+                  )}
+
+                  {/* Direct Delete Image Button within E-Menu */}
+                  {!isImageDeleted(prod.id, currentSlug) ? (
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteProductImage(prod, e)}
+                      className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full bg-black/60 hover:bg-rose-600 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1 transition active:scale-90 z-10 cursor-pointer shadow-sm border border-white/20"
+                      title="Delete image directly within E-Menu"
+                    >
+                      <DeleteOutlined style={{ fontSize: 9 }} />
+                      <span className="text-[9.5px]">Del Img</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => handleRestoreProductImage(prod, e)}
+                      className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold flex items-center gap-1 transition active:scale-90 z-10 cursor-pointer shadow-sm"
+                      title="Restore product image"
+                    >
+                      <ReloadOutlined style={{ fontSize: 9 }} />
+                      <span className="text-[9.5px]">Restore</span>
+                    </button>
+                  )}
 
                   {/* Bookmark Favorites Toggle Button (Top Right) */}
                   <button
@@ -858,7 +996,7 @@ export default function EMenuPage() {
                   className="space-y-0.5 cursor-pointer"
                 >
                   <h3 className="font-bold text-slate-900 text-xs leading-snug line-clamp-1 hover:text-[#2F6FED] transition">
-                    {prod.name}
+                    <HighlightMatch text={prod.name} query={searchQuery} />
                   </h3>
                   <p className="text-[11px] text-slate-500 line-clamp-1 leading-normal">
                     {prod.details || 'Handcrafted fresh daily.'}
@@ -979,24 +1117,65 @@ export default function EMenuPage() {
 
             {/* Switch Store / Branch */}
             <div className="space-y-1.5 pt-2 border-t border-slate-100">
-              <span className="text-[11px] font-bold text-slate-500 uppercase">Switch Store / Branch</span>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-500 uppercase">
+                  Switch Store / Branch
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center p-0.5 bg-slate-100 rounded-lg text-[10px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setStoreSwitchScope('owner')}
+                      className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                        storeSwitchScope === 'owner' ? 'bg-white text-[#2F6FED] shadow-xs' : 'text-slate-500'
+                      }`}
+                    >
+                      {currentStoreOwner === 'Yin' ? "Yin (2 Stores)" : `${currentStoreOwner.split(' ')[0]} (1 Store)`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStoreSwitchScope('all')}
+                      className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                        storeSwitchScope === 'all' ? 'bg-white text-[#2F6FED] shadow-xs' : 'text-slate-500'
+                      }`}
+                    >
+                      8 Merchants
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs max-h-52 overflow-y-auto pr-0.5 scrollbar-thin">
                 {storeOptions.map((st) => (
                   <button
                     key={st.slug}
                     type="button"
                     onClick={() => {
                       setIsLocationModalOpen(false);
-                      navigate(`/shop/${st.slug}`);
+                      if (st.slug !== currentSlug) {
+                        navigate(`/shop/${st.slug}`);
+                        message.success(`Switched store to ${st.fullName || st.name}! (Owner: ${st.owner})`);
+                      }
                     }}
-                    className={`p-2.5 rounded-xl font-bold text-left transition flex items-center gap-2 ${
+                    className={`p-2.5 rounded-xl font-bold text-left transition flex items-center justify-between gap-1.5 cursor-pointer active:scale-95 ${
                       currentSlug === st.slug
-                        ? 'bg-blue-50 text-[#2F6FED] border border-[#2F6FED]/50 shadow-xs'
+                        ? 'bg-blue-50 text-[#2F6FED] border border-[#2F6FED]/50 shadow-xs ring-1 ring-[#2F6FED]/20'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
-                    <span>{st.emoji}</span>
-                    <span className="truncate">{st.name.replace('Aura ', '')}</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-sm shrink-0">{st.emoji}</span>
+                      <div className="truncate">
+                        <span className="block truncate">{st.name}</span>
+                        {storeSwitchScope === 'all' && (
+                          <span className="block text-[9.5px] text-slate-400 font-normal truncate">
+                            by {st.owner}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {currentSlug === st.slug && (
+                      <span className="text-[10px] text-blue-600 font-bold shrink-0">✓</span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -1013,9 +1192,9 @@ export default function EMenuPage() {
                 }}
                 className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs cursor-pointer hover:border-[#2F6FED]/60 transition active:scale-98"
               >
-                <code className="text-[#2F6FED] font-mono text-[11px] truncate max-w-[320px]">
-                  https://t.me/aura_emenu_order_bot/menu?startapp=shop_{currentSlug}
-                </code>
+                <span className="text-[#2F6FED] font-semibold text-[11px] truncate max-w-[320px]">
+                  Telegram Mini App ({currentStore?.name || currentSlug})
+                </span>
                 <span className="text-[11px] font-bold text-slate-600 shrink-0 ml-2 bg-slate-200 px-2 py-0.5 rounded-md">
                   Copy Link
                 </span>
@@ -1071,22 +1250,56 @@ export default function EMenuPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <img
-                src={customizingProduct.image}
-                alt=""
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src =
-                    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
-                }}
-                className="w-14 h-14 rounded-2xl object-cover shrink-0 bg-slate-100"
-              />
-              <div>
-                <h4 className="font-extrabold text-sm text-slate-900">{customizingProduct.name}</h4>
-                <span className="font-mono text-xs font-bold text-[#2F6FED]">
-                  Base Price: ${Number(customizingProduct.price).toFixed(2)}
-                </span>
+            <div className="flex items-center justify-between gap-3 p-3 bg-slate-50/90 rounded-2xl border border-slate-200/80">
+              <div className="flex items-center gap-3 min-w-0">
+                {isImageDeleted(customizingProduct.id, currentSlug) ? (
+                  <div className="w-14 h-14 rounded-2xl bg-slate-200 border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 shrink-0 select-none">
+                    <CameraOutlined style={{ fontSize: 16 }} />
+                    <span className="text-[9px] font-bold mt-0.5">Deleted</span>
+                  </div>
+                ) : (
+                  <img
+                    src={customizingProduct.image}
+                    alt=""
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src =
+                        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&fit=crop';
+                    }}
+                    className="w-14 h-14 rounded-2xl object-cover shrink-0 bg-slate-100"
+                  />
+                )}
+                <div className="min-w-0">
+                  <h4 className="font-extrabold text-sm text-slate-900 truncate">{customizingProduct.name}</h4>
+                  <span className="font-mono text-xs font-bold text-[#2F6FED]">
+                    Base Price: ${Number(customizingProduct.price).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Direct Image Delete / Restore Action in Customizer Modal */}
+              <div className="shrink-0">
+                {!isImageDeleted(customizingProduct.id, currentSlug) ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteProductImage(customizingProduct)}
+                    className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold flex items-center gap-1 cursor-pointer transition active:scale-95 shadow-2xs"
+                    title="Delete image directly from E-Menu"
+                  >
+                    <DeleteOutlined />
+                    <span>Delete Image</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleRestoreProductImage(customizingProduct)}
+                    className="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#2F6FED] border border-blue-200 text-xs font-bold flex items-center gap-1 cursor-pointer transition active:scale-95 shadow-2xs"
+                    title="Restore image"
+                  >
+                    <ReloadOutlined />
+                    <span>Restore Image</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1356,21 +1569,6 @@ export default function EMenuPage() {
           </div>
         </div>
       )}
-
-      {/* Telegram Mini App: Multi-Store Group Management & Bot Permissions Modal */}
-      <TelegramStoreGroupModal
-        open={isStoreGroupModalOpen}
-        onClose={() => setIsStoreGroupModalOpen(false)}
-        currentStoreSlug={currentSlug}
-        onSwitchStore={(newSlug) => {
-          setIsStoreGroupModalOpen(false);
-          if (newSlug !== currentSlug) {
-            navigate(`/shop/${newSlug}`);
-            message.success(`Switched store account to ${newSlug.replace(/-/g, ' ').toUpperCase()}`);
-          }
-        }}
-        triggerHaptic={triggerHaptic}
-      />
     </div>
   );
 }

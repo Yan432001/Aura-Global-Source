@@ -68,7 +68,7 @@ export default function Register() {
 
       // Log user in
       login(newUser);
-      message.success(`Welcome to Aura Global, ${newUser.name}! You received 100 welcome reward points! 🎉`);
+      message.success(`Welcome to Aura Supply, ${newUser.name}! You received 100 welcome reward points! 🎉`);
       setLoading(false);
       navigate('/profile');
     }, 650);
@@ -95,7 +95,7 @@ export default function Register() {
             Create Your Account
           </Title>
           <Text style={{ color: '#64748b', fontSize: 13.5 }}>
-            Join Aura Global for exclusive store rewards, table ordering &amp; order history.
+            Join Aura Supply for exclusive store rewards, table ordering &amp; order history.
           </Text>
         </div>
 

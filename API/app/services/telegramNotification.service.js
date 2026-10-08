@@ -98,11 +98,17 @@ function buildTelegramOrderMessage({ store, order, customer = {}, items = [] }) 
  * If sending fails, marks notification as failed without throwing or canceling the order.
  */
 async function sendOrderToShopGroup({ store, order, customer = {}, items = [] }) {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN || '8613686625:AAFe8-04LvQumEXZ8-MBjbNSDozba3E1lCw';
+  let customStoreConfig = null;
+  try {
+    const telegramStoreConfigService = require('./telegramStoreConfig.service');
+    customStoreConfig = telegramStoreConfigService.getConfig(store.slug);
+  } catch (_) {}
+
+  const botToken = (customStoreConfig?.botToken || '').trim() || process.env.TELEGRAM_BOT_TOKEN || '8613686625:AAFe8-04LvQumEXZ8-MBjbNSDozba3E1lCw';
   // Destination must be strictly isolated to the selected store's telegram_group_id
-  const targetGroupId = process.env.TELEGRAM_GROUP_CHAT_ID || store.telegram_group_id;
-  const storeName = store.name || store.company || 'Store';
-  const groupName = store.telegram_group_name || `${storeName} Notification Group`;
+  const targetGroupId = process.env.TELEGRAM_GROUP_CHAT_ID || customStoreConfig?.groupId || store.telegram_group_id;
+  const storeName = store.name || store.company || customStoreConfig?.storeName || 'Store';
+  const groupName = customStoreConfig?.groupTitle || store.telegram_group_name || `${storeName} Notification Group`;
   const orderRef = order.referenceNo || order.reference_no || `ORD-${String(order.id || 1001).padStart(6, '0')}`;
 
   const messageText = buildTelegramOrderMessage({ store, order, customer, items });

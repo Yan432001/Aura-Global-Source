@@ -626,7 +626,7 @@ const Header = ({ currentPage }) => {
           >
             {/* 1. Logo on the left */}
             <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
-              <AuraLogo size={28} showText={true} subtitle="MARKET" textColor={publicTheme.text} />
+              <AuraLogo size={28} showText={true} subtitle="SUPPLY" textColor={publicTheme.text} />
             </Link>
 
             {/* 2. Search Box in the middle */}
@@ -721,7 +721,7 @@ const Header = ({ currentPage }) => {
             {/* Row 1: Tablet Top Bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
-                <AuraLogo size={32} showText={true} subtitle="B2B MARKET" textColor={publicTheme.text} />
+                <AuraLogo size={32} showText={true} subtitle="SUPPLY" textColor={publicTheme.text} />
               </Link>
 
               <div ref={searchContainerRef} style={{ position: 'relative', flex: 1, maxWidth: 340, marginLeft: 6, marginRight: 6 }}>
@@ -900,7 +900,7 @@ const Header = ({ currentPage }) => {
             <Row align="middle" justify="space-between" gutter={[12, 12]}>
               <Col xs={14} md={6} style={{ display: 'flex', alignItems: 'center' }}>
                 <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-                  <AuraLogo size={38} showText={true} subtitle="B2B SOURCING" textColor={publicTheme.text} />
+                  <AuraLogo size={38} showText={true} subtitle="SUPPLY" textColor={publicTheme.text} />
                 </Link>
               </Col>
 
