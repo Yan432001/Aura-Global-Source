@@ -24,7 +24,6 @@ const MainLayout = () => {
         minHeight: '100vh',
         background: publicTheme.pageBackground,
         position: 'relative',
-        overflow: 'hidden',
       }}
     >
       <div
@@ -40,12 +39,14 @@ const MainLayout = () => {
       <Layout.Header
         style={{
           padding: 0,
-          background: 'transparent',
+          background: '#ffffff',
           position: 'sticky',
           top: 0,
           zIndex: 1000,
           height: 'auto',
           lineHeight: 'normal',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.06)',
+          borderBottom: '1px solid #e2e8f0',
         }}
       >
         <Header currentPage={currentPage} />

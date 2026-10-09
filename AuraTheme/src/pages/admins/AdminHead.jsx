@@ -119,11 +119,15 @@ const Head = ({ collapsed, setCollapsed, isMobile, showModuleMenu }) => {
       <OfflineWarningBanner />
       <Header
         style={{
-          background: adminTheme.topPanel,
-          padding: isMobile ? '12px 12px' : '16px 24px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 1000,
+          background: adminTheme.topPanel || '#ffffff',
+          padding: isMobile ? '12px 14px' : '16px 24px',
           height: 'auto',
           lineHeight: 'normal',
           borderBottom: `1px solid ${adminTheme.border}`,
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
         }}
       >
       <Flex justify="space-between" align="center" gap={16} wrap="wrap">

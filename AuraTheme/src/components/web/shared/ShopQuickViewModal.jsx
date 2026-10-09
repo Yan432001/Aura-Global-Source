@@ -109,7 +109,7 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
       try {
         await navigator.share({
           title: shop.name,
-          text: shop.summary || shop.description || `Discover ${shop.name} on Aura Supply!`,
+          text: shop.summary || shop.description || `Discover ${shop.name} on Aura Global!`,
           url: shareUrl,
         });
         return;
@@ -137,11 +137,13 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
       style={
         isMobile
           ? {
-              top: 0,
+              position: 'fixed',
+              bottom: 0,
+              top: 'auto',
               margin: 0,
               paddingBottom: 0,
               maxWidth: '100vw',
-              height: '100vh',
+              width: '100vw',
             }
           : {}
       }
@@ -170,23 +172,52 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
         body: {
           padding: 0,
           overflow: 'hidden',
-          borderRadius: isMobile ? 0 : 24,
-          maxHeight: isMobile ? '100vh' : '92vh',
-          height: isMobile ? '100vh' : 'auto',
+          borderRadius: isMobile ? '24px 24px 0 0' : 24,
+          maxHeight: isMobile ? '90vh' : '92vh',
+          height: isMobile ? '90vh' : 'auto',
           display: 'flex',
           flexDirection: 'column',
         },
         content: {
           padding: 0,
-          borderRadius: isMobile ? 0 : 24,
+          borderRadius: isMobile ? '24px 24px 0 0' : 24,
           overflow: 'hidden',
           boxShadow: '0 30px 80px -15px rgba(15, 23, 42, 0.45), 0 0 1px 1px rgba(47, 111, 237, 0.2)',
           border: isMobile ? 'none' : '1px solid rgba(47, 111, 237, 0.16)',
-          height: isMobile ? '100vh' : 'auto',
+          height: isMobile ? '90vh' : 'auto',
+          margin: 0,
         },
       }}
       title={null}
     >
+      {/* Mobile Bottom-Sheet Grab Handle */}
+      {isMobile && (
+        <div
+          style={{
+            width: '100%',
+            background: '#ffffff',
+            paddingTop: 8,
+            paddingBottom: 4,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            position: 'relative',
+            zIndex: 10,
+          }}
+        >
+          <div
+            style={{
+              width: 38,
+              height: 4,
+              borderRadius: 999,
+              backgroundColor: '#cbd5e1',
+            }}
+          />
+        </div>
+      )}
+
       <div
         style={{
           display: 'flex',
@@ -194,8 +225,8 @@ const ShopQuickViewModal = ({ shop, open, onClose, onOpenTelegram, shopProducts 
           width: '100%',
           background: '#ffffff',
           overflowY: 'auto',
-          maxHeight: isMobile ? '100vh' : '92vh',
-          height: isMobile ? '100vh' : 'auto',
+          maxHeight: isMobile ? 'calc(90vh - 16px)' : '92vh',
+          height: isMobile ? 'calc(90vh - 16px)' : 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
         }}

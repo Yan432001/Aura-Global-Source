@@ -42,7 +42,7 @@ export const shopTelegramGroups = {
 // Registered Bot identity
 export const BOTFATHER_CONFIG = {
   botUsername: 'aura_emenu_order_bot',
-  botName: 'Aura Multi-Store E-Menu',
+  botName: 'Aura Supply',
   botToken: '8613686625:AAFe8-04LvQumEXZ8-MBjbNSDozba3E1lCw',
   webAppName: 'menu',
   registeredVia: '@BotFather',
@@ -345,13 +345,13 @@ export default function TelegramMiniAppModal({
               flexShrink: 0,
               padding: 2,
             }}
-            title="Aura Supply Official Website Logo"
+            title="Aura Global Official Website Logo"
           >
             <AuraLogo size={34} showText={false} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 16, fontWeight: 800 }}>Aura Supply</span>
+              <span style={{ fontSize: 16, fontWeight: 800 }}>{targetShop?.name || 'Aura'}</span>
               <CheckCircleFilled style={{ color: '#4ade80', fontSize: 14 }} />
               <Tag
                 style={{
@@ -369,7 +369,7 @@ export default function TelegramMiniAppModal({
               </Tag>
             </div>
             <div style={{ fontSize: 12, opacity: 0.9 }}>
-              Telegram Mini App E-Menu • {product ? `${product.name} • ${targetShop?.name || 'Shop'}` : (targetShop?.name ? `${targetShop.name} Directory` : 'Shop Directory Link')}
+              Telegram Mini App • {product ? 'Item Product Link' : 'Shop Directory Link'}
             </div>
           </div>
         </div>
@@ -459,7 +459,7 @@ export default function TelegramMiniAppModal({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                   <Tag color="blue" style={{ borderRadius: 999, fontWeight: 700, margin: 0, fontSize: 10 }}>
-                    TELEGRAM E-MENU SHOP
+                    TELEGRAM SHOP
                   </Tag>
                   <span style={{ fontSize: 11, color: '#64748b' }}>
                     <StarFilled style={{ color: '#f59e0b' }} /> {targetShop?.rating || 4.9}

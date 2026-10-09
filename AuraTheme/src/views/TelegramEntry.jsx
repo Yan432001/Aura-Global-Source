@@ -112,7 +112,7 @@ export default function TelegramEntry() {
       </div>
       <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-500 mb-3" />
       <p className="text-xs font-bold text-slate-700 tracking-wide">
-        Connecting to Telegram E-Menu...
+        Connecting to Aura Supply...
       </p>
     </div>
   );

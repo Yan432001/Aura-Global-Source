@@ -237,6 +237,68 @@ body.preset-darkOnly .ant-btn-primary {
   display: none;
 }
 
+/* Creative Shop Cards & Carousel Animations */
+@keyframes livePing {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+@keyframes popHeart {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.4);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes cardShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-live-ping {
+  animation: livePing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.animate-pop-heart {
+  animation: popHeart 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.shimmer-placeholder {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: cardShimmer 1.5s infinite;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Ensure no horizontal overflow on mobile screens */
 @media (max-width: 576px) {
   html,

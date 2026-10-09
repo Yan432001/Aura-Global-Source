@@ -19,7 +19,6 @@ import {
   CameraOutlined,
   ReloadOutlined,
   PictureOutlined,
-  GlobalOutlined,
 } from '@ant-design/icons';
 import { useTelegram } from '../hooks/useTelegram';
 import { useFavorites } from '../hooks/useFavorites';
@@ -160,10 +159,15 @@ export default function EMenuPage() {
     return SHOP_THEMES[currentSlug] || SHOP_THEMES['sbc-store'];
   }, [currentSlug]);
 
-  // Ensure Telegram WebApp BackButton is hidden
+  // Ensure Telegram WebApp & Browser title is "Aura Supply" with native mobile app settings
   useEffect(() => {
+    document.title = 'Aura Supply';
     try {
       tg?.BackButton?.hide?.();
+      tg?.ready?.();
+      tg?.expand?.();
+      tg?.setHeaderColor?.('#ffffff');
+      tg?.setBackgroundColor?.('#ffffff');
     } catch (_) {}
   }, [tg]);
 
@@ -174,6 +178,25 @@ export default function EMenuPage() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Dynamic quick search tags derived from active store categories and products
+  const dynamicQuickTags = useMemo(() => {
+    if (categories && categories.length > 0) {
+      const names = categories.map((c) => c.name).filter(Boolean);
+      if (names.length >= 2) return names.slice(0, 5);
+    }
+    if (products && products.length > 0) {
+      const words = [];
+      products.forEach((p) => {
+        const first = (p.name || '').split(' ')[0];
+        if (first && first.length > 2 && !words.includes(first)) {
+          words.push(first);
+        }
+      });
+      if (words.length > 0) return words.slice(0, 5);
+    }
+    return ['Popular', 'Featured', 'New'];
+  }, [categories, products]);
 
   // Favorites Persistence
   const { isFavorite, toggleFavorite, favoritesCount } = useFavorites();
@@ -679,27 +702,33 @@ export default function EMenuPage() {
       className="w-full max-w-[480px] min-h-screen text-slate-800 font-sans flex flex-col relative pb-32 border-x border-blue-100/60 selection:bg-[#2F6FED] selection:text-white"
     >
       {/* ======================================================== */}
-      {/* 0. PERSISTENT MINI-BANNER AT TOP (REAL-TIME ORDER STATUS) */}
+      {/* 1. STICKY NATIVE APP HEADER (SOLID WHITE, Z-INDEX 1000)   */}
       {/* ======================================================== */}
-      <OrderStatusMiniBanner
-        order={activeOrder}
-        onOrderUpdate={setActiveOrder}
-        storeName={currentStore?.name}
-        triggerHaptic={triggerHaptic}
-        className="sticky top-0 z-40"
-      />
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 1000,
+          backgroundColor: '#ffffff',
+        }}
+        className="sticky top-0 z-[1000] bg-white border-b border-slate-200 shadow-2xs w-full"
+      >
+        <OrderStatusMiniBanner
+          order={activeOrder}
+          onOrderUpdate={setActiveOrder}
+          storeName={currentStore?.name}
+          triggerHaptic={triggerHaptic}
+          className=""
+        />
 
-      {/* ======================================================== */}
-      {/* 1. TOP HEADER (WEBSITE DEFAULT STYLE & ELEGANT SHADOW)   */}
-      {/* ======================================================== */}
-      <header className="px-4 py-3 flex items-center justify-between sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+        <div className="px-3.5 py-2.5 flex items-center justify-between bg-white gap-2">
         {/* Left: Avatar + Title + "Table #06 • delivery" */}
         <div
           onClick={() => setIsLocationModalOpen(true)}
           className="flex items-center gap-3 cursor-pointer select-none active:opacity-80 transition"
         >
           <div className="relative group shrink-0">
-            <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-[#2F6FED]/25 bg-slate-100 shadow-sm relative">
+            <div className="w-10 h-10 rounded-2xl overflow-hidden ring-2 ring-[#2F6FED]/20 bg-slate-100 shadow-xs relative">
               {isStoreLogoDeleted(currentSlug) ? (
                 <div className="w-full h-full bg-blue-50 text-[#2F6FED] font-black text-xs flex items-center justify-center text-center p-1">
                   {currentStore?.name?.slice(0, 2)?.toUpperCase() || 'AS'}
@@ -726,7 +755,7 @@ export default function EMenuPage() {
               <button
                 type="button"
                 onClick={handleToggleStoreLogo}
-                title="Delete store logo directly from E-Menu"
+                title="Delete store logo"
                 className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center text-[9px] shadow-sm cursor-pointer transition active:scale-90 border border-white"
               >
                 <DeleteOutlined style={{ fontSize: 8 }} />
@@ -735,74 +764,65 @@ export default function EMenuPage() {
               <button
                 type="button"
                 onClick={handleToggleStoreLogo}
-                title="Restore store logo in E-Menu"
+                title="Restore store logo"
                 className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#2F6FED] hover:bg-blue-600 text-white flex items-center justify-center text-[9px] shadow-sm cursor-pointer transition active:scale-90 border border-white"
               >
                 <ReloadOutlined style={{ fontSize: 8 }} />
               </button>
             )}
           </div>
-          <div>
-            <h1 className="font-extrabold text-sm sm:text-base text-slate-900 tracking-tight leading-tight flex items-center gap-1">
-              <span>{currentStore?.name || activeTheme.name}</span>
-            </h1>
-            <p className="text-xs font-bold text-[#2F6FED] flex items-center gap-1.5 pt-0.5">
-              <span>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 leading-none">
+              <span className="text-[11px] font-black tracking-wider uppercase text-[#2F6FED]">
+                Aura Supply
+              </span>
+              <span className="w-1 h-1 rounded-full bg-slate-300" />
+              <span className="text-[11px] font-semibold text-slate-500 truncate">
+                {currentStore?.name || activeTheme.name}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-xs font-bold text-slate-900 tracking-tight truncate">
                 {customerLocation} • {diningMode}
               </span>
-              <span className="text-[10px] bg-blue-50 text-[#2F6FED] px-1.5 py-0.5 rounded-md font-extrabold flex items-center gap-0.5 border border-blue-200/60">
-                <span>Switch Store</span>
-                <DownOutlined style={{ fontSize: 7 }} />
+              <span className="text-[9.5px] bg-blue-50 text-[#2F6FED] px-1.5 py-0.5 rounded-md font-extrabold flex items-center gap-0.5 border border-blue-200/60 shrink-0">
+                <span>Switch</span>
+                <DownOutlined style={{ fontSize: 6.5 }} />
               </span>
-            </p>
+            </div>
           </div>
         </div>
 
-        {/* Right: Switch to Website View & Cart Badge */}
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => navigate(`/shop/menu/${currentSlug}`)}
-            className="px-2.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 border border-slate-200/80 active:scale-95 transition cursor-pointer"
-            title="Switch from App Preview to Website View"
-          >
-            <GlobalOutlined style={{ color: '#2563eb', fontSize: 13 }} />
-            <span className="hidden sm:inline text-[11px] font-extrabold">Website View</span>
-          </button>
+        {/* Right: Tactile Native Bag Cart Button */}
+        <button
+          type="button"
+          onClick={() => setIsCartOpen(true)}
+          aria-label={`View cart with ${totalItemCount} items`}
+          className="h-10 px-3.5 rounded-2xl bg-gradient-to-r from-[#2F6FED] to-[#4583FF] text-white font-extrabold text-xs flex items-center gap-1.5 shadow-sm shadow-[#2F6FED]/30 active:scale-95 transition cursor-pointer shrink-0"
+        >
+          <span className="text-sm">🛍️</span>
+          <span className="font-mono font-black">{totalItemCount}</span>
+        </button>
+      </div>
 
-          <button
-            type="button"
-            onClick={() => setIsCartOpen(true)}
-            className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-[#2F6FED]/25 active:scale-95 transition cursor-pointer hover:opacity-95"
-          >
-            <span className="text-sm">🛍️</span>
-            <span className="font-mono">{totalItemCount}</span>
-          </button>
-        </div>
-      </header>
-
-      {/* ======================================================== */}
-      {/* 2. REAL-TIME SEARCH BAR COMPONENT AT TOP OF MENU         */}
-      {/* ======================================================== */}
-      <div className="px-3 sm:px-4 pt-3 pb-2 bg-white/95 backdrop-blur-md border-b border-slate-100">
+      {/* Real-time Search Input */}
+      <div className="px-3 pb-2 pt-0.5 bg-white">
         <MenuSearchBar
           value={searchQuery}
           onChange={setSearchQuery}
           onClear={() => setSearchQuery('')}
-          placeholder={`Search ${currentStore?.name || 'menu'} products by name...`}
+          placeholder={`Search ${currentStore?.name || 'items'}...`}
           totalMatches={filteredProducts.length}
           totalItems={products.length}
           accentColor={activeTheme.accent || '#2F6FED'}
           showQuickTags={true}
-          quickTags={['Croissant', 'Latte', 'Sourdough', 'Matcha', 'Cruffin']}
+          quickTags={dynamicQuickTags}
         />
       </div>
 
-      {/* ======================================================== */}
-      {/* 3. CATEGORY HORIZONTAL SCROLL BAR (AURA BLUE PILLS)     */}
-      {/* ======================================================== */}
-      <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto scrollbar-none sticky top-[57px] z-20 bg-white/95 backdrop-blur-md border-b border-slate-200/80">
-        {/* All Items Pill */}
+      {/* Horizontal Category Segmented Tabs */}
+      <div className="px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto scrollbar-none bg-white border-t border-slate-100">
         <button
           type="button"
           onClick={() => {
@@ -810,7 +830,7 @@ export default function EMenuPage() {
             setShowFavoritesOnly(false);
             setSelectedCategory(null);
           }}
-          className={`px-4 py-1.5 rounded-2xl text-xs font-bold transition whitespace-nowrap cursor-pointer active:scale-95 shrink-0 ${
+          className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition whitespace-nowrap cursor-pointer active:scale-95 shrink-0 ${
             !showFavoritesOnly && selectedCategory === null
               ? activeTheme.pillActive
               : activeTheme.pillInactive
@@ -819,7 +839,6 @@ export default function EMenuPage() {
           All ({products.length})
         </button>
 
-        {/* Favorites Filter Pill */}
         <button
           type="button"
           onClick={() => {
@@ -827,10 +846,10 @@ export default function EMenuPage() {
             setShowFavoritesOnly(!showFavoritesOnly);
             setSelectedCategory(null);
           }}
-          className={`px-3.5 py-1.5 rounded-2xl text-xs font-bold transition whitespace-nowrap cursor-pointer active:scale-95 shrink-0 flex items-center gap-1.5 ${
+          className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition whitespace-nowrap cursor-pointer active:scale-95 shrink-0 flex items-center gap-1 ${
             showFavoritesOnly
-              ? 'bg-rose-500 text-white shadow-md shadow-rose-500/25 border-none'
-              : 'bg-rose-50/80 text-rose-600 border border-rose-200/90 hover:bg-rose-100/80 font-bold'
+              ? 'bg-rose-500 text-white shadow-xs border-none'
+              : 'bg-rose-50 text-rose-600 border border-rose-200/80 font-bold'
           }`}
           title="Filter bookmarked favorites"
         >
@@ -838,7 +857,6 @@ export default function EMenuPage() {
           <span>Favorites ({currentStoreFavoritesCount})</span>
         </button>
 
-        {/* Category Pills */}
         {categories.map((cat) => {
           const isSelected = !showFavoritesOnly && selectedCategory === cat.id;
           return (
@@ -850,7 +868,7 @@ export default function EMenuPage() {
                 setShowFavoritesOnly(false);
                 setSelectedCategory(cat.id);
               }}
-              className={`px-4 py-1.5 rounded-2xl text-xs font-bold transition whitespace-nowrap cursor-pointer active:scale-95 shrink-0 ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition whitespace-nowrap cursor-pointer active:scale-95 shrink-0 ${
                 isSelected
                   ? activeTheme.pillActive
                   : activeTheme.pillInactive
@@ -861,6 +879,7 @@ export default function EMenuPage() {
           );
         })}
       </div>
+    </header>
 
       {/* ======================================================== */}
       {/* 4. 2-COLUMN PRODUCT GRID (LIGHT WHITE CARDS + BLUE TAGS) */}
@@ -902,25 +921,25 @@ export default function EMenuPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {filteredProducts.map((prod) => (
               <div
                 key={prod.id}
                 id={`product-${prod.id}`}
-                className="bg-white rounded-2xl border border-slate-200/80 p-2.5 flex flex-col justify-between space-y-2.5 transition shadow-xs hover:shadow-md hover:border-[#2F6FED]/40"
+                className="bg-white rounded-2xl border border-slate-200/80 p-2 sm:p-2.5 flex flex-col justify-between space-y-1.5 sm:space-y-2 transition shadow-2xs hover:shadow-md hover:border-[#2F6FED]/40"
               >
                 {/* Product Image with Price Badge, Favorite, and Direct Delete Image Button */}
                 <div
                   role="button"
                   tabIndex={0}
                   onClick={() => openCustomizer(prod)}
-                  className="relative h-28 w-full rounded-xl overflow-hidden bg-slate-100 cursor-pointer group"
+                  className="relative h-20 sm:h-24 w-full rounded-xl overflow-hidden bg-slate-100 cursor-pointer group shadow-2xs"
                 >
                   {isImageDeleted(prod.id, currentSlug) ? (
                     <div className="w-full h-full bg-slate-50 border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 p-2 text-center select-none">
-                      <CameraOutlined style={{ fontSize: 18 }} className="text-slate-400 mb-0.5" />
-                      <span className="text-[10px] font-bold text-slate-500">Image Deleted</span>
-                      <span className="text-[9px] text-slate-400">Tap to edit / restore</span>
+                      <CameraOutlined style={{ fontSize: 16 }} className="text-slate-400 mb-0.5" />
+                      <span className="text-[9.5px] font-bold text-slate-500">Image Deleted</span>
+                      <span className="text-[8.5px] text-slate-400">Tap to restore</span>
                     </div>
                   ) : (
                     <img
@@ -941,21 +960,21 @@ export default function EMenuPage() {
                     <button
                       type="button"
                       onClick={(e) => handleDeleteProductImage(prod, e)}
-                      className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full bg-black/60 hover:bg-rose-600 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1 transition active:scale-90 z-10 cursor-pointer shadow-sm border border-white/20"
+                      className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-black/65 hover:bg-rose-600 backdrop-blur-md text-white text-[8.5px] font-bold flex items-center gap-0.5 transition active:scale-90 z-10 cursor-pointer shadow-xs border border-white/20"
                       title="Delete image directly within E-Menu"
                     >
-                      <DeleteOutlined style={{ fontSize: 9 }} />
-                      <span className="text-[9.5px]">Del Img</span>
+                      <DeleteOutlined style={{ fontSize: 7.5 }} />
+                      <span className="text-[8px] font-bold">Del Img</span>
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={(e) => handleRestoreProductImage(prod, e)}
-                      className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold flex items-center gap-1 transition active:scale-90 z-10 cursor-pointer shadow-sm"
+                      className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[8.5px] font-bold flex items-center gap-0.5 transition active:scale-90 z-10 cursor-pointer shadow-xs"
                       title="Restore product image"
                     >
-                      <ReloadOutlined style={{ fontSize: 9 }} />
-                      <span className="text-[9.5px]">Restore</span>
+                      <ReloadOutlined style={{ fontSize: 7.5 }} />
+                      <span className="text-[8px] font-bold">Restore</span>
                     </button>
                   )}
 
@@ -968,7 +987,7 @@ export default function EMenuPage() {
                       toggleFavorite(prod.id, prod.name, e);
                     }}
                     aria-label={isFavorite(prod.id) ? `Remove ${prod.name} from favorites` : `Bookmark ${prod.name} to favorites`}
-                    className={`absolute top-1.5 right-1.5 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 z-10 cursor-pointer shadow-sm active:scale-90 ${
+                    className={`absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 z-10 cursor-pointer shadow-xs active:scale-90 ${
                       isFavorite(prod.id)
                         ? 'bg-rose-50 text-rose-500 border border-rose-200 shadow-rose-200/50 scale-105'
                         : 'bg-white/90 backdrop-blur-md text-slate-400 hover:text-rose-500 hover:bg-white border border-slate-200/80'
@@ -976,14 +995,14 @@ export default function EMenuPage() {
                     title={isFavorite(prod.id) ? 'Bookmarked in Favorites (Click to remove)' : 'Bookmark to Favorites'}
                   >
                     {isFavorite(prod.id) ? (
-                      <HeartFilled className="text-rose-500 text-xs" />
+                      <HeartFilled className="text-rose-500 text-[10px]" />
                     ) : (
-                      <HeartOutlined className="text-xs" />
+                      <HeartOutlined className="text-[10px]" />
                     )}
                   </button>
 
                   {/* Floating Price Tag Badge (Bottom Right) */}
-                  <div className="absolute bottom-1.5 right-1.5 px-2.5 py-0.5 rounded-lg bg-white/95 backdrop-blur-md font-mono font-black text-[#2F6FED] text-[12px] shadow-sm border border-blue-100/60">
+                  <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-white/95 backdrop-blur-md font-mono font-extrabold text-[#2F6FED] text-[10.5px] sm:text-[11px] shadow-2xs border border-blue-100/60 leading-none">
                     ${Number(prod.price).toFixed(2)}
                   </div>
                 </div>
@@ -993,29 +1012,29 @@ export default function EMenuPage() {
                   role="button"
                   tabIndex={0}
                   onClick={() => openCustomizer(prod)}
-                  className="space-y-0.5 cursor-pointer"
+                  className="space-y-0.5 cursor-pointer pt-0.5"
                 >
-                  <h3 className="font-bold text-slate-900 text-xs leading-snug line-clamp-1 hover:text-[#2F6FED] transition">
+                  <h3 className="font-extrabold text-slate-900 text-[11px] sm:text-xs leading-tight line-clamp-2 min-h-[26px] sm:min-h-[28px] hover:text-[#2F6FED] transition">
                     <HighlightMatch text={prod.name} query={searchQuery} />
                   </h3>
-                  <p className="text-[11px] text-slate-500 line-clamp-1 leading-normal">
+                  <p className="text-[9.5px] sm:text-[10px] text-slate-400 line-clamp-1 leading-normal">
                     {prod.details || 'Handcrafted fresh daily.'}
                   </p>
                 </div>
 
                 {/* Card Bottom Buttons: "Detail" + "+ Add" */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                   <button
                     type="button"
                     onClick={() => openCustomizer(prod)}
-                    className="py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold text-center active:scale-95 transition cursor-pointer flex items-center justify-center gap-1"
+                    className="py-1 px-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] sm:text-[11px] font-bold text-center active:scale-95 transition cursor-pointer flex items-center justify-center gap-1"
                   >
                     <span>👁️ Detail</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDirectAddToCart(prod)}
-                    className="py-1.5 px-2 rounded-xl text-xs font-black text-center shadow-md active:scale-95 transition cursor-pointer bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-[#2F6FED]/25"
+                    className="py-1 px-1.5 rounded-lg text-[10px] sm:text-[11px] font-black text-center shadow-xs active:scale-95 transition cursor-pointer bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 text-white shadow-[#2F6FED]/20"
                   >
                     + Add
                   </button>
@@ -1029,7 +1048,7 @@ export default function EMenuPage() {
       {/* ======================================================== */}
       {/* 4. STICKY BOTTOM BASKET BAR                              */}
       {/* ======================================================== */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 p-3 pointer-events-none flex justify-center">
+      <div className="fixed bottom-3 left-0 right-0 z-[1000] px-3.5 pointer-events-none flex justify-center">
         <div className="w-full max-w-[480px] pointer-events-auto">
           <button
             type="button"
@@ -1037,13 +1056,18 @@ export default function EMenuPage() {
               triggerHaptic?.('medium');
               setIsCartOpen(true);
             }}
-            className="w-full py-3.5 px-5 rounded-2xl text-white font-extrabold text-sm flex items-center justify-between shadow-2xl active:scale-98 transition bg-gradient-to-r from-[#2F6FED] to-[#5B8DEF] hover:opacity-95 shadow-[#2F6FED]/35 cursor-pointer"
+            className="w-full py-3 px-4 rounded-2xl text-white font-extrabold text-sm flex items-center justify-between shadow-xl active:scale-[0.98] transition-all bg-gradient-to-r from-[#2F6FED] via-[#3B7BF6] to-[#2563EB] hover:opacity-95 shadow-[#2F6FED]/35 cursor-pointer border border-white/20"
           >
-            <div className="flex items-center gap-2">
-              <span className="text-base">🛍️</span>
-              <span>View Basket ({totalItemCount})</span>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-sm shadow-inner">
+                🛍️
+              </div>
+              <span className="font-extrabold text-sm tracking-tight">View Basket ({totalItemCount})</span>
             </div>
-            <span className="font-mono text-base font-black">${cartGrandTotal}</span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-base font-black tracking-tight">${cartGrandTotal}</span>
+              <span className="text-white/80 text-xs font-bold">→</span>
+            </div>
           </button>
         </div>
       </div>

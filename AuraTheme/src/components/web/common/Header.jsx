@@ -605,19 +605,26 @@ const Header = ({ currentPage }) => {
   };
 
   return (
-    <>
+    <div
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 1000,
+        background: '#ffffff',
+        width: '100%',
+      }}
+    >
       <OfflineWarningBanner />
       {isPhone ? (
         /* Phone View: Clean Modern Single-Row Header (< 576px) */
-        <div style={{ padding: '6px 8px 0' }}>
+        <div style={{ padding: '8px 10px', background: '#ffffff' }}>
           <div
-            className="frosted-panel"
             style={{
               padding: '6px 10px',
-              borderRadius: 16,
-              background: 'rgba(255, 255, 255, 0.95)',
+              borderRadius: 14,
+              background: '#ffffff',
               border: `1px solid ${publicTheme.softBorder}`,
-              boxShadow: '0 4px 18px rgba(15, 23, 42, 0.05)',
+              boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -626,7 +633,7 @@ const Header = ({ currentPage }) => {
           >
             {/* 1. Logo on the left */}
             <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
-              <AuraLogo size={28} showText={true} subtitle="SUPPLY" textColor={publicTheme.text} />
+              <AuraLogo size={28} showText={true} subtitle="MARKET" textColor={publicTheme.text} />
             </Link>
 
             {/* 2. Search Box in the middle */}
@@ -704,15 +711,14 @@ const Header = ({ currentPage }) => {
         </div>
       ) : isTablet ? (
         /* Tablet View: Balanced Compact 2-Row Header (576px - 991px) */
-        <div style={{ padding: '8px 12px 0' }}>
+        <div style={{ padding: '8px 12px', background: '#ffffff' }}>
           <div
-            className="frosted-panel"
             style={{
               padding: '10px 14px',
-              borderRadius: 18,
-              background: 'rgba(255, 255, 255, 0.94)',
+              borderRadius: 16,
+              background: '#ffffff',
               border: `1px solid ${publicTheme.softBorder}`,
-              boxShadow: '0 4px 20px rgba(15, 23, 42, 0.06)',
+              boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
               display: 'flex',
               flexDirection: 'column',
               gap: 8,
@@ -721,7 +727,7 @@ const Header = ({ currentPage }) => {
             {/* Row 1: Tablet Top Bar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
-                <AuraLogo size={32} showText={true} subtitle="SUPPLY" textColor={publicTheme.text} />
+                <AuraLogo size={32} showText={true} subtitle="B2B MARKET" textColor={publicTheme.text} />
               </Link>
 
               <div ref={searchContainerRef} style={{ position: 'relative', flex: 1, maxWidth: 340, marginLeft: 6, marginRight: 6 }}>
@@ -886,21 +892,20 @@ const Header = ({ currentPage }) => {
         </div>
       ) : (
         /* Desktop View (>= 992px) */
-        <div style={{ padding: '12px 16px 0' }}>
+        <div style={{ padding: '10px 16px', background: '#ffffff' }}>
           <div
-            className="frosted-panel"
             style={{
-              padding: '12px 18px',
-              borderRadius: 24,
-              background: 'rgba(255,255,255,0.92)',
+              padding: '10px 18px',
+              borderRadius: 20,
+              background: '#ffffff',
               border: `1px solid ${publicTheme.border}`,
-              boxShadow: publicTheme.shadow,
+              boxShadow: '0 2px 12px rgba(15, 23, 42, 0.05)',
             }}
           >
             <Row align="middle" justify="space-between" gutter={[12, 12]}>
               <Col xs={14} md={6} style={{ display: 'flex', alignItems: 'center' }}>
                 <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-                  <AuraLogo size={38} showText={true} subtitle="SUPPLY" textColor={publicTheme.text} />
+                  <AuraLogo size={38} showText={true} subtitle="B2B SOURCING" textColor={publicTheme.text} />
                 </Link>
               </Col>
 
@@ -1201,7 +1206,7 @@ const Header = ({ currentPage }) => {
           )}
         </Space>
       </Drawer>
-    </>
+    </div>
   );
 
 };

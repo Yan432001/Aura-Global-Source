@@ -22,7 +22,6 @@ import {
   CameraOutlined,
   ReloadOutlined,
   PictureOutlined,
-  MobileOutlined,
 } from '@ant-design/icons';
 import { message, Modal, Drawer, notification } from 'antd';
 import simpleData from '../../../data/simpleData';
@@ -30,7 +29,6 @@ import { useCart } from '../contexts/CartContext';
 import { publicTheme } from '../utils/webTheme';
 import MenuSearchBar, { HighlightMatch } from '../components/emenu/MenuSearchBar';
 import OrderStatusMiniBanner from '../components/emenu/OrderStatusMiniBanner';
-import DigitEMenuViewSwitcher from '../components/emenu/DigitEMenuViewSwitcher';
 import AuraLogo from '../components/common/AuraLogo';
 import { useFavorites } from '../hooks/useFavorites';
 import { routeOrderToTelegramGroup } from '../data/telegramStoreGroupManager';
@@ -771,23 +769,16 @@ export default function WebEMenuPage() {
 
   return (
     <div className="bg-[#FAF9F6] min-h-screen text-slate-800 font-sans pb-28 antialiased selection:bg-[#A31D1D] selection:text-white">
-      {/* 1. Global View Mode Switcher: App Preview <-> Website View */}
-      <DigitEMenuViewSwitcher
-        currentMode="website"
-        currentSlug={currentSlug}
-        showStorePicker={true}
-      />
-
       {/* Persistent Mini-Banner at the Top of Screen */}
       <OrderStatusMiniBanner
         storeName={currentStore?.name}
-        className="sticky top-0 z-40"
+        className="sticky top-0 z-50"
       />
 
       {/* ======================================================== */}
       {/* 1. TOP UTILITY HEADER (STORE SWITCHER & CART FLOATING)   */}
       {/* ======================================================== */}
-      <header className="sticky top-[52px] z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs px-4 sm:px-8 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -800,7 +791,7 @@ export default function WebEMenuPage() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-[#A31D1D]">
-                Digit E-Menu
+                Aura Supply
               </span>
               <span className="text-slate-300">|</span>
               <span className="text-xs font-bold text-slate-700">
@@ -813,7 +804,7 @@ export default function WebEMenuPage() {
           </div>
         </div>
 
-        {/* Right: Store Switcher Dropdown, App Preview Switcher & Cart Trigger */}
+        {/* Right: Store Switcher Dropdown & Cart Trigger */}
         <div className="flex items-center gap-2.5">
           {/* Quick Store Switcher Pills */}
           <div className="hidden lg:flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-full text-xs font-bold">
@@ -836,17 +827,6 @@ export default function WebEMenuPage() {
               </button>
             ))}
           </div>
-
-          {/* Quick Switch to App Preview Button */}
-          <button
-            type="button"
-            onClick={() => navigate(`/shop/${currentSlug}`)}
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-full font-bold text-xs shadow-md shadow-blue-500/20 active:scale-95 transition cursor-pointer"
-            title="Switch to Mobile App Preview (Telegram Mini App view)"
-          >
-            <MobileOutlined />
-            <span className="hidden sm:inline">App Preview</span>
-          </button>
 
           {/* Cart Button */}
           <button
